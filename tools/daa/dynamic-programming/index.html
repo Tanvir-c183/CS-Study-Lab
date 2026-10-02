@@ -1,0 +1,2548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAA Dynamic Programming Solver — RBU Unit III</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                            700: '#1e40af',
+                            800: '#1e3a8a',
+                            900: '#0f172a'
+                        },
+                        accent: {
+                            amber: '#f59e0b',
+                            emerald: '#10b981',
+                            rose: '#f43f5e',
+                            purple: '#8b5cf6'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 360px;
+            }
+        }
+        canvas.custom-canvas {
+            border: 1px solid #e2e8f0;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.03);
+        }
+        .dp-cell-base { background-color: #f1f5f9; font-weight: 600; }
+        .dp-cell-active { background-color: #fef08a; border: 2px solid #eab308 !important; }
+        .dp-cell-computed { background-color: #dbeafe; }
+        .dp-cell-trace { background-color: #bbf7d0; font-weight: 700; border: 2px solid #22c55e !important; }
+        .dp-cell-min { background-color: #fed7aa; }
+        .dp-cell-highlight { background-color: #e9d5ff; }
+        
+        /* Custom Scrollbars for Dense Matrices */
+        .matrix-scroll::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .matrix-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-blue-100 selection:text-blue-900">
+
+    <!-- Placeholders required by system prompt -->
+    <!-- Chosen Palette: Warm Neutral Academic (Slate background, Indigo/Blue primary, Amber/Emerald state accents) -->
+    <!-- Application Structure Plan: Designed as a university-grade interactive laboratory and exam revision system. Divided into clear sections: Global Navigation Header, Main Dashboard Cards, DP Foundations (Recursion vs DP, Tabulation vs Memoization), Standard 6-Step Formulation Frame, Dedicated Solvers for 7 core algorithms with side-by-side Input/Canvas layout, Step Controls, Dynamic Table Matrix Evaluation, Exam-Ready Generator, Answer Verifier, Algorithm Comparison Matrix, Greedy vs DP comparison, and Interactive Problem Selector Wizard. -->
+    <!-- Visualization & Content Choices: Canvas API used for visual graphs, staged networks, BST trees, and TSP tour animations (NO SVG/Mermaid used). Dynamic Chart.js canvas containers used for matrix/complexity visualizations. Interactive tables with color-coded state indicators (Base Case, Active Evaluation, Computed, Traceback Path) to enable step-by-step notebook comparison. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <!-- TOP HEADER -->
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-600 text-white font-bold text-xl px-3 py-1 rounded shadow-sm tracking-wide">DAA</div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                            DAA Dynamic Programming Solver
+                            <span class="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full border border-amber-500/40 font-semibold uppercase tracking-wider">
+                                RBU DAA — Unit III
+                            </span>
+                        </h1>
+                        <p class="text-xs text-slate-400">Dynamic Programming • Recurrence Tables • Shortest Paths • Optimization • String Algorithms</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                    <button onclick="switchView('exam')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm">
+                        <span>📝</span> Exam Sheet Generator
+                    </button>
+                    <button onclick="switchView('verify')" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm">
+                        <span>🔍</span> Verify My Answer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRIMARY NAVIGATION BAR -->
+        <nav class="bg-slate-800 text-slate-300 text-xs font-medium border-t border-slate-700/60 overflow-x-auto">
+            <div class="max-w-7xl mx-auto px-4 flex space-x-1 py-1 whitespace-nowrap">
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Dashboard</button>
+                <button onclick="switchView('basics')" id="nav-basics" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">DP Basics</button>
+                <button onclick="switchView('bellman')" id="nav-bellman" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Bellman-Ford</button>
+                <button onclick="switchView('floyd')" id="nav-floyd" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Floyd-Warshall</button>
+                <button onclick="switchView('multistage')" id="nav-multistage" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Multistage Graph</button>
+                <button onclick="switchView('obst')" id="nav-obst" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Optimal BST</button>
+                <button onclick="switchView('tsp')" id="nav-tsp" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">TSP</button>
+                <button onclick="switchView('edit')" id="nav-edit" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">String Editing</button>
+                <button onclick="switchView('lcs')" id="nav-lcs" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">LCS & Variations</button>
+                <button onclick="switchView('compare')" id="nav-compare" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Compare Algorithms</button>
+                <button onclick="switchView('wizard')" id="nav-wizard" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Problem Wizard</button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ==================== VIEW 1: DASHBOARD ==================== -->
+        <section id="view-dashboard" class="view-panel space-y-6">
+            <div class="bg-gradient-to-r from-blue-900 to-slate-900 rounded-xl p-6 text-white shadow-lg border border-slate-800">
+                <div class="max-w-3xl space-y-3">
+                    <span class="inline-block bg-blue-500/20 text-blue-300 text-xs px-2.5 py-1 rounded-md font-mono border border-blue-400/30">RBU CSE • DAA Curriculum Laboratory</span>
+                    <h2 class="text-3xl font-extrabold tracking-tight">Dynamic Programming Algorithm Laboratory</h2>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        A rigorous, step-by-step verification and preparation engine engineered specifically for standard university exam numericals. Translate homework problems into exact recurrence relations, state transition tables, and verified solution tracebacks.
+                    </p>
+                    <div class="flex flex-wrap gap-3 pt-2 text-xs">
+                        <button onclick="switchView('basics')" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-semibold transition shadow">Study DP Strategy →</button>
+                        <button onclick="switchView('wizard')" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg font-semibold transition">Algorithm Selection Wizard</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Bellman Ford -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-slate-900 text-lg">Bellman-Ford Solver</h3>
+                            <span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-mono">Single-Source</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-4">Computes shortest paths from a root vertex with negative edge weights and explicit V-th pass negative cycle detection.</p>
+                        <div class="text-xs text-slate-500 font-mono bg-slate-50 p-2 rounded mb-4">Input: Weighted Edge List / Matrix</div>
+                    </div>
+                    <button onclick="switchView('bellman')" class="w-full bg-slate-900 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded transition flex items-center justify-center gap-1">Open Solver →</button>
+                </div>
+
+                <!-- Floyd Warshall -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-slate-900 text-lg">Floyd-Warshall Solver</h3>
+                            <span class="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded font-mono">All-Pairs</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-4">Generates D⁽⁰⁾ through D⁽ⱽ⁾ intermediate matrix animations, predecessor matrices, and full path reconstruction.</p>
+                        <div class="text-xs text-slate-500 font-mono bg-slate-50 p-2 rounded mb-4">Input: V × V Adjacency Matrix</div>
+                    </div>
+                    <button onclick="switchView('floyd')" class="w-full bg-slate-900 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded transition flex items-center justify-center gap-1">Open Solver →</button>
+                </div>
+
+                <!-- Multistage Graph -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-slate-900 text-lg">Multistage Graph</h3>
+                            <span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded font-mono">Staged DAG</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-4">Evaluates minimal stage-by-stage path cost using backward dynamic recurrence equations and candidate edge rejection analysis.</p>
+                        <div class="text-xs text-slate-500 font-mono bg-slate-50 p-2 rounded mb-4">Input: Staged Vertices & Directed Edges</div>
+                    </div>
+                    <button onclick="switchView('multistage')" class="w-full bg-slate-900 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded transition flex items-center justify-center gap-1">Open Solver →</button>
+                </div>
+
+                <!-- OBST -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-slate-900 text-lg">Optimal BST (OBST)</h3>
+                            <span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded font-mono">Search Cost</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-4">Builds Weight (W), Cost (C), and Root (R) tables to minimize expected search cost across primary and dummy key probabilities.</p>
+                        <div class="text-xs text-slate-500 font-mono bg-slate-50 p-2 rounded mb-4">Input: Key Probabilities (p_i, q_i)</div>
+                    </div>
+                    <button onclick="switchView('obst')" class="w-full bg-slate-900 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded transition flex items-center justify-center gap-1">Open Solver →</button>
+                </div>
+
+                <!-- TSP -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-slate-900 text-lg">Traveling Salesman (TSP)</h3>
+                            <span class="bg-rose-100 text-rose-800 text-xs px-2 py-0.5 rounded font-mono">Bitmask DP</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-4">Solves minimal cost Hamiltonian tour using subset bitmask dynamic programming DP[S][j] and full tour reconstruction.</p>
+                        <div class="text-xs text-slate-500 font-mono bg-slate-50 p-2 rounded mb-4">Input: n × n Distance Matrix</div>
+                    </div>
+                    <button onclick="switchView('tsp')" class="w-full bg-slate-900 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded transition flex items-center justify-center gap-1">Open Solver →</button>
+                </div>
+
+                <!-- Edit Distance -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-slate-900 text-lg">String Editing</h3>
+                            <span class="bg-cyan-100 text-cyan-800 text-xs px-2 py-0.5 rounded font-mono">Alignment</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-4">Computes minimum edit distance alignment table with explicit operation scripts (Insert, Delete, Substitute, Match).</p>
+                        <div class="text-xs text-slate-500 font-mono bg-slate-50 p-2 rounded mb-4">Input: Source String + Target String</div>
+                    </div>
+                    <button onclick="switchView('edit')" class="w-full bg-slate-900 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded transition flex items-center justify-center gap-1">Open Solver →</button>
+                </div>
+
+                <!-- LCS -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-slate-900 text-lg">Longest Common Subseq.</h3>
+                            <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-mono">Sequences</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-4">Constructs sequence alignment matrix, traces back common subsequences, and compares against substring variations.</p>
+                        <div class="text-xs text-slate-500 font-mono bg-slate-50 p-2 rounded mb-4">Input: String Pair (X, Y)</div>
+                    </div>
+                    <button onclick="switchView('lcs')" class="w-full bg-slate-900 hover:bg-blue-600 text-white text-xs font-semibold py-2 rounded transition flex items-center justify-center gap-1">Open Solver →</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 2: DP BASICS ==================== -->
+        <section id="view-basics" class="view-panel space-y-6 hidden">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h2 class="text-2xl font-bold text-slate-900">Understanding Dynamic Programming</h2>
+                <p class="text-sm text-slate-600 leading-relaxed">
+                    Dynamic Programming (DP) is an algorithmic paradigm that solves complex problems by breaking them down into simpler subproblems, solving each subproblem exactly once, and storing its answer in a table to avoid redundant computations.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                        <h3 class="font-bold text-blue-900 text-base mb-1">1. Optimal Substructure</h3>
+                        <p class="text-xs text-slate-600">A problem exhibits optimal substructure if an optimal solution to the overall instance is constructed directly from optimal solutions to its constituent subproblems.</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                        <h3 class="font-bold text-blue-900 text-base mb-1">2. Overlapping Subproblems</h3>
+                        <p class="text-xs text-slate-600">A problem has overlapping subproblems if a standard recursive decomposition evaluates the exact same subproblem instances repeatedly.</p>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg text-center space-y-2">
+                    <div class="text-sm font-semibold text-blue-900">Core Transformation Pipeline</div>
+                    <div class="font-mono text-xs text-blue-800 flex items-center justify-center gap-2 flex-wrap">
+                        <span class="bg-white px-2.5 py-1 rounded border border-blue-200">Naive Recursion</span>
+                        <span>→</span>
+                        <span class="bg-rose-100 text-rose-800 px-2.5 py-1 rounded border border-rose-200">Repeated Subproblems</span>
+                        <span>→</span>
+                        <span class="bg-amber-100 text-amber-800 px-2.5 py-1 rounded border border-amber-200">Memoization / Tabulation</span>
+                        <span>→</span>
+                        <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded border border-emerald-200">Optimal Subproblem Table</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Memoization vs Tabulation -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                    <h3 class="text-xl font-bold text-slate-900">Memoization vs. Tabulation Comparison</h3>
+                    <div class="inline-flex p-1 bg-slate-100 rounded-lg text-xs font-semibold">
+                        <button onclick="toggleApproach('memo')" id="btn-memo" class="px-3 py-1 rounded-md bg-white shadow-sm text-slate-800">Memoization (Top-Down)</button>
+                        <button onclick="toggleApproach('tab')" id="btn-tab" class="px-3 py-1 rounded-md text-slate-600">Tabulation (Bottom-Up)</button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                                <th class="p-2.5">Feature</th>
+                                <th class="p-2.5">Memoization (Top-Down)</th>
+                                <th class="p-2.5">Tabulation (Bottom-Up)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 text-slate-600">
+                            <tr>
+                                <td class="p-2.5 font-semibold text-slate-800">Approach Strategy</td>
+                                <td class="p-2.5">Starts from target main problem and recursively breaks down to base cases.</td>
+                                <td class="p-2.5">Starts from primitive base cases and iteratively fills table up to target state.</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-semibold text-slate-800">Call-Stack Overhead</td>
+                                <td class="p-2.5">Incurs function recursion stack overhead; risk of call-stack overflow.</td>
+                                <td class="p-2.5">Zero recursion stack overhead; executes strictly via iterative loops.</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-semibold text-slate-800">Subproblem Evaluation</td>
+                                <td class="p-2.5">Evaluates subproblems lazily (only calculates required states).</td>
+                                <td class="p-2.5">Evaluates subproblems eagerly (systematically computes all table entries).</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-semibold text-slate-800">Exam Recommendation</td>
+                                <td class="p-2.5">Used primarily in recursive conceptual proofs.</td>
+                                <td class="p-2.5 font-semibold text-emerald-700">Standard for RBU exam numericals & table construction!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="approach-explanation" class="p-3 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700 leading-relaxed font-mono">
+                    Top-Down Memoization uses a lookup array initialized with sentinel values (-1) to cache recursive results on-demand.
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 3: BELLMAN-FORD SOLVER ==================== -->
+        <section id="view-bellman" class="view-panel space-y-6 hidden">
+            <!-- Intro Paragraph -->
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-900 leading-relaxed">
+                <strong>Bellman-Ford Single-Source Shortest Path Module:</strong> This section computes shortest paths from a designated root vertex across directed weighted graphs with negative edge weights. Unlike Dijkstra's greedy strategy, Bellman-Ford performs $V-1$ relaxation passes and executes a mandatory $V$-th pass to detect negative-weight cycles.
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Input Panel -->
+                <div class="lg:col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">1. Graph Configuration</h3>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Source Node:</label>
+                        <select id="bf-source" onchange="markSolverDirty('bellman')" class="w-full text-xs p-2 border border-slate-300 rounded bg-slate-50 font-mono">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                            <option value="E">E</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-semibold text-slate-700">Edge List (Source Target Weight):</label>
+                            <button onclick="loadBFPreset('standard')" class="text-xs text-blue-600 hover:underline">Load Exam Preset</button>
+                            <button onclick="loadBFPreset('negcycle')" class="text-xs text-rose-600 hover:underline">Negative Cycle</button>
+                        </div>
+                        <textarea id="bf-edges" rows="6" oninput="markSolverDirty('bellman')" class="w-full text-xs p-2 font-mono border border-slate-300 rounded bg-slate-50 focus:bg-white" placeholder="A B 4&#10;A C 5&#10;B C -2&#10;C D 3&#10;D E 2"></textarea>
+                    </div>
+
+
+                    <div id="sim-controls-bellman" class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button id="solve-bellman" onclick="solveModule('bellman')" type="button" class="hidden bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded transition shadow-sm">✓ Solve</button>
+                            <button id="play-bellman" onclick="playModule('bellman')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>▶ Play</button>
+                            <button id="pause-bellman" onclick="pauseModule('bellman')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>⏸ Pause</button>
+                            <button id="reset-bellman" onclick="resetModuleSimulation('bellman')" type="button" class="bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-2 rounded border border-slate-300 transition" disabled>↺ Reset</button>
+                            <span id="sim-status-bellman" class="text-[11px] font-mono text-slate-500" aria-live="polite">Enter/modify the problem, then Solve.</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded border border-slate-200 space-y-1 text-xs">
+                        <div class="font-bold text-slate-800">Mathematical Recurrence:</div>
+                        <div class="font-mono text-blue-700">d[v] = min( d[v], d[u] + w(u, v) )</div>
+                        <div class="text-slate-500 text-[11px]">Repeated over V - 1 relaxation iterations.</div>
+                    </div>
+                </div>
+
+                <!-- Canvas Visualizer -->
+                <div class="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-slate-900 text-lg">Graph Visualization</h3>
+                            <span id="bf-status-badge" class="text-xs font-semibold px-2.5 py-1 rounded bg-emerald-100 text-emerald-800">Valid Directed Graph</span>
+                        </div>
+                        <div class="w-full flex justify-center">
+                            <canvas id="bf-canvas" width="550" height="280" class="custom-canvas w-full"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Iteration Passes Table -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                    <h3 class="font-bold text-slate-900 text-lg">2. Bellman-Ford Distance Table D⁽⁰⁾ to D⁽ⱽ⁻¹⁾</h3>
+                    <div id="bf-cycle-alert" class="text-xs font-bold px-3 py-1 rounded bg-emerald-100 text-emerald-800">
+                        ✓ No negative-weight cycle detected
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto matrix-scroll">
+                    <table id="bf-table" class="w-full text-xs border-collapse text-center">
+                        <!-- Dynamic JS Populated -->
+                    </table>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    <div id="bf-final-distance" class="p-3 bg-blue-50 border border-blue-200 rounded text-xs font-mono text-blue-900"></div>
+                    <div id="bf-final-predecessor" class="p-3 bg-indigo-50 border border-indigo-200 rounded text-xs font-mono text-indigo-900"></div>
+                </div>
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700">
+                    <b>Interpretation:</b> D⁽ᵏ⁾[v] is the shortest distance from the source to vertex v after k relaxation passes; π⁽ᵏ⁾[v] stores its predecessor. D⁽V−1⁾ is the final shortest-distance vector. The V-th pass is only for negative-cycle detection.
+                </div>
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
+                    <strong>V-th Pass (Negative-Cycle Test):</strong> After D⁽ⱽ⁻¹⁾ is obtained, one additional relaxation check is performed only to detect a reachable negative-weight cycle. It is <b>not</b> used as the final shortest-distance vector.
+                </div>
+            </div>
+
+            <!-- Final Path & Predecessor Output -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">3. Shortest Path & Predecessor Summary</h3>
+                <div id="bf-path-output" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                    <!-- Dynamic Output -->
+                </div>
+                <div class="p-3 bg-slate-100 rounded text-xs text-slate-700 flex justify-between items-center">
+                    <span><strong>Time Complexity:</strong> O(V · E)</span>
+                    <span><strong>Space Complexity:</strong> O(V)</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 4: FLOYD-WARSHALL SOLVER ==================== -->
+        <section id="view-floyd" class="view-panel space-y-6 hidden">
+            <!-- Intro Paragraph -->
+            <div class="bg-purple-50 border border-purple-200 rounded-xl p-4 text-xs text-purple-900 leading-relaxed">
+                <strong>Floyd-Warshall All-Pairs Shortest Path Module:</strong> Computes shortest path weights between all pairs of vertices in a weighted graph using sequence of intermediate matrix choices $D^{(0)}, D^{(1)}, \dots, D^{(V)}$. Cell updates compare remaining at direct distance vs routing through intermediate vertex $k$.
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Matrix Input Panel -->
+                <div class="lg:col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-2">
+                        <h3 class="font-bold text-slate-900 text-lg">1. Adjacency Matrix D⁽⁰⁾</h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-semibold">Vertices:</label>
+                            <select id="fw-size" onchange="setFWSize(this.value)" class="text-xs p-1.5 border rounded bg-slate-50 font-mono">
+                                <option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option>
+                            </select>
+                            <button onclick="loadFWPreset()" class="text-xs text-purple-600 hover:underline">Load Exam Matrix</button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500">Enter distance values (Use 'INF' or '999' for infinity):</p>
+                    
+                    <div id="fw-matrix-input-grid" class="grid gap-2 text-xs font-mono"></div>
+                    <div class="text-[11px] text-slate-500">Use <b>INF</b> for no edge. Diagonal entries should normally be 0.</div>
+
+                    <div id="sim-controls-floyd" class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button id="solve-floyd" onclick="solveModule('floyd')" type="button" class="hidden bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-4 py-2 rounded transition shadow-sm">✓ Solve</button>
+                            <button id="play-floyd" onclick="playModule('floyd')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>▶ Play</button>
+                            <button id="pause-floyd" onclick="pauseModule('floyd')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>⏸ Pause</button>
+                            <button id="reset-floyd" onclick="resetModuleSimulation('floyd')" type="button" class="bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-2 rounded border border-slate-300 transition" disabled>↺ Reset</button>
+                            <span id="sim-status-floyd" class="text-[11px] font-mono text-slate-500" aria-live="polite">Enter/modify the problem, then Solve.</span>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div class="p-3 bg-purple-50 rounded border border-purple-200 space-y-1 text-xs">
+                        <div class="font-bold text-purple-900">Dynamic Recurrence Equation:</div>
+                        <div class="font-mono text-purple-800">D⁽ᵏ⁾[i][j] = min( D⁽ᵏ⁻¹⁾[i][j], D⁽ᵏ⁻¹⁾[i][k] + D⁽ᵏ⁻¹⁾[k][j] )</div>
+                    </div>
+                </div>
+
+                <!-- Matrix Animation View -->
+                <div class="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                        <h3 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                            <span>2. Step Matrix Iteration:</span>
+                            <span id="fw-k-label" class="text-purple-700 bg-purple-100 px-2 py-0.5 rounded text-xs">D⁽⁰⁾ (Base Graph)</span>
+                        </h3>
+                        <div class="flex items-center gap-1 text-xs">
+                            <button onclick="stepFW(-1)" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 rounded font-bold">← Prev</button>
+                            <button onclick="stepFW(1)" class="px-2.5 py-1 bg-purple-600 text-white hover:bg-purple-500 rounded font-bold">Next k →</button>
+                        </div>
+                    </div>
+
+                    <!-- Step Calculation Explainer -->
+                    <div id="fw-cycle-alert" class="text-xs font-bold px-3 py-1 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">✓ No negative-weight cycle detected</div>
+
+                    <div id="fw-calc-trace" class="p-3 bg-slate-50 border border-slate-200 rounded text-xs font-mono text-slate-700">
+                        D⁽⁰⁾ represents original weighted adjacency matrix before considering intermediate vertices.
+                    </div>
+
+                    <!-- Rendered D^(k) Table -->
+                    <div class="overflow-x-auto">
+                        <table id="fw-rendered-matrix" class="w-full text-xs border-collapse text-center">
+                            <!-- Matrix JS populated -->
+                        </table>
+                    </div>
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 pt-2">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800 mb-1">Distance Matrix D⁽ᵏ⁾</h4>
+                            <div class="text-[11px] text-slate-500 mb-1">D⁽ᵏ⁾[i][j] = shortest distance from i to j using the first k intermediate vertices.</div>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800 mb-1">Predecessor Matrix P⁽ᵏ⁾</h4>
+                            <div class="overflow-x-auto"><table id="fw-pred-matrix" class="w-full text-xs border-collapse text-center"></table></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Path Query Engine -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">3. All-Pairs Path Query & Predecessor Traceback</h3>
+                <div class="flex flex-wrap items-center gap-4 text-xs">
+                    <div class="flex items-center gap-2">
+                        <label class="font-semibold text-slate-700">From Source:</label>
+                        <select id="fw-query-src" onchange="queryFWPath()" class="p-1.5 border rounded font-mono bg-slate-50">
+                            <option value="0">A (0)</option>
+                            <option value="1">B (1)</option>
+                            <option value="2">C (2)</option>
+                            <option value="3">D (3)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="font-semibold text-slate-700">To Destination:</label>
+                        <select id="fw-query-dst" onchange="queryFWPath()" class="p-1.5 border rounded font-mono bg-slate-50">
+                            <option value="0">A (0)</option>
+                            <option value="1">B (1)</option>
+                            <option value="2">C (2)</option>
+                            <option value="3" selected>D (3)</option>
+                        </select>
+                    </div>
+                    <div id="fw-query-result" class="font-bold text-purple-900 bg-purple-100 px-3 py-1.5 rounded">
+                        Shortest Path: A → B → C → D | Cost = 6
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">4. Final All-Pairs Result: D⁽ⱽ⁾ and P⁽ⱽ⁾</h3>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="text-xs font-bold text-purple-900 mb-1">Final Distance Matrix D⁽ⱽ⁾</h4>
+                        <div class="overflow-x-auto"><table id="fw-final-distance-matrix" class="w-full text-xs border-collapse text-center"></table></div>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-indigo-900 mb-1">Final Predecessor Matrix P⁽ⱽ⁾</h4>
+                        <div class="overflow-x-auto"><table id="fw-final-pred-matrix" class="w-full text-xs border-collapse text-center"></table></div>
+                    </div>
+                </div>
+                <div class="p-3 bg-purple-50 border border-purple-200 rounded text-xs text-purple-900">
+                    <b>Final state:</b> D⁽V⁾ contains the shortest distance between every ordered pair of vertices after all V vertices have been allowed as intermediates. P⁽V⁾ stores the predecessor used for traceback.
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 5: MULTISTAGE GRAPH SOLVER ==================== -->
+        <section id="view-multistage" class="view-panel space-y-6 hidden">
+            <!-- Intro Paragraph -->
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs text-emerald-900 leading-relaxed">
+                <strong>Multistage Graph Optimization Module:</strong> Evaluates path costs across a directed acyclic graph partitioned into disjoint stage sets $V_1 \dots V_k$. Uses backward recurrence starting at destination node $T$, computing $\text{cost}(i) = \min_{j} \{c(i, j) + \text{cost}(j)\}$.
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Input Panel -->
+                <div class="lg:col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-200 pb-2">
+                        <h3 class="font-bold text-slate-900 text-lg">1. Staged Graph Data</h3>
+                        <button onclick="loadMultistagePreset()" class="text-xs text-emerald-600 hover:underline">Load Exam Graph</button>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Stage Assignments (JSON format):</label>
+                        <textarea id="ms-stages-json" rows="3" oninput="markSolverDirty('multistage')" class="w-full text-xs p-2 font-mono border border-slate-300 rounded bg-slate-50" placeholder='{"1":[1], "2":[2,3], "3":[4,5], "4":[6]}'></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Directed Edges (u v weight):</label>
+                        <textarea id="ms-edges-text" rows="5" oninput="markSolverDirty('multistage')" class="w-full text-xs p-2 font-mono border border-slate-300 rounded bg-slate-50" placeholder="1 2 2&#10;1 3 5&#10;2 4 4&#10;2 5 2&#10;3 4 6&#10;3 5 1&#10;4 6 3&#10;5 6 5"></textarea>
+                    </div>
+
+                    <div id="sim-controls-multistage" class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button id="solve-multistage" onclick="solveModule('multistage')" type="button" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded transition shadow-sm">✓ Solve</button>
+                            <button id="play-multistage" onclick="playModule('multistage')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>▶ Play</button>
+                            <button id="pause-multistage" onclick="pauseModule('multistage')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>⏸ Pause</button>
+                            <button id="reset-multistage" onclick="resetModuleSimulation('multistage')" type="button" class="bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-2 rounded border border-slate-300 transition" disabled>↺ Reset</button>
+                            <span id="sim-status-multistage" class="text-[11px] font-mono text-slate-500" aria-live="polite">Enter/modify the problem, then Solve.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Canvas Diagram -->
+                <div class="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                    <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">Stage Layout Rendering</h3>
+                    <div class="w-full flex justify-center">
+                        <canvas id="ms-canvas" width="550" height="260" class="custom-canvas w-full"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backward Calculation Table -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">2. Exam-Standard Backward DP: Cost D(i) + Next d(i)</h3>
+                <div class="overflow-x-auto">
+                    <table id="ms-calc-table" class="w-full text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800 border-b border-slate-200">
+                                <th class="p-2 text-left">Vertex (i)</th>
+                                <th class="p-2 text-center">Stage</th>
+                                <th class="p-2 text-left">Candidate Outgoing Transitions</th>
+                                <th class="p-2 text-left">Recurrence Min Formula</th>
+                                <th class="p-2 text-center">cost(i)</th>
+                                <th class="p-2 text-center">d(i) Next Vertex</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 text-slate-700 font-mono">
+                            <!-- Dynamic Table JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="ms-summary-box" class="p-3 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-900 font-semibold flex justify-between items-center">
+                    <span>Optimal Path: 1 → 2 → 4 → 6</span>
+                    <span>Minimum Path Cost = 9</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 6: OPTIMAL BST SOLVER ==================== -->
+        <section id="view-obst" class="view-panel space-y-6 hidden">
+            <!-- Intro Paragraph -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900 leading-relaxed">
+                <strong>Optimal Binary Search Tree (OBST) Solver:</strong> Given key search probabilities $p_1 \dots p_n$ and dummy key search probabilities $q_0 \dots q_n$, constructs Weight ($W$), Cost ($C$), and Root ($R$) matrices to construct an optimal tree topology minimizing expected search cost.
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Input Panel -->
+                <div class="lg:col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-200 pb-2">
+                        <h3 class="font-bold text-slate-900 text-lg">1. Probabilities Input</h3>
+                        <button onclick="loadOBSTPreset()" class="text-xs text-amber-600 hover:underline">Load Exam Question</button>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Key Probabilities p (p1 ... pn):</label>
+                        <input type="text" id="obst-p" oninput="markSolverDirty('obst')" value="0.15, 0.10, 0.05" class="w-full text-xs p-2 font-mono border border-slate-300 rounded bg-slate-50">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Dummy Probabilities q (q0 ... qn):</label>
+                        <input type="text" id="obst-q" oninput="markSolverDirty('obst')" value="0.05, 0.10, 0.05, 0.05" class="w-full text-xs p-2 font-mono border border-slate-300 rounded bg-slate-50">
+                    </div>
+
+                    <div id="sim-controls-obst" class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button id="solve-obst" onclick="solveModule('obst')" type="button" class="hidden bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-4 py-2 rounded transition shadow-sm">✓ Solve</button>
+                            <button id="play-obst" onclick="playModule('obst')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>▶ Play</button>
+                            <button id="pause-obst" onclick="pauseModule('obst')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>⏸ Pause</button>
+                            <button id="reset-obst" onclick="resetModuleSimulation('obst')" type="button" class="bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-2 rounded border border-slate-300 transition" disabled>↺ Reset</button>
+                            <span id="sim-status-obst" class="text-[11px] font-mono text-slate-500" aria-live="polite">Enter/modify the problem, then Solve.</span>
+                        </div>
+                    </div>
+
+                    <div id="obst-prob-check" class="text-xs font-mono p-2 rounded bg-slate-100 text-slate-700">
+                        Sum(p) + Sum(q) = 0.30 + 0.25 = 0.55 (Normalized automatically)
+                    </div>
+
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900 space-y-2">
+                        <div class="font-bold">OBST Table Convention:</div>
+                        <select id="obst-base-mode" onchange="markSolverDirty('obst')" class="w-full p-1.5 border border-amber-300 rounded bg-white text-xs font-mono">
+                            <option value="q" selected>Standard: C[i][i−1] = q[i−1] (dummy searches counted)</option>
+                            <option value="zero">Zero-base: C[i][i−1] = 0 (dummy base cost omitted)</option>
+                        </select>
+                        <div class="text-[11px] leading-relaxed">
+                            The two modes use the same W and root recurrence, but different empty-subtree base costs. This lets you match either common exam convention without silently changing the mathematics.
+                        </div>
+                        <div class="font-bold pt-1">Cost Recurrence:</div>
+                        <div class="font-mono text-[11px]">C[i][j] = W[i][j] + min<sub>r=i..j</sub>( C[i][r−1] + C[r+1][j] )</div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700 space-y-1">
+                        <div class="font-bold">Important indexing note:</div>
+                        <div>Base entries are <span class="font-mono">(i, i−1)</span>, i.e. the sub-diagonal/empty intervals. A zero main diagonal is <b>not</b> a separate standard OBST expected-cost formula; if your notes show zeros for empty intervals, select <b>Zero-base</b>.</div>
+                    </div>
+                </div>
+
+                <!-- Tree Visualizer Canvas -->
+                <div class="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                    <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">Optimal Tree Visualizer</h3>
+                    <div class="w-full flex justify-center">
+                        <canvas id="obst-canvas" width="550" height="260" class="custom-canvas w-full"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matrices Panel -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">2. Generated DP Matrices (W, C, R)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-800 mb-1">Weight Matrix W[i][j]</h4>
+                        <div class="overflow-x-auto"><table id="obst-table-w" class="w-full text-xs border-collapse text-center"></table></div>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-800 mb-1">Cost Matrix C[i][j]</h4>
+                        <div class="overflow-x-auto"><table id="obst-table-c" class="w-full text-xs border-collapse text-center"></table></div>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-800 mb-1">Root Matrix R[i][j]</h4>
+                        <div class="overflow-x-auto"><table id="obst-table-r" class="w-full text-xs border-collapse text-center"></table></div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h4 class="text-xs font-bold text-slate-800 mb-1">3. Interval-by-Interval Calculation Trace</h4>
+                    <div id="obst-trace" class="overflow-x-auto text-xs"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 7: TSP SOLVER ==================== -->
+        <section id="view-tsp" class="view-panel space-y-6 hidden">
+            <!-- Intro Paragraph -->
+            <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 text-xs text-rose-900 leading-relaxed">
+                <strong>Traveling Salesman Problem (TSP) Subset Bitmask Solver:</strong> Solves minimal-cost Hamiltonian cycle visiting every vertex exactly once using state pair $(S, j)$, where $S$ is the bitmask subset of visited cities and $j$ is the current active city.
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Matrix Input Panel -->
+                <div class="lg:col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-2">
+                        <h3 class="font-bold text-slate-900 text-lg">1. Cost Matrix</h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-semibold">Cities:</label>
+                            <select id="tsp-size" onchange="setTSPSize(this.value)" class="text-xs p-1.5 border rounded bg-slate-50 font-mono">
+                                <option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option>
+                            </select>
+                            <button onclick="loadTSPPreset()" class="text-xs text-rose-600 hover:underline">Load Exam Preset</button>
+                        </div>
+                    </div>
+
+                    <div id="tsp-matrix-inputs" class="grid gap-2 text-xs font-mono"></div>
+                    <div class="text-[11px] text-slate-500">Use <b>INF</b> for an unavailable route. Diagonal entries are ignored as self-travel.</div>
+
+                    <div id="sim-controls-tsp" class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button id="solve-tsp" onclick="solveModule('tsp')" type="button" class="hidden bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold px-4 py-2 rounded transition shadow-sm">✓ Solve</button>
+                            <button id="play-tsp" onclick="playModule('tsp')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>▶ Play</button>
+                            <button id="pause-tsp" onclick="pauseModule('tsp')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>⏸ Pause</button>
+                            <button id="reset-tsp" onclick="resetModuleSimulation('tsp')" type="button" class="bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-2 rounded border border-slate-300 transition" disabled>↺ Reset</button>
+                            <span id="sim-status-tsp" class="text-[11px] font-mono text-slate-500" aria-live="polite">Enter/modify the problem, then Solve.</span>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div class="p-3 bg-rose-50 border border-rose-200 rounded text-xs text-rose-900 space-y-1">
+                        <div class="font-bold">Bitmask State Recurrence:</div>
+                        <div class="font-mono text-[11px]">DP[S][j] = min_{i in S\{j\}} ( DP[S\{j\}][i] + cost[i][j] )</div>
+                    </div>
+                </div>
+
+                <!-- Canvas Visualizer -->
+                <div class="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                    <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">Tour Animation</h3>
+                    <div class="w-full flex justify-center">
+                        <canvas id="tsp-canvas" width="550" height="260" class="custom-canvas w-full"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bitmask Tabulation View -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">2. Bitmask Subproblems Tabulation & Traceback</h3>
+                <div id="tsp-subproblems-output" class="overflow-x-auto matrix-scroll text-xs">
+                    <!-- Dynamic Subproblem Table -->
+                </div>
+                <div id="tsp-parent-output" class="overflow-x-auto matrix-scroll text-xs"></div>
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700">
+                    <b>State fields:</b> S = visited-city subset, j = current last city, DP[S][j] = minimum cost to reach j from A while visiting exactly S, and π[S][j] = predecessor city used to obtain that state.
+                </div>
+                <div id="tsp-final-tour-box" class="p-3 bg-rose-100 border border-rose-300 rounded text-xs font-bold text-rose-900 flex justify-between">
+                    <span>Optimal Hamiltonian Tour: A → B → D → C → A</span>
+                    <span>Min Tour Cost = 80</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 8: STRING EDITING SOLVER ==================== -->
+        <section id="view-edit" class="view-panel space-y-6 hidden">
+            <!-- Intro Paragraph -->
+            <div class="bg-cyan-50 border border-cyan-200 rounded-xl p-4 text-xs text-cyan-900 leading-relaxed">
+                <strong>String Editing / Edit Distance Module:</strong> Calculates transformation operations (Insert, Delete, Substitute, Match) to align Source string $S$ to Target string $T$ with minimum operational cost.
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">1. Alignment Input</h3>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Source String S:</label>
+                        <input type="text" id="edit-src" oninput="markSolverDirty('edit')" value="SUNDAY" class="w-full text-xs p-2 font-mono uppercase border border-slate-300 rounded bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Target String T:</label>
+                        <input type="text" id="edit-dst" oninput="markSolverDirty('edit')" value="SATURDAY" class="w-full text-xs p-2 font-mono uppercase border border-slate-300 rounded bg-slate-50">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600">Ins Cost</label>
+                            <input type="number" id="cost-ins" value="1" oninput="markSolverDirty('edit')" class="w-full p-1 border rounded text-center">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600">Del Cost</label>
+                            <input type="number" id="cost-del" value="1" oninput="markSolverDirty('edit')" class="w-full p-1 border rounded text-center">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600">Sub Cost</label>
+                            <input type="number" id="cost-sub" value="1" oninput="markSolverDirty('edit')" class="w-full p-1 border rounded text-center">
+                        </div>
+                    </div>
+
+                    <div id="sim-controls-edit" class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button id="solve-edit" onclick="solveModule('edit')" type="button" class="hidden bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold px-4 py-2 rounded transition shadow-sm">✓ Solve</button>
+                            <button id="play-edit" onclick="playModule('edit')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>▶ Play</button>
+                            <button id="pause-edit" onclick="pauseModule('edit')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>⏸ Pause</button>
+                            <button id="reset-edit" onclick="resetModuleSimulation('edit')" type="button" class="bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-2 rounded border border-slate-300 transition" disabled>↺ Reset</button>
+                            <span id="sim-status-edit" class="text-[11px] font-mono text-slate-500" aria-live="polite">Enter/modify the problem, then Solve.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-8 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">2. Edit Distance DP Matrix D[i][j] + Operation / Parent</h3>
+                    <div class="overflow-x-auto">
+                        <table id="edit-table" class="w-full text-xs border-collapse text-center">
+                            <!-- JS Generated -->
+                        </table>
+                    </div>
+                    <div class="mt-3">
+                        <h4 class="text-xs font-bold text-slate-800 mb-1">Operation / Predecessor Matrix</h4>
+                        <div class="overflow-x-auto"><table id="edit-op-table" class="w-full text-xs border-collapse text-center"></table></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Operations Breakdown -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">3. Transformation Script Sequence</h3>
+                <div id="edit-operations-script" class="text-xs font-mono p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
+                    <!-- Dynamic Ops Script -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 9: LCS SOLVER ==================== -->
+        <section id="view-lcs" class="view-panel space-y-6 hidden">
+            <!-- Intro Paragraph -->
+            <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-xs text-indigo-900 leading-relaxed">
+                <strong>Longest Common Subsequence (LCS) Module:</strong> Computes matching character subsequence lengths between strings $X$ and $Y$. Evaluates match recurrence $L[i-1][j-1]+1$ versus mismatch recurrence $\max(L[i-1][j], L[i][j-1])$.
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">1. Sequence Input</h3>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Sequence X:</label>
+                        <input type="text" id="lcs-x" oninput="markSolverDirty('lcs')" value="ABCBDAB" class="w-full text-xs p-2 font-mono uppercase border border-slate-300 rounded bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Sequence Y:</label>
+                        <input type="text" id="lcs-y" oninput="markSolverDirty('lcs')" value="BDCABA" class="w-full text-xs p-2 font-mono uppercase border border-slate-300 rounded bg-slate-50">
+                    </div>
+
+                    <div id="sim-controls-lcs" class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button id="solve-lcs" onclick="solveModule('lcs')" type="button" class="hidden bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded transition shadow-sm">✓ Solve</button>
+                            <button id="play-lcs" onclick="playModule('lcs')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>▶ Play</button>
+                            <button id="pause-lcs" onclick="pauseModule('lcs')" type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3 py-2 rounded transition" disabled>⏸ Pause</button>
+                            <button id="reset-lcs" onclick="resetModuleSimulation('lcs')" type="button" class="bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-2 rounded border border-slate-300 transition" disabled>↺ Reset</button>
+                            <span id="sim-status-lcs" class="text-[11px] font-mono text-slate-500" aria-live="polite">Enter/modify the problem, then Solve.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-8 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">2. LCS DP Table L[i][j] + Direction / Parent</h3>
+                    <div class="overflow-x-auto">
+                        <table id="lcs-table" class="w-full text-xs border-collapse text-center">
+                            <!-- Dynamic Table JS -->
+                        </table>
+                    </div>
+                    <div class="mt-3">
+                        <h4 class="text-xs font-bold text-slate-800 mb-1">Direction / Predecessor Matrix</h4>
+                        <div class="overflow-x-auto"><table id="lcs-direction-table" class="w-full text-xs border-collapse text-center"></table></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Traceback & Variations -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h3 class="font-bold text-slate-900 text-lg border-b border-slate-200 pb-2">3. Solution Traceback & Common Variations</h3>
+                <div id="lcs-result-box" class="p-3 bg-indigo-100 border border-indigo-200 rounded text-xs font-bold text-indigo-900 flex justify-between">
+                    <span>Optimal LCS Sequence: "BCBA"</span>
+                    <span>LCS Length = 4</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
+                    <div class="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
+                        <h4 class="font-bold text-slate-800">Longest Common Substring Difference</h4>
+                        <p class="text-slate-600">Requires strict contiguous character matching. Mismatch cell resets state directly to 0 instead of propagating maximum.</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
+                        <h4 class="font-bold text-slate-800">Space-Optimized (2-Row Evaluator)</h4>
+                        <p class="text-slate-600">Reduces spatial footprint from O(m·n) to O(min(m,n)) using rolling array $L[i \bmod 2][j]$ when length estimation is sufficient.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 10: COMPARE ALGORITHMS ==================== -->
+        <section id="view-compare" class="view-panel space-y-6 hidden">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h2 class="text-2xl font-bold text-slate-900">Master Dynamic Programming Comparison Framework</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs border-collapse text-left">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800 border-b border-slate-200 font-semibold">
+                                <th class="p-2.5">Algorithm</th>
+                                <th class="p-2.5">Problem Scope</th>
+                                <th class="p-2.5">Primary Input</th>
+                                <th class="p-2.5">DP Lookup Structure</th>
+                                <th class="p-2.5">Time Complexity</th>
+                                <th class="p-2.5">Space Complexity</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 text-slate-700">
+                            <tr>
+                                <td class="p-2.5 font-bold text-blue-900">Bellman-Ford</td>
+                                <td class="p-2.5">Single-Source Shortest Path</td>
+                                <td class="p-2.5">Weighted Edges</td>
+                                <td class="p-2.5">1D Distance Vector (V-1 Passes)</td>
+                                <td class="p-2.5 font-mono text-blue-700">O(V · E)</td>
+                                <td class="p-2.5 font-mono">O(V)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold text-purple-900">Floyd-Warshall</td>
+                                <td class="p-2.5">All-Pairs Shortest Path</td>
+                                <td class="p-2.5">V × V Matrix</td>
+                                <td class="p-2.5">3D Sequence of V × V Matrices</td>
+                                <td class="p-2.5 font-mono text-purple-700">O(V³)</td>
+                                <td class="p-2.5 font-mono">O(V²)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold text-emerald-900">Multistage Graph</td>
+                                <td class="p-2.5">Path Optimization in DAG</td>
+                                <td class="p-2.5">Staged Network</td>
+                                <td class="p-2.5">1D Vertex Cost Array</td>
+                                <td class="p-2.5 font-mono text-emerald-700">O(E)</td>
+                                <td class="p-2.5 font-mono">O(V)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold text-amber-900">Optimal BST</td>
+                                <td class="p-2.5">Search Cost Minimization</td>
+                                <td class="p-2.5">p_i, q_i Probabilities</td>
+                                <td class="p-2.5">Three n × n Tables (W, C, R)</td>
+                                <td class="p-2.5 font-mono text-amber-700">O(n³) standard</td>
+                                <td class="p-2.5 font-mono">O(n²)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold text-rose-900">TSP (Bitmask)</td>
+                                <td class="p-2.5">Minimal Hamiltonian Cycle</td>
+                                <td class="p-2.5">Distance Matrix</td>
+                                <td class="p-2.5">Subset Grid (2ⁿ × n)</td>
+                                <td class="p-2.5 font-mono text-rose-700">O(n² 2ⁿ)</td>
+                                <td class="p-2.5 font-mono">O(n 2ⁿ)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold text-cyan-900">String Editing</td>
+                                <td class="p-2.5">Minimum Transformation</td>
+                                <td class="p-2.5">Strings S, T</td>
+                                <td class="p-2.5">m × n Edit Distance Matrix</td>
+                                <td class="p-2.5 font-mono text-cyan-700">O(m · n)</td>
+                                <td class="p-2.5 font-mono">O(m · n)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold text-indigo-900">LCS</td>
+                                <td class="p-2.5">Longest Common Subsequence</td>
+                                <td class="p-2.5">Sequences X, Y</td>
+                                <td class="p-2.5">m × n Subsequence Matrix</td>
+                                <td class="p-2.5 font-mono text-indigo-700">O(m · n)</td>
+                                <td class="p-2.5 font-mono">O(m · n)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Greedy vs DP -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h3 class="text-xl font-bold text-slate-900">Greedy Paradigm vs. Dynamic Programming</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                        <h4 class="font-bold text-slate-800 text-sm">Greedy Strategy Failure Case</h4>
+                        <p class="text-slate-600">Dijkstra's greedy algorithm permanently locks vertex distances upon extraction from priority queue. When negative edge weights exist, a later path could reduce cost, causing Dijkstra to fail.</p>
+                    </div>
+                    <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-2">
+                        <h4 class="font-bold text-emerald-900 text-sm">Dynamic Programming Advantage</h4>
+                        <p class="text-emerald-800">Bellman-Ford re-evaluates all edges over V-1 relaxation passes, guaranteeing optimal path distance recovery even in the presence of negative edge weights.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 11: EXAM SOLUTION GENERATOR ==================== -->
+        <section id="view-exam" class="view-panel space-y-6 hidden">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                    <h2 class="text-xl font-bold text-slate-900">Automated Exam Solution Sheet Generator</h2>
+                    <button onclick="copyExamSheet()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded font-semibold transition">Copy Formatted Text</button>
+                </div>
+
+                <div id="exam-output-sheet" class="bg-slate-900 text-slate-100 p-6 rounded-lg font-mono text-xs whitespace-pre-wrap leading-relaxed overflow-x-auto">
+                    <!-- Dynamic Answer Sheet Output -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 12: VERIFY SOLUTION ==================== -->
+        <section id="view-verify" class="view-panel space-y-6 hidden">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h2 class="text-xl font-bold text-slate-900">Interactive Solution Verification Engine ("Verify My Answer")</h2>
+                <p class="text-xs text-slate-600">Compare calculated numerical answers from your physical notebook against the dynamic solver ground truth matrix.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Select Module to Verify:</label>
+                        <select id="verify-module-select" class="w-full p-2 border rounded font-mono bg-slate-50">
+                            <option value="lcs">Longest Common Subsequence (LCS)</option>
+                            <option value="bellman">Bellman-Ford Distance Vector</option>
+                            <option value="floyd">Floyd-Warshall Distance / Path</option>
+                            <option value="multistage">Multistage Graph Minimum Cost</option>
+                            <option value="obst">Optimal BST Cost</option>
+                            <option value="tsp">TSP Minimum Tour Cost</option>
+                            <option value="edit">Edit Distance</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Enter Your Computed Final Value/Cost:</label>
+                        <input type="text" id="verify-user-val" placeholder="e.g. 4 or Path string" class="w-full p-2 border rounded font-mono">
+                    </div>
+                </div>
+
+                <button onclick="runVerificationDiagnostic()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded transition">Run Differential Diagnostic</button>
+
+                <div id="verify-diagnostic-result" class="p-4 rounded border text-xs font-mono hidden">
+                    <!-- Diagnostic result JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW 13: PROBLEM HELPER WIZARD ==================== -->
+        <section id="view-wizard" class="view-panel space-y-6 hidden">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h2 class="text-xl font-bold text-slate-900">Interactive Technique Selection Helper ("Which DP Algorithm?")</h2>
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Q1: What type of input data is given in the problem?</label>
+                        <select id="wiz-q1" class="w-full p-2 border rounded bg-slate-50">
+                            <option value="graph">Weighted Graph / Nodes & Edges</option>
+                            <option value="matrix">Square Distance / Cost Matrix</option>
+                            <option value="strings">One or Two Strings / Sequences</option>
+                            <option value="probs">Key Search Probabilities (p, q)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Q2: What is the primary objective of the problem?</label>
+                        <select id="wiz-q2" class="w-full p-2 border rounded bg-slate-50">
+                            <option value="sssp">Single Source Shortest Path (Negative Weights Possible)</option>
+                            <option value="apsp">Shortest Distance Between ALL Vertex Pairs</option>
+                            <option value="stage">Path Cost across Staged Columns</option>
+                            <option value="tour">Minimal Tour Visiting Every City Once (Hamiltonian)</option>
+                            <option value="align">Minimum Character Editing Script</option>
+                            <option value="seq">Longest Non-Contiguous Common Match</option>
+                            <option value="bst">Minimize Search Tree Expected Cost</option>
+                        </select>
+                    </div>
+
+                    <button onclick="runWizardRecommendation()" class="bg-slate-900 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded transition">Identify Recommended DP Algorithm</button>
+
+                    <div id="wiz-recommendation-box" class="p-4 bg-blue-50 border border-blue-200 rounded text-blue-900 font-mono hidden">
+                        <!-- Recommendation JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
+            <p><strong>DAA Dynamic Programming Solver and Visualizer</strong> — Aligned with Ramdeobaba University (RBU) Unit III Curriculum.</p>
+            <p class="text-slate-500">Includes dynamic client-side engines for Bellman-Ford, Floyd-Warshall, Multistage Graph, OBST, TSP, Edit Distance, and LCS.</p>
+            <p class="pt-2 text-blue-600 font-semibold tracking-wide">Created by Tanvir Ahmed</p>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC ENGINE -->
+    <script>
+        // Global Application State Navigation
+        function switchView(viewId) {
+            document.querySelectorAll('.view-panel').forEach(panel => panel.classList.add('hidden'));
+            const targetPanel = document.getElementById(`view-${viewId}`);
+            if(targetPanel) targetPanel.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('bg-slate-700', 'text-white'));
+            const activeNav = document.getElementById(`nav-${viewId}`);
+            if(activeNav) activeNav.classList.add('bg-slate-700', 'text-white');
+
+            // Trigger dynamic solver refreshes on view switch
+            if(viewId === 'bellman') runBellmanFord();
+            if(viewId === 'floyd') runFloydWarshall();
+            if(viewId === 'multistage') runMultistage();
+            if(viewId === 'obst') runOBST();
+            if(viewId === 'tsp') runTSP();
+            if(viewId === 'edit') runEditDistance();
+            if(viewId === 'lcs') runLCS();
+            if(viewId === 'exam') generateExamSheet();
+        }
+
+        // Approach Toggle (Memoization vs Tabulation)
+        function toggleApproach(type) {
+            const btnMemo = document.getElementById('btn-memo');
+            const btnTab = document.getElementById('btn-tab');
+            const exp = document.getElementById('approach-explanation');
+
+            if(type === 'memo') {
+                btnMemo.className = "px-3 py-1 rounded-md bg-white shadow-sm text-slate-800 font-bold";
+                btnTab.className = "px-3 py-1 rounded-md text-slate-600";
+                exp.innerText = "Top-Down Memoization uses dynamic recursion with array lookup caches initialized to sentinel values (-1). Subproblems are solved on-demand.";
+            } else {
+                btnTab.className = "px-3 py-1 rounded-md bg-white shadow-sm text-slate-800 font-bold";
+                btnMemo.className = "px-3 py-1 rounded-md text-slate-600";
+                exp.innerText = "Bottom-Up Tabulation systematically fills DP tables starting from base case indices up to target array coordinates. Preferred for RBU exam numericals!";
+            }
+        }
+
+        // Helper Canvas Edge Drawing
+        function drawArrow(ctx, fromx, fromy, tox, toy, label="", lane=0) {
+            const headlen = 9;
+            const nodeGap = 20;
+            const dx = tox - fromx;
+            const dy = toy - fromy;
+            const distance = Math.hypot(dx,dy) || 1;
+            const ux = dx / distance, uy = dy / distance;
+            const nx = -uy, ny = ux;
+            const sx = fromx + ux * nodeGap;
+            const sy = fromy + uy * nodeGap;
+            const ex = tox - ux * nodeGap;
+            const ey = toy - uy * nodeGap;
+            const bend = lane * 18;
+            const mx = (sx + ex) / 2 + nx * bend;
+            const my = (sy + ey) / 2 + ny * bend;
+
+            ctx.save();
+            ctx.strokeStyle = "#475569";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            if(Math.abs(bend) < 0.5) {
+                ctx.moveTo(sx,sy); ctx.lineTo(ex,ey);
+            } else {
+                ctx.moveTo(sx,sy); ctx.quadraticCurveTo(mx,my,ex,ey);
+            }
+            ctx.stroke();
+
+            const tangentX = bend === 0 ? ex-sx : ex-mx;
+            const tangentY = bend === 0 ? ey-sy : ey-my;
+            const angle = Math.atan2(tangentY,tangentX);
+            ctx.beginPath();
+            ctx.moveTo(ex,ey);
+            ctx.lineTo(ex-headlen*Math.cos(angle-Math.PI/6),ey-headlen*Math.sin(angle-Math.PI/6));
+            ctx.lineTo(ex-headlen*Math.cos(angle+Math.PI/6),ey-headlen*Math.sin(angle+Math.PI/6));
+            ctx.closePath();
+            ctx.fillStyle = "#475569";
+            ctx.fill();
+
+            if(label) {
+                let lx=(sx+ex)/2 + nx*(14 + Math.abs(bend)*0.15);
+                let ly=(sy+ey)/2 + ny*(14 + Math.abs(bend)*0.15);
+                if(Math.abs(bend) >= 0.5) { lx=mx + nx*10; ly=my + ny*10; }
+                ctx.font = "bold 11px monospace";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                const padX=5, padY=3;
+                const width=ctx.measureText(String(label)).width + padX*2;
+                const height=16;
+                ctx.fillStyle = "rgba(255,255,255,0.94)";
+                ctx.strokeStyle = "#cbd5e1";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                const r=4, x=lx-width/2, y=ly-height/2;
+                ctx.moveTo(x+r,y); ctx.lineTo(x+width-r,y); ctx.quadraticCurveTo(x+width,y,x+width,y+r);
+                ctx.lineTo(x+width,y+height-r); ctx.quadraticCurveTo(x+width,y+height,x+width-r,y+height);
+                ctx.lineTo(x+r,y+height); ctx.quadraticCurveTo(x,y+height,x,y+height-r);
+                ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.fillStyle="#1e293b";
+                ctx.fillText(String(label),lx,ly);
+            }
+            ctx.restore();
+        }
+
+        // ==================== 1. BELLMAN-FORD LOGIC ====================
+        let bfData = { nodes: ['A', 'B', 'C', 'D', 'E'], edges: [], passes: [] };
+
+        function loadBFPreset(type) {
+            const edgeArea = document.getElementById('bf-edges');
+            if(type === 'standard') {
+                edgeArea.value = "A B 4\nA C 5\nB C -2\nC D 3\nD E 2";
+            } else {
+                edgeArea.value = "A B 4\nB C -2\nC A -3\nC D 3";
+            }
+            runBellmanFord(); markSolverSolved('bellman');
+        }
+
+        function runBellmanFord() {
+            const sourceEl = document.getElementById('bf-source');
+            const edgeText = document.getElementById('bf-edges').value.trim();
+            const source = sourceEl.value.toUpperCase();
+            const edges = [];
+            const nodesSet = new Set();
+
+            if(edgeText) {
+                edgeText.split(/\n/).forEach(line => {
+                    const parts = line.trim().split(/\s+/);
+                    if(parts.length !== 3) return;
+                    const u = parts[0].toUpperCase();
+                    const v = parts[1].toUpperCase();
+                    const w = Number(parts[2]);
+                    if(u && v && Number.isFinite(w)) {
+                        edges.push({u, v, w});
+                        nodesSet.add(u); nodesSet.add(v);
+                    }
+                });
+            }
+
+            if(!nodesSet.has(source)) nodesSet.add(source);
+            const nodes = Array.from(nodesSet).sort();
+            const V = nodes.length;
+            bfData = {nodes, edges};
+
+            const dist = Object.fromEntries(nodes.map(n => [n, Infinity]));
+            const pred = Object.fromEntries(nodes.map(n => [n, '-']));
+            dist[source] = 0;
+
+            const passes = [{pass:0, dist:{...dist}, pred:{...pred}}];
+
+            // Use a snapshot for each pass: this is the standard Bellman-Ford table form.
+            for(let pass = 1; pass < V; pass++) {
+                const nextDist = {...dist};
+                const nextPred = {...pred};
+                let updated = false;
+                edges.forEach(({u,v,w}) => {
+                    if(dist[u] !== Infinity && dist[u] + w < nextDist[v]) {
+                        nextDist[v] = dist[u] + w;
+                        nextPred[v] = u;
+                        updated = true;
+                    }
+                });
+                Object.assign(dist, nextDist);
+                Object.assign(pred, nextPred);
+                passes.push({pass, dist:{...dist}, pred:{...pred}});
+                if(!updated) {
+                    // Remaining passes would be identical; fill them so the exam table stays V-1 rows.
+                    for(let p = pass + 1; p < V; p++) {
+                        passes.push({pass:p, dist:{...dist}, pred:{...pred}});
+                    }
+                    break;
+                }
+            }
+
+            let hasNegCycle = false;
+            edges.forEach(({u,v,w}) => {
+                if(dist[u] !== Infinity && dist[u] + w < dist[v]) hasNegCycle = true;
+            });
+
+            const table = document.getElementById('bf-table');
+            let tableHTML = `<thead><tr class="bg-slate-100 font-semibold text-slate-800"><th class="p-2 border">Pass k</th><th class="p-2 border">Vertex v</th><th class="p-2 border">Distance D⁽ᵏ⁾[v]</th><th class="p-2 border">Parent π⁽ᵏ⁾[v]</th></tr></thead><tbody>`;
+            passes.forEach(p => {
+                nodes.forEach((n,idx) => {
+                    const val = p.dist[n] === Infinity ? '∞' : p.dist[n];
+                    tableHTML += `<tr data-bf-pass="${p.pass}" class="border-b"><td class="p-2 border font-bold bg-slate-50">${p.pass}</td><td class="p-2 border font-bold">${n}</td><td class="p-2 border font-mono">${val}</td><td class="p-2 border font-mono">${p.pred[n]}</td></tr>`;
+                });
+            });
+            table.innerHTML = tableHTML + `</tbody>`;
+
+            // Explicit final Bellman-Ford result: D^(V-1) is the shortest-distance vector.
+            // The separate V-th check below is only for negative-cycle detection.
+            const finalDistanceBox = document.getElementById('bf-final-distance');
+            const finalPredBox = document.getElementById('bf-final-predecessor');
+            finalDistanceBox.innerHTML = `<div class="font-bold mb-1">Final Distance Vector D⁽ⱽ⁻¹⁾</div><div class="flex flex-wrap gap-2">${nodes.map(n => `<span class="px-2 py-1 bg-white border border-blue-200 rounded">d[${n}] = ${dist[n] === Infinity ? '∞' : dist[n]}</span>`).join('')}</div>`;
+            finalPredBox.innerHTML = `<div class="font-bold mb-1">Final Predecessor Vector π</div><div class="flex flex-wrap gap-2">${nodes.map(n => `<span class="px-2 py-1 bg-white border border-indigo-200 rounded">π[${n}] = ${pred[n]}</span>`).join('')}</div>`;
+
+            const cycleAlert = document.getElementById('bf-cycle-alert');
+            cycleAlert.className = hasNegCycle
+                ? "text-xs font-bold px-3 py-1 rounded bg-rose-100 text-rose-800 border border-rose-300"
+                : "text-xs font-bold px-3 py-1 rounded bg-emerald-100 text-emerald-800 border border-emerald-300";
+            cycleAlert.innerText = hasNegCycle
+                ? "⚠ Negative Weight Cycle Detected!"
+                : "✓ No negative-weight cycle reachable from source";
+
+            const pathOut = document.getElementById('bf-path-output');
+            let pathHTML = '';
+            nodes.forEach(target => {
+                if(dist[target] === Infinity) {
+                    pathHTML += `<div class="p-2.5 bg-slate-50 border rounded"><div class="font-bold text-slate-800">Target: ${target}</div><div class="text-blue-700 font-mono">Cost = ∞</div><div class="text-[11px] text-slate-500 font-mono">Path: No reachable path</div></div>`;
+                    return;
+                }
+                const path = [];
+                const seen = new Set();
+                let curr = target;
+                while(curr !== '-' && curr !== undefined && !seen.has(curr)) {
+                    seen.add(curr);
+                    path.unshift(curr);
+                    if(curr === source) break;
+                    curr = pred[curr];
+                }
+                const valid = path[0] === source;
+                pathHTML += `<div class="p-2.5 bg-slate-50 border rounded"><div class="font-bold text-slate-800">Target: ${target}</div><div class="text-blue-700 font-mono">Cost = ${dist[target]}</div><div class="text-[11px] text-slate-500 font-mono">Path: ${valid ? path.join(' → ') : 'Path unavailable'}</div></div>`;
+            });
+            pathOut.innerHTML = pathHTML;
+            drawBFCanvas(nodes, edges);
+            return {nodes, edges, dist, pred, passes, hasNegCycle, source};
+        }
+
+        function drawBFCanvas(nodes, edges) {
+            const canvas = document.getElementById('bf-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const pos = {};
+            const radius = 18;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const angleStep = (2 * Math.PI) / nodes.length;
+
+            nodes.forEach((n, idx) => {
+                pos[n] = {
+                    x: centerX + 180 * Math.cos(idx * angleStep),
+                    y: centerY + 90 * Math.sin(idx * angleStep)
+                };
+            });
+
+            // Draw Edges with separate lanes for parallel/opposite-direction edges.
+            const pairCounts = {};
+            edges.forEach(({u,v}) => {
+                const key=[u,v].sort().join('|');
+                pairCounts[key]=(pairCounts[key]||0)+1;
+            });
+            const pairSeen = {};
+            edges.forEach(({ u, v, w }) => {
+                if(pos[u] && pos[v]) {
+                    const key=[u,v].sort().join('|');
+                    const total=pairCounts[key];
+                    const idx=pairSeen[key]||0; pairSeen[key]=idx+1;
+                    const lane=total===1 ? 0 : (idx-(total-1)/2);
+                    drawArrow(ctx, pos[u].x, pos[u].y, pos[v].x, pos[v].y, `${w}`, lane);
+                }
+            });
+
+            // Draw Nodes
+            nodes.forEach(n => {
+                ctx.beginPath();
+                ctx.arc(pos[n].x, pos[n].y, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = "#2563eb";
+                ctx.fill();
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 12px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(n, pos[n].x, pos[n].y);
+            });
+        }
+
+        // ==================== 2. FLOYD-WARSHALL LOGIC ====================
+        let fwMatrix = [
+            [0, 3, 999, 7],
+            [8, 0, 2, 999],
+            [5, 999, 0, 1],
+            [2, 999, 999, 0]
+        ];
+        let fwKStep = 0;
+        let fwHistory = [];
+        let fwPredHistory = [];
+        let msLastData = null;
+        let obstLastData = null;
+        let editLastData = null;
+        let lcsLastData = null;
+
+        function parseMatrixValue(value) {
+            const s = String(value).trim().toUpperCase();
+            if(s === '' || s === 'INF' || s === '∞' || s === 'INFINITY' || s === '999') return Infinity;
+            const n = Number(s);
+            return Number.isFinite(n) ? n : Infinity;
+        }
+
+        function renderFWInputs() {
+            const grid = document.getElementById('fw-matrix-input-grid');
+            if(!grid) return;
+            const n = fwMatrix.length;
+            grid.style.gridTemplateColumns = `repeat(${n}, minmax(0, 1fr))`;
+            let html = '';
+            for(let i=0;i<n;i++) {
+                for(let j=0;j<n;j++) {
+                    const value = fwMatrix[i][j] === Infinity ? 'INF' : fwMatrix[i][j];
+                    html += `<input aria-label="Floyd row ${i+1} column ${j+1}" value="${value}" oninput="updateFWCell(${i},${j},this.value)" class="w-full min-w-0 p-1.5 border border-slate-300 rounded text-center bg-slate-50 focus:bg-white">`;
+                }
+            }
+            grid.innerHTML = html;
+        }
+
+        function updateFWCell(i,j,value) {
+            fwMatrix[i][j] = parseMatrixValue(value);
+            markSolverDirty('floyd');
+        }
+
+        function setFWSize(size) {
+            const n = Math.max(2, Math.min(8, Number(size) || 4));
+            const old = fwMatrix;
+            fwMatrix = Array.from({length:n},(_,i) =>
+                Array.from({length:n},(_,j) => i < old.length && j < old.length ? old[i][j] : (i===j ? 0 : Infinity))
+            );
+            renderFWInputs();
+            refreshFWQuerySelectors();
+            runFloydWarshall(); markSolverSolved('floyd');
+        }
+
+        function loadFWPreset() {
+            fwMatrix = [
+                [0, 3, 999, 7],
+                [8, 0, 2, 999],
+                [5, 999, 0, 1],
+                [2, 999, 999, 0]
+            ];
+            const size = document.getElementById('fw-size');
+            if(size) size.value = '4';
+            renderFWInputs();
+            runFloydWarshall();
+        }
+
+        function runFloydWarshall() {
+            const V = fwMatrix.length;
+            fwHistory = [];
+            fwPredHistory = [];
+            let currentD = fwMatrix.map(row => row.map(v => Number.isFinite(v) ? v : Infinity));
+            let currentPred = Array.from({length:V},(_,i) =>
+                Array.from({length:V},(_,j) => (i !== j && Number.isFinite(currentD[i][j])) ? i : null)
+            );
+            fwHistory.push(currentD.map(r=>[...r]));
+            fwPredHistory.push(currentPred.map(r=>[...r]));
+
+            for(let k=0;k<V;k++) {
+                const nextD = currentD.map(r=>[...r]);
+                const nextPred = currentPred.map(r=>[...r]);
+                for(let i=0;i<V;i++) for(let j=0;j<V;j++) {
+                    if(!Number.isFinite(currentD[i][k]) || !Number.isFinite(currentD[k][j])) continue;
+                    const through = currentD[i][k] + currentD[k][j];
+                    if(through < currentD[i][j]) {
+                        nextD[i][j] = through;
+                        nextPred[i][j] = currentPred[k][j];
+                    }
+                }
+                currentD = nextD;
+                currentPred = nextPred;
+                fwHistory.push(currentD.map(r=>[...r]));
+                fwPredHistory.push(currentPred.map(r=>[...r]));
+            }
+            const negCycleVertices=[];
+            for(let i=0;i<V;i++) if(currentD[i][i] < 0) negCycleVertices.push(i);
+            const fwCycleBox=document.getElementById('fw-cycle-alert');
+            if(fwCycleBox) {
+                fwCycleBox.className=negCycleVertices.length ? 'text-xs font-bold px-3 py-1 rounded bg-rose-100 text-rose-800 border border-rose-300' : 'text-xs font-bold px-3 py-1 rounded bg-emerald-100 text-emerald-800 border border-emerald-300';
+                fwCycleBox.innerText=negCycleVertices.length ? `⚠ Negative cycle detected at: ${negCycleVertices.map(i=>String.fromCharCode(65+i)).join(', ')}` : '✓ No negative-weight cycle detected';
+            }
+            fwKStep = 0;
+            renderFWStep();
+            renderFWFinalMatrices();
+            queryFWPath();
+        }
+
+        function stepFW(delta) {
+            fwKStep = Math.max(0, Math.min(fwMatrix.length, fwKStep + delta));
+            renderFWStep();
+        }
+
+        function renderFWStep() {
+            const label = document.getElementById('fw-k-label');
+            const trace = document.getElementById('fw-calc-trace');
+            const table = document.getElementById('fw-rendered-matrix');
+            const V = fwMatrix.length;
+            label.innerText = fwKStep === 0 ? "D⁽⁰⁾ (Base Graph)" : `D⁽${fwKStep}⁾ (Intermediate Vertex k = ${fwKStep})`;
+            trace.innerText = fwKStep === 0
+                ? "Base adjacency matrix initialization before routing through intermediate vertices."
+                : `D⁽${fwKStep}⁾[i][j] = min(D⁽${fwKStep-1}⁾[i][j], D⁽${fwKStep-1}⁾[i][${fwKStep}] + D⁽${fwKStep-1}⁾[${fwKStep}][j])`;
+
+            const labels = Array.from({length:V},(_,i)=>String.fromCharCode(65+i));
+            const matrix = fwHistory[fwKStep];
+            let html = `<thead><tr class="bg-purple-100 font-semibold text-purple-900"><th class="p-2 border">D⁽${fwKStep}⁾</th>`;
+            labels.forEach(l=>html += `<th class="p-2 border">${l}</th>`);
+            html += `</tr></thead><tbody>`;
+            matrix.forEach((row,i)=>{
+                html += `<tr class="border-b"><td class="p-2 border font-bold bg-slate-50">${labels[i]}</td>`;
+                row.forEach((val,j)=>{
+                    const cellVal = Number.isFinite(val) ? val : '∞';
+                    const isChanged = fwKStep>0 && val !== fwHistory[fwKStep-1][i][j];
+                    html += `<td class="p-2 border font-mono ${isChanged ? 'bg-amber-200 border-2 border-amber-500 font-bold' : ''}">${cellVal}</td>`;
+                });
+                html += `</tr>`;
+            });
+            table.innerHTML = html + `</tbody>`;
+
+            const predTable = document.getElementById('fw-pred-matrix');
+            if(predTable){
+                const pred = fwPredHistory[fwKStep];
+                let ph = `<thead><tr class="bg-indigo-100 font-semibold text-indigo-900"><th class="p-2 border">P⁽${fwKStep}⁾</th>`;
+                labels.forEach(l=>ph += `<th class="p-2 border">${l}</th>`);
+                ph += `</tr></thead><tbody>`;
+                pred.forEach((row,i)=>{
+                    ph += `<tr class="border-b"><td class="p-2 border font-bold bg-slate-50">${labels[i]}</td>`;
+                    row.forEach((v,j)=>{
+                        const pv = (i===j || v===null || v===undefined) ? '—' : labels[v];
+                        ph += `<td class="p-2 border font-mono">${pv}</td>`;
+                    });
+                    ph += `</tr>`;
+                });
+                predTable.innerHTML = ph + `</tbody>`;
+            }
+        }
+
+        function renderFWFinalMatrices() {
+            const V=fwMatrix.length, labels=Array.from({length:V},(_,i)=>String.fromCharCode(65+i));
+            const d=fwHistory[V], p=fwPredHistory[V];
+            const dt=document.getElementById('fw-final-distance-matrix');
+            const pt=document.getElementById('fw-final-pred-matrix');
+            if(!dt||!pt||!d||!p) return;
+            let dh=`<thead><tr class="bg-purple-100 font-semibold text-purple-900"><th class="p-2 border">D⁽V⁾</th>${labels.map(x=>`<th class="p-2 border">${x}</th>`).join('')}</tr></thead><tbody>`;
+            d.forEach((row,i)=>{ dh+=`<tr><td class="p-2 border font-bold bg-slate-50">${labels[i]}</td>${row.map(v=>`<td class="p-2 border font-mono">${Number.isFinite(v)?v:'∞'}</td>`).join('')}</tr>`; });
+            dt.innerHTML=dh+'</tbody>';
+            let ph=`<thead><tr class="bg-indigo-100 font-semibold text-indigo-900"><th class="p-2 border">P⁽V⁾</th>${labels.map(x=>`<th class="p-2 border">${x}</th>`).join('')}</tr></thead><tbody>`;
+            p.forEach((row,i)=>{ ph+=`<tr><td class="p-2 border font-bold bg-slate-50">${labels[i]}</td>${row.map((v,j)=>`<td class="p-2 border font-mono">${i===j||v===null?'—':labels[v]}</td>`).join('')}</tr>`; });
+            pt.innerHTML=ph+'</tbody>';
+        }
+
+        function queryFWPath() {
+            const u = Number(document.getElementById('fw-query-src').value);
+            const v = Number(document.getElementById('fw-query-dst').value);
+            const labels = Array.from({length:fwMatrix.length},(_,i)=>String.fromCharCode(65+i));
+            const finalD = fwHistory[fwMatrix.length];
+            const finalPred = fwPredHistory[fwMatrix.length];
+            const result = document.getElementById('fw-query-result');
+            if(!finalD || !Number.isFinite(finalD[u][v])) {
+                result.innerText = `No path exists between ${labels[u]} and ${labels[v]}`;
+                return;
+            }
+            if(u === v) {
+                result.innerText = `Shortest Path (${labels[u]} to ${labels[v]}): ${labels[u]} | Cost = 0`;
+                return;
+            }
+            const path = [v];
+            let curr = v;
+            const seen = new Set([v]);
+            while(curr !== u) {
+                curr = finalPred[u][curr];
+                if(curr === null || curr === undefined || seen.has(curr)) {
+                    result.innerText = `Path reconstruction unavailable between ${labels[u]} and ${labels[v]} | Cost = ${finalD[u][v]}`;
+                    return;
+                }
+                seen.add(curr);
+                path.unshift(curr);
+            }
+            result.innerText = `Shortest Path (${labels[u]} to ${labels[v]}): ${path.map(i=>labels[i]).join(' → ')} | Cost = ${finalD[u][v]}`;
+        }
+
+        function refreshFWQuerySelectors() {
+            const labels = Array.from({length:fwMatrix.length},(_,i)=>String.fromCharCode(65+i));
+            ['fw-query-src','fw-query-dst'].forEach(id=>{
+                const el=document.getElementById(id);
+                if(!el) return;
+                const old=Number(el.value);
+                el.innerHTML=labels.map((l,i)=>`<option value="${i}">${l} (${i})</option>`).join('');
+                el.value=String(Math.min(old,labels.length-1));
+            });
+        }
+
+        // ==================== 3. MULTISTAGE GRAPH LOGIC ====================
+        function loadMultistagePreset() {
+            document.getElementById('ms-stages-json').value = '{"1":[1], "2":[2,3], "3":[4,5], "4":[6]}';
+            document.getElementById('ms-edges-text').value = "1 2 2\n1 3 5\n2 4 4\n2 5 2\n3 4 6\n3 5 1\n4 6 3\n5 6 5";
+            runMultistage(); markSolverSolved('multistage');
+        }
+
+        function runMultistage() {
+            const tbody = document.querySelector('#ms-calc-table tbody');
+            const summary = document.getElementById('ms-summary-box');
+            try {
+                const stagesJSON = JSON.parse(document.getElementById('ms-stages-json').value);
+                const stageKeys = Object.keys(stagesJSON).sort((a,b)=>Number(a)-Number(b));
+                if(stageKeys.length < 2) throw new Error("At least two stages are required.");
+
+                const stageOf = new Map();
+                stageKeys.forEach((s,idx)=>{
+                    if(!Array.isArray(stagesJSON[s]) || stagesJSON[s].length===0) throw new Error(`Stage ${s} is empty.`);
+                    stagesJSON[s].forEach(v=>{
+                        const key=String(v);
+                        if(stageOf.has(key)) throw new Error(`Vertex ${v} appears in more than one stage.`);
+                        stageOf.set(key,idx);
+                    });
+                });
+
+                const adj = {};
+                const edgeLines = document.getElementById('ms-edges-text').value.trim();
+                if(edgeLines) edgeLines.split(/\n/).forEach((line,idx)=>{
+                    const parts=line.trim().split(/\s+/);
+                    if(parts.length!==3) throw new Error(`Invalid edge on line ${idx+1}. Use: u v weight`);
+                    const u=String(parts[0]), v=String(parts[1]), w=Number(parts[2]);
+                    if(!stageOf.has(u) || !stageOf.has(v)) throw new Error(`Edge ${u} → ${v} uses a vertex not listed in the stages.`);
+                    if(!Number.isFinite(w)) throw new Error(`Invalid weight on edge ${u} → ${v}.`);
+                    if(stageOf.get(v) <= stageOf.get(u)) throw new Error(`Edge ${u} → ${v} must go to a later stage.`);
+                    (adj[u] ||= []).push({v,w});
+                });
+
+                const source = String(stagesJSON[stageKeys[0]][0]);
+                const finalVertices = stagesJSON[stageKeys.at(-1)].map(String);
+                const cost = Object.fromEntries([...stageOf.keys()].map(v=>[v,Infinity]));
+                const nextNode = Object.fromEntries([...stageOf.keys()].map(v=>[v,null]));
+                finalVertices.forEach(v=>{cost[v]=0; nextNode[v]=null;});
+
+                for(let s=stageKeys.length-2;s>=0;s--) {
+                    stagesJSON[stageKeys[s]].map(String).forEach(u=>{
+                        const candidates=(adj[u]||[]).filter(e=>Number.isFinite(cost[e.v]));
+                        if(candidates.length){
+                            let best=candidates[0];
+                            candidates.slice(1).forEach(e=>{
+                                if(e.w+cost[e.v] < best.w+cost[best.v]) best=e;
+                            });
+                            cost[u]=best.w+cost[best.v];
+                            nextNode[u]=best.v;
+                        }
+                    });
+                }
+
+                let html='';
+                for(let si=stageKeys.length-1;si>=0;si--){
+                    const s=stageKeys[si];
+                    stagesJSON[s].map(String).forEach(u=>{
+                        const outgoing=(adj[u]||[]);
+                        let candidates = outgoing.length
+                            ? outgoing.map(e=>`c(${u},${e.v})=${e.w}`).join(', ')
+                            : (si===stageKeys.length-1 ? 'Destination' : 'No outgoing edge');
+                        let formula = si===stageKeys.length-1
+                            ? '0'
+                            : outgoing.length
+                                ? `min(${outgoing.map(e=>`${e.w}+${Number.isFinite(cost[e.v])?cost[e.v]:'∞'}`).join(', ')})`
+                                : '∞';
+                        const c=Number.isFinite(cost[u])?cost[u]:'∞';
+                        const nxt=nextNode[u] ?? '-';
+                        html += `<tr><td class="p-2 border font-bold">${u}</td><td class="p-2 border text-center">${s}</td><td class="p-2 border text-slate-500">${candidates}</td><td class="p-2 border font-mono text-blue-700">${formula}</td><td class="p-2 border text-center font-bold text-emerald-700">${c}</td><td class="p-2 border text-center font-bold">${nxt}</td></tr>`;
+                    });
+                }
+                tbody.innerHTML=html;
+
+                const pathArr=[source];
+                const seen=new Set([source]);
+                let cur=source;
+                while(nextNode[cur] && !seen.has(nextNode[cur])){
+                    cur=nextNode[cur]; seen.add(cur); pathArr.push(cur);
+                }
+                const reachable=Number.isFinite(cost[source]) && pathArr.length>0 && finalVertices.includes(pathArr.at(-1));
+                summary.innerHTML = reachable
+                    ? `<span>Optimal Path: ${pathArr.join(' → ')}</span><span>Minimum Path Cost = ${cost[source]}</span>`
+                    : `<span>No complete path from source ${source} to the final stage.</span><span>Minimum Path Cost = ∞</span>`;
+                drawMultistageCanvas(stagesJSON,adj,reachable?pathArr:[]);
+                msLastData={source,cost,nextNode,stagesJSON,adj,path:pathArr};
+                return msLastData;
+            } catch(e) {
+                if(tbody) tbody.innerHTML=`<tr><td colspan="6" class="p-3 text-rose-700 bg-rose-50 border">Input error: ${e.message}</td></tr>`;
+                if(summary) summary.innerHTML=`<span>Please correct the stage/edge input.</span><span>${e.message}</span>`;
+                const canvas=document.getElementById('ms-canvas');
+                if(canvas) canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+                return null;
+            }
+        }
+
+        function drawMultistageCanvas(stagesJSON, adj, optPath) {
+            const canvas = document.getElementById('ms-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const stageKeys = Object.keys(stagesJSON);
+            const colWidth = canvas.width / (stageKeys.length + 1);
+            const pos = {};
+
+            stageKeys.forEach((sKey, colIdx) => {
+                const vertices = stagesJSON[sKey];
+                const rowHeight = canvas.height / (vertices.length + 1);
+                vertices.forEach((v, rowIdx) => {
+                    pos[v] = { x: colWidth * (colIdx + 1), y: rowHeight * (rowIdx + 1) };
+                });
+            });
+
+            // Draw Edges with lane separation so labels never sit directly on top of another edge.
+            const allEdges=[];
+            Object.keys(adj).forEach(u=>adj[u].forEach(e=>allEdges.push({u,v:e.v,w:e.w})));
+            const pairCounts={}; allEdges.forEach(e=>{const k=[e.u,e.v].sort().join('|');pairCounts[k]=(pairCounts[k]||0)+1;});
+            const pairSeen={};
+            allEdges.forEach(({u,v,w})=>{
+                if(pos[u]&&pos[v]){
+                    const k=[u,v].sort().join('|'), total=pairCounts[k], idx=pairSeen[k]||0; pairSeen[k]=idx+1;
+                    const lane=total===1?0:(idx-(total-1)/2);
+                    drawArrow(ctx,pos[u].x,pos[u].y,pos[v].x,pos[v].y,`${w}`,lane);
+                }
+            });
+
+            // Highlight Optimal Path Edges
+            for(let i = 0; i < optPath.length - 1; i++) {
+                const u = optPath[i], v = optPath[i+1];
+                if(pos[u] && pos[v]) {
+                    ctx.beginPath();
+                    ctx.moveTo(pos[u].x, pos[u].y);
+                    ctx.lineTo(pos[v].x, pos[v].y);
+                    ctx.strokeStyle = "#10b981";
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+            }
+
+            // Draw Nodes
+            Object.keys(pos).forEach(v => {
+                ctx.beginPath();
+                ctx.arc(pos[v].x, pos[v].y, 16, 0, 2 * Math.PI);
+                ctx.fillStyle = optPath.includes(String(v)) ? "#10b981" : "#0f172a";
+                ctx.fill();
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 11px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(v, pos[v].x, pos[v].y);
+            });
+        }
+
+        // ==================== 4. OPTIMAL BST (OBST) LOGIC ====================
+        function loadOBSTPreset() {
+            document.getElementById('obst-p').value = "0.15, 0.10, 0.05";
+            document.getElementById('obst-q').value = "0.05, 0.10, 0.05, 0.05";
+            runOBST(); markSolverSolved('obst');
+        }
+
+        function runOBST() {
+            const pRaw=document.getElementById('obst-p').value.split(',').map(x=>Number(x.trim()));
+            const qRaw=document.getElementById('obst-q').value.split(',').map(x=>Number(x.trim()));
+            const modeEl=document.getElementById('obst-base-mode');
+            const mode=modeEl ? modeEl.value : 'q';
+            const n=pRaw.length;
+            const check=document.getElementById('obst-prob-check');
+            const traceBox=document.getElementById('obst-trace');
+            if(n===0 || pRaw.some(x=>!Number.isFinite(x)||x<0) || qRaw.length!==n+1 || qRaw.some(x=>!Number.isFinite(x)||x<0)) {
+                check.className="text-xs font-mono p-2 rounded bg-rose-100 text-rose-800 border border-rose-200";
+                check.innerText="Invalid probabilities: p must contain n non-negative numbers and q must contain n+1 non-negative numbers.";
+                if(traceBox) traceBox.innerHTML='';
+                return null;
+            }
+            const total=pRaw.reduce((a,b)=>a+b,0)+qRaw.reduce((a,b)=>a+b,0);
+            if(total<=0) {
+                check.className="text-xs font-mono p-2 rounded bg-rose-100 text-rose-800 border border-rose-200";
+                check.innerText="Probability total must be greater than 0.";
+                if(traceBox) traceBox.innerHTML='';
+                return null;
+            }
+            const p=pRaw.map(x=>x/total), q=qRaw.map(x=>x/total);
+            check.className="text-xs font-mono p-2 rounded bg-slate-100 text-slate-700";
+            check.innerText=`Input total = ${total.toFixed(4)}; normalized total = 1.0000 | Convention: ${mode==='q'?'C[i][i−1]=q[i−1]':'C[i][i−1]=0'}`;
+
+            // Tables are indexed exactly like the exam form: rows i=1..n+1,
+            // columns j=0..n.  The sub-diagonal (i,i-1) represents an empty interval.
+            const W=Array.from({length:n+2},()=>Array(n+1).fill(0));
+            const C=Array.from({length:n+2},()=>Array(n+1).fill(0));
+            const R=Array.from({length:n+2},()=>Array(n+1).fill(0));
+
+            for(let i=0;i<=n;i++) {
+                W[i+1][i]=q[i];
+                C[i+1][i]=mode==='q' ? q[i] : 0;
+            }
+
+            const traces=[];
+            for(let len=1;len<=n;len++) {
+                for(let i=1;i<=n-len+1;i++) {
+                    const j=i+len-1;
+                    W[i][j]=W[i][j-1]+p[j-1]+q[j];
+                    const candidates=[];
+                    let minC=Infinity,bestR=i;
+                    for(let r=i;r<=j;r++) {
+                        const left=C[i][r-1];
+                        const right=C[r+1][j];
+                        const sub=left+right;
+                        candidates.push({r,left,right,sub,total:W[i][j]+sub});
+                        if(sub<minC || (sub===minC && r<bestR)) {
+                            minC=sub;
+                            bestR=r;
+                        }
+                    }
+                    C[i][j]=W[i][j]+minC;
+                    R[i][j]=bestR;
+                    traces.push({i,j,w:W[i][j],candidates,bestR,cost:C[i][j]});
+                }
+            }
+
+            renderOBSTTable('obst-table-w',W,n,true,mode);
+            renderOBSTTable('obst-table-c',C,n,true,mode);
+            renderOBSTTable('obst-table-r',R,n,false,mode,true);
+            renderOBSTTrace(traces);
+            drawOBSTTree(R,1,n,275,30,120);
+            obstLastData={p,q,W,C,R,mode,total,traces};
+            return obstLastData;
+        }
+
+        function renderOBSTTable(tableId, mat, n, isFloat=false, mode='q', isRoot=false) {
+            const table = document.getElementById(tableId);
+            let html = '<thead><tr class="bg-amber-100 font-semibold text-amber-900"><th class="p-1 border">i\j</th>';
+            for(let j=0;j<=n;j++) html += `<th class="p-1 border">${j}</th>`;
+            html += '</tr></thead><tbody>';
+            for(let i=1;i<=n+1;i++) {
+                html += `<tr class="border-b"><td class="p-1 border font-bold bg-slate-50">${i}</td>`;
+                for(let j=0;j<=n;j++) {
+                    const valid = i<=j+1;
+                    let val='-';
+                    if(valid) {
+                        if(isRoot) val=(i<=j && mat[i][j]) ? mat[i][j] : (i===j+1 ? '-' : 0);
+                        else val=isFloat ? Number(mat[i][j]).toFixed(4) : mat[i][j];
+                    }
+                    const baseClass=(i===j+1 && !isRoot) ? 'bg-slate-100 font-semibold' : '';
+                    html += `<td class="p-1 border font-mono text-[11px] ${baseClass}">${val}</td>`;
+                }
+                html += '</tr>';
+            }
+            html += '</tbody>';
+            table.innerHTML = html;
+        }
+
+        function renderOBSTTrace(traces) {
+            const box=document.getElementById('obst-trace');
+            if(!box) return;
+            let html='<table class="w-full border-collapse text-center"><thead><tr class="bg-amber-100 text-amber-900 font-semibold"><th class="p-2 border">Interval</th><th class="p-2 border">W[i][j]</th><th class="p-2 border text-left">Root candidates</th><th class="p-2 border">Selected root</th><th class="p-2 border">C[i][j]</th></tr></thead><tbody>';
+            traces.forEach(t=>{
+                const cand=t.candidates.map(c=>`r=${c.r}: C[${t.i}][${c.r-1}] + C[${c.r+1}][${t.j}] = ${c.left.toFixed(4)} + ${c.right.toFixed(4)} = ${c.sub.toFixed(4)}${c.r===t.bestR?' ✓':''}`).join('<br>');
+                html+=`<tr data-obst-step="${traces.indexOf(t)}"><td class="p-2 border font-mono">(${t.i},${t.j})</td><td class="p-2 border font-mono">${t.w.toFixed(4)}</td><td class="p-2 border text-left font-mono">${cand}</td><td class="p-2 border font-bold">K${t.bestR}</td><td class="p-2 border font-bold">${t.cost.toFixed(4)}</td></tr>`;
+            });
+            html+='</tbody></table>';
+            box.innerHTML=html;
+        }
+
+        function drawOBSTTree(R, i, j, x, y, offset) {
+            const canvas = document.getElementById('obst-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            function helper(i, j, px, py, dx) {
+                if(i > j) return;
+                const r = R[i][j];
+                ctx.beginPath();
+                ctx.arc(px, py, 15, 0, 2 * Math.PI);
+                ctx.fillStyle = "#f59e0b";
+                ctx.fill();
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 11px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(`K${r}`, px, py);
+
+                if(R[i][r-1]) {
+                    const leftX = px - dx, leftY = py + 50;
+                    drawArrow(ctx, px, py + 15, leftX, leftY - 15);
+                    helper(i, r - 1, leftX, leftY, dx / 2);
+                }
+                if(R[r+1][j]) {
+                    const rightX = px + dx, rightY = py + 50;
+                    drawArrow(ctx, px, py + 15, rightX, rightY - 15);
+                    helper(r + 1, j, rightX, rightY, dx / 2);
+                }
+            }
+            helper(i, j, x, y, offset);
+        }
+
+        // ==================== 5. TSP BITMASK LOGIC ====================
+        let tspMatrix = [
+            [0,10,15,20],
+            [10,0,35,25],
+            [15,35,0,30],
+            [20,25,30,0]
+        ];
+        let tspBestTour=[];
+
+        function renderTSPInputs() {
+            const grid=document.getElementById('tsp-matrix-inputs');
+            const n=tspMatrix.length;
+            grid.style.gridTemplateColumns=`repeat(${n},minmax(0,1fr))`;
+            let html='';
+            for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+                const val=Number.isFinite(tspMatrix[i][j])?tspMatrix[i][j]:'INF';
+                html += `<input aria-label="TSP row ${i+1} column ${j+1}" value="${val}" oninput="updateTSPCell(${i},${j},this.value)" class="w-full min-w-0 p-1.5 border border-slate-300 rounded text-center bg-slate-50 focus:bg-white">`;
+            }
+            grid.innerHTML=html;
+        }
+        function updateTSPCell(i,j,value){ tspMatrix[i][j]=parseMatrixValue(value); markSolverDirty('tsp'); }
+        function setTSPSize(size){
+            const n=Math.max(2,Math.min(8,Number(size)||4)), old=tspMatrix;
+            tspMatrix=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i<old.length&&j<old.length?old[i][j]:(i===j?0:Infinity)));
+            renderTSPInputs(); runTSP(); markSolverSolved('tsp');
+        }
+        function loadTSPPreset(){
+            tspMatrix=[[0,10,15,20],[10,0,35,25],[15,35,0,30],[20,25,30,0]];
+            const size=document.getElementById('tsp-size'); if(size) size.value='4';
+            renderTSPInputs(); runTSP();
+        }
+
+        function runTSP() {
+            const n=tspMatrix.length, fullMask=(1<<n)-1;
+            const dp=Array.from({length:1<<n},()=>Array(n).fill(Infinity));
+            const parent=Array.from({length:1<<n},()=>Array(n).fill(-1));
+            dp[1][0]=0;
+            for(let mask=1;mask<=fullMask;mask++){
+                if(!(mask&1)) continue; // tours always start at A/city 0
+                for(let u=0;u<n;u++){
+                    if(!(mask&(1<<u)) || !Number.isFinite(dp[mask][u])) continue;
+                    for(let v=1;v<n;v++){
+                        if(mask&(1<<v) || !Number.isFinite(tspMatrix[u][v])) continue;
+                        const nm=mask|(1<<v), cand=dp[mask][u]+tspMatrix[u][v];
+                        if(cand<dp[nm][v]){dp[nm][v]=cand;parent[nm][v]=u;}
+                    }
+                }
+            }
+            let minTour=Infinity,lastCity=-1;
+            for(let i=1;i<n;i++){
+                if(Number.isFinite(dp[fullMask][i]) && Number.isFinite(tspMatrix[i][0])){
+                    const cand=dp[fullMask][i]+tspMatrix[i][0];
+                    if(cand<minTour){minTour=cand;lastCity=i;}
+                }
+            }
+            tspBestTour=[];
+            if(lastCity!==-1){
+                let mask=fullMask,cur=lastCity;
+                const rev=[cur];
+                while(cur!==0){
+                    const prev=parent[mask][cur];
+                    if(prev<0){tspBestTour=[];break;}
+                    mask ^= (1<<cur); cur=prev; rev.push(cur);
+                }
+                if(tspBestTour.length===0) tspBestTour=[0,...rev.slice(0,-1).reverse(),0];
+            }
+
+            const labels=Array.from({length:n},(_,i)=>String.fromCharCode(65+i));
+            const outBox=document.getElementById('tsp-subproblems-output');
+            let html=`<table class="w-full border-collapse text-center"><thead><tr class="bg-rose-100 font-semibold text-rose-900"><th class="p-2 border">Bitmask S</th><th class="p-2 border">City Set</th><th class="p-2 border">Current City j</th><th class="p-2 border">DP[S][j]</th><th class="p-2 border">Parent π[S][j]</th></tr></thead><tbody>`;
+            for(let mask=1;mask<=fullMask;mask++){
+                if(!(mask&1)) continue;
+                const cities=[]; for(let k=0;k<n;k++) if(mask&(1<<k)) cities.push(labels[k]);
+                for(let j=0;j<n;j++){
+                    if(!(mask&(1<<j))) continue;
+                    const dv=dp[mask][j], pv=parent[mask][j];
+                    html+=`<tr class="border-b"><td class="p-2 border font-mono">${mask.toString(2).padStart(n,'0')}</td><td class="p-2 border font-bold">{${cities.join(',')}}</td><td class="p-2 border font-bold">${labels[j]}</td><td class="p-2 border font-mono text-rose-700">${Number.isFinite(dv)?dv:'∞'}</td><td class="p-2 border font-mono">${pv>=0?labels[pv]:'—'}</td></tr>`;
+                }
+            }
+            outBox.innerHTML=html+'</tbody></table>';
+            const parentOut=document.getElementById('tsp-parent-output');
+            if(parentOut) parentOut.innerHTML=`<div class="p-3 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700"><b>Traceback rule:</b> π[S][j] identifies the previous city i such that DP[S][j] = DP[S\{j\}][i] + c(i,j). The final tour also adds c(last,A) to return to the starting city.</div>`;
+            document.getElementById('tsp-final-tour-box').innerHTML=Number.isFinite(minTour)
+                ? `<span>Optimal Tour: ${tspBestTour.map(i=>labels[i]).join(' → ')}</span><span>Minimum Tour Cost = ${minTour}</span>`
+                : `<span>No Hamiltonian tour exists from ${labels[0]}.</span><span>Minimum Tour Cost = ∞</span>`;
+            drawTSPCanvas();
+            return {dp,parent,minTour,tour:tspBestTour};
+        }
+
+        function drawTSPCanvas(activeStep=null) {
+            const canvas=document.getElementById('tsp-canvas'),ctx=canvas.getContext('2d'),n=tspMatrix.length;
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            const cx=canvas.width/2,cy=canvas.height/2,rx=Math.min(190,cx-45),ry=Math.min(90,cy-35);
+            const pts=Array.from({length:n},(_,i)=>{
+                const a=-Math.PI/2+(2*Math.PI*i/n);
+                return {x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a),label:String.fromCharCode(65+i)};
+            });
+            if(tspBestTour.length>1){
+                const count=activeStep===null ? tspBestTour.length : Math.max(1,Math.min(activeStep+1,tspBestTour.length));
+                ctx.beginPath(); ctx.moveTo(pts[tspBestTour[0]].x,pts[tspBestTour[0]].y);
+                tspBestTour.slice(1,count).forEach(i=>ctx.lineTo(pts[i].x,pts[i].y));
+                ctx.strokeStyle="#f43f5e";ctx.lineWidth=2.5;ctx.stroke();
+            }
+            pts.forEach((p,i)=>{
+                ctx.beginPath();ctx.arc(p.x,p.y,16,0,2*Math.PI);ctx.fillStyle="#f43f5e";ctx.fill();
+                ctx.fillStyle="#fff";ctx.font="bold 12px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(p.label,p.x,p.y);
+            });
+        }
+
+        // ==================== 6. EDIT DISTANCE LOGIC ====================
+        function runEditDistance() {
+            const S=document.getElementById('edit-src').value.toUpperCase();
+            const T=document.getElementById('edit-dst').value.toUpperCase();
+            const readEditCost = id => { const v=Number(document.getElementById(id).value); return Number.isFinite(v) && v>=0 ? v : 1; };
+            const cIns=readEditCost('cost-ins');
+            const cDel=readEditCost('cost-del');
+            const cSub=readEditCost('cost-sub');
+            const m=S.length,n=T.length;
+            const D=Array.from({length:m+1},()=>Array(n+1).fill(0));
+            for(let i=0;i<=m;i++)D[i][0]=i*cDel;
+            for(let j=0;j<=n;j++)D[0][j]=j*cIns;
+            for(let i=1;i<=m;i++)for(let j=1;j<=n;j++){
+                if(S[i-1]===T[j-1]) D[i][j]=D[i-1][j-1];
+                else D[i][j]=Math.min(D[i-1][j]+cDel,D[i][j-1]+cIns,D[i-1][j-1]+cSub);
+            }
+
+            const table=document.getElementById('edit-table');
+            let html=`<thead><tr class="bg-cyan-100 font-semibold text-cyan-900"><th class="p-2 border">S\\T</th><th class="p-2 border">Ø</th>`;
+            for(let j=0;j<n;j++)html+=`<th class="p-2 border">${T[j]}</th>`;
+            html+='</tr></thead><tbody>';
+            for(let i=0;i<=m;i++){
+                html+=`<tr class="border-b"><td class="p-2 border font-bold bg-slate-50">${i===0?'Ø':S[i-1]}</td>`;
+                for(let j=0;j<=n;j++)html+=`<td class="p-2 border font-mono">${D[i][j]}</td>`;
+                html+='</tr>';
+            }
+            table.innerHTML=html+'</tbody>';
+
+            const opTable=document.getElementById('edit-op-table');
+            if(opTable){
+                let oh=`<thead><tr class="bg-slate-100 font-semibold text-slate-800"><th class="p-2 border">S\\T</th><th class="p-2 border">Ø</th>`;
+                for(let j=0;j<n;j++) oh+=`<th class="p-2 border">${T[j]}</th>`;
+                oh+='</tr></thead><tbody>';
+                for(let ii=0;ii<=m;ii++){
+                    oh+=`<tr><td class="p-2 border font-bold bg-slate-50">${ii===0?'Ø':S[ii-1]}</td>`;
+                    for(let jj=0;jj<=n;jj++){
+                        let op='—';
+                        if(ii===0&&jj>0) op='← Insert';
+                        else if(jj===0&&ii>0) op='↑ Delete';
+                        else if(ii>0&&jj>0&&S[ii-1]===T[jj-1]) op='↖ Match';
+                        else if(ii>0&&jj>0){
+                            const vals=[D[ii-1][jj]+cDel,D[ii][jj-1]+cIns,D[ii-1][jj-1]+cSub];
+                            const best=Math.min(...vals);
+                            const opsAt=[]; if(vals[0]===best) opsAt.push('↑ Delete'); if(vals[1]===best) opsAt.push('← Insert'); if(vals[2]===best) opsAt.push('↖ Substitute');
+                            op=opsAt.join(' / ');
+                        }
+                        oh+=`<td class="p-2 border font-mono">${op}</td>`;
+                    }
+                    oh+='</tr>';
+                }
+                opTable.innerHTML=oh+'</tbody>';
+            }
+
+            const ops=[]; let i=m,j=n;
+            while(i>0||j>0){
+                if(i>0&&j>0&&S[i-1]===T[j-1]&&D[i][j]===D[i-1][j-1]){
+                    ops.unshift(`Match '${S[i-1]}'`);i--;j--;
+                } else if(i>0&&j>0&&D[i][j]===D[i-1][j-1]+cSub){
+                    ops.unshift(`Substitute '${S[i-1]}' → '${T[j-1]}' (cost ${cSub})`);i--;j--;
+                } else if(i>0&&D[i][j]===D[i-1][j]+cDel){
+                    ops.unshift(`Delete '${S[i-1]}' (cost ${cDel})`);i--;
+                } else {
+                    ops.unshift(`Insert '${T[j-1]}' (cost ${cIns})`);j--;
+                }
+            }
+            document.getElementById('edit-operations-script').innerHTML=`<div>Minimum Edit Distance = <strong>${D[m][n]}</strong></div>${ops.map((op,k)=>`<div data-edit-step="${k}" class="px-1 rounded">${k+1}. ${op}</div>`).join('')}`;
+            editLastData={distance:D[m][n],D,operations:ops};
+            return editLastData;
+        }
+
+        // ==================== 7. LCS LOGIC ====================
+        function runLCS() {
+            const X = document.getElementById('lcs-x').value.toUpperCase();
+            const Y = document.getElementById('lcs-y').value.toUpperCase();
+            const m = X.length, n = Y.length;
+
+            const L = Array.from({length: m + 1}, () => Array(n + 1).fill(0));
+            const dir = Array.from({length: m + 1}, () => Array(n + 1).fill(''));
+
+            for(let i = 1; i <= m; i++) {
+                for(let j = 1; j <= n; j++) {
+                    if(X[i-1] === Y[j-1]) {
+                        L[i][j] = L[i-1][j-1] + 1;
+                        dir[i][j] = '↖ Match';
+                    } else if(L[i-1][j] >= L[i][j-1]) {
+                        L[i][j] = L[i-1][j];
+                        dir[i][j] = '↑';
+                    } else {
+                        L[i][j] = L[i][j-1];
+                        dir[i][j] = '←';
+                    }
+                }
+            }
+
+            // Render Table
+            const table = document.getElementById('lcs-table');
+            let html = `<thead><tr class="bg-indigo-100 font-semibold text-indigo-900"><th class="p-2 border">X\\Y</th><th class="p-2 border">Ø</th>`;
+            for(let j = 0; j < n; j++) html += `<th class="p-2 border">${Y[j]}</th>`;
+            html += `</tr></thead><tbody>`;
+
+            for(let i = 0; i <= m; i++) {
+                const charX = i === 0 ? 'Ø' : X[i-1];
+                html += `<tr class="border-b"><td class="p-2 border font-bold bg-slate-50">${charX}</td>`;
+                for(let j = 0; j <= n; j++) {
+                    html += `<td class="p-2 border font-mono">${L[i][j]}</td>`;
+                }
+                html += `</tr>`;
+            }
+            html += `</tbody>`;
+            table.innerHTML = html;
+
+            // Traceback data must be built BEFORE the direction-table highlighting.
+            // The previous version referenced `traceback` before its const declaration,
+            // which threw a TDZ ReferenceError and left the hard-coded default LCS visible.
+            let i = m, j = n;
+            let lcsSeq = [];
+            const traceback=[];
+
+            while(i > 0 && j > 0) {
+                if(X[i-1] === Y[j-1]) {
+                    traceback.unshift({i,j});
+                    lcsSeq.unshift(X[i-1]);
+                    i--; j--;
+                } else if(L[i-1][j] >= L[i][j-1]) {
+                    traceback.unshift({i,j});
+                    i--;
+                } else {
+                    traceback.unshift({i,j});
+                    j--;
+                }
+            }
+
+            const dirTable=document.getElementById('lcs-direction-table');
+            if(dirTable){
+                let dh=`<thead><tr class="bg-slate-100 font-semibold text-slate-800"><th class="p-2 border">X\\Y</th><th class="p-2 border">Ø</th>`;
+                for(let j=0;j<n;j++) dh+=`<th class="p-2 border">${Y[j]}</th>`;
+                dh+='</tr></thead><tbody>';
+                for(let ii=0;ii<=m;ii++){
+                    dh+=`<tr><td class="p-2 border font-bold bg-slate-50">${ii===0?'Ø':X[ii-1]}</td>`;
+                    for(let jj=0;jj<=n;jj++) dh+=`<td class="p-2 border font-mono">${ii===0||jj===0?'—':dir[ii][jj]}</td>`;
+                    dh+='</tr>';
+                }
+                dirTable.innerHTML=dh+'</tbody>';
+                const lcsCells=dirTable.querySelectorAll('tbody tr');
+                traceback.forEach((cell,step)=>{
+                    const row=lcsCells[cell.i];
+                    if(row && row.children[cell.j+1]) row.children[cell.j+1].setAttribute('data-lcs-step',step);
+                });
+            }
+            while(i > 0 && j > 0) {
+                if(X[i-1] === Y[j-1]) {
+                    traceback.unshift({i,j});
+                    lcsSeq.unshift(X[i-1]);
+                    i--; j--;
+                } else if(L[i-1][j] >= L[i][j-1]) {
+                    traceback.unshift({i,j});
+                    i--;
+                } else {
+                    traceback.unshift({i,j});
+                    j--;
+                }
+            }
+
+            document.getElementById('lcs-result-box').innerHTML = `<span>Optimal LCS Sequence: "${lcsSeq.join('')}"</span><span>LCS Length = ${L[m][n]}</span>`;
+            lcsLastData={X,Y,L,traceback,sequence:lcsSeq.join('')};
+            return lcsLastData;
+        }
+
+        // ==================== EXAM SHEET GENERATOR ====================
+        function generateExamSheet() {
+            const sheet=document.getElementById('exam-output-sheet');
+            const X=document.getElementById('lcs-x').value.toUpperCase();
+            const Y=document.getElementById('lcs-y').value.toUpperCase();
+            const m=X.length,n=Y.length;
+            const L=Array.from({length:m+1},()=>Array(n+1).fill(0));
+            for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)
+                L[i][j]=X[i-1]===Y[j-1]?L[i-1][j-1]+1:Math.max(L[i-1][j],L[i][j-1]);
+            let i=m,j=n,seq=[];
+            while(i>0&&j>0){
+                if(X[i-1]===Y[j-1]){seq.unshift(X[i-1]);i--;j--;}
+                else if(L[i-1][j]>=L[i][j-1])i--;else j--;
+            }
+            sheet.innerText=`RAMDEOBABA UNIVERSITY — DAA UNIT III
+==============================================
+
+1. GIVEN PROBLEM
+X = "${X}" (m = ${m})
+Y = "${Y}" (n = ${n})
+
+2. STATE DEFINITION
+L[i][j] = length of LCS of X[1..i] and Y[1..j].
+
+3. RECURRENCE
+L[i][0] = 0
+L[0][j] = 0
+If X[i] = Y[j]:
+    L[i][j] = L[i-1][j-1] + 1
+Otherwise:
+    L[i][j] = max(L[i-1][j], L[i][j-1])
+
+4. TRACEBACK
+Optimal LCS = "${seq.join('')}"
+
+5. FINAL ANSWER
+LCS Length = ${L[m][n]}
+LCS = "${seq.join('')}"
+
+6. COMPLEXITY
+Time = O(m × n)
+Space = O(m × n)`;
+        }
+
+        function copyExamSheet() {
+            const txt = document.getElementById('exam-output-sheet').innerText;
+            navigator.clipboard.writeText(txt);
+            alert("Exam sheet copied to clipboard!");
+        }
+
+        // ==================== VERIFY SOLUTION DIAGNOSTIC ====================
+        function runVerificationDiagnostic() {
+            const module = document.getElementById('verify-module-select').value;
+            const enteredRaw = document.getElementById('verify-user-val').value.trim();
+            const res = document.getElementById('verify-diagnostic-result');
+            let expected = null, detail = '', alternate = [];
+
+            const normalizeNumber = value => {
+                const n = Number(String(value).trim());
+                return Number.isFinite(n) ? n : null;
+            };
+            const numericMatch = (a, b) => {
+                const na = normalizeNumber(a), nb = normalizeNumber(b);
+                return na !== null && nb !== null && Math.abs(na - nb) < 1e-9;
+            };
+            const normalizePath = value => String(value)
+                .toUpperCase()
+                .replace(/\s+/g, '')
+                .replace(/→/g, '->');
+            const isSubsequence = (candidate, source) => {
+                let j = 0;
+                for(const ch of source) if(j < candidate.length && ch === candidate[j]) j++;
+                return j === candidate.length;
+            };
+
+            if(module === 'lcs') {
+                const X = document.getElementById('lcs-x').value.toUpperCase();
+                const Y = document.getElementById('lcs-y').value.toUpperCase();
+                const L = Array.from({length:X.length+1},()=>Array(Y.length+1).fill(0));
+                for(let i=1;i<=X.length;i++) {
+                    for(let j=1;j<=Y.length;j++) {
+                        L[i][j] = X[i-1]===Y[j-1]
+                            ? L[i-1][j-1]+1
+                            : Math.max(L[i-1][j],L[i][j-1]);
+                    }
+                }
+                let i=X.length,j=Y.length,s=[];
+                while(i&&j) {
+                    if(X[i-1]===Y[j-1]) { s.unshift(X[i-1]); i--; j--; }
+                    else if(L[i-1][j]>=L[i][j-1]) i--;
+                    else j--;
+                }
+                expected = L[X.length][Y.length];
+                alternate = [s.join('')];
+                detail = `LCS length = ${expected}; one optimal LCS = "${s.join('')}"`;
+            } else if(module === 'bellman') {
+                const data = runBellmanFord();
+                if(!data) return;
+                const src = document.getElementById('bf-source').value.toUpperCase();
+                const targetInput = prompt("Enter target vertex to verify (e.g. D):","D");
+                if(!targetInput) return;
+                const target = targetInput.trim().toUpperCase();
+                if(!data.nodes.includes(target)) {
+                    res.className = "p-4 rounded border text-xs font-mono bg-rose-100 text-rose-900 border-rose-300";
+                    res.innerText = `✗ DIFFERENCE DETECTED: Vertex "${target}" is not present in the current graph. | Your entry = "${enteredRaw}"`;
+                    res.classList.remove('hidden');
+                    return;
+                }
+                expected = Number.isFinite(data.dist[target]) ? data.dist[target] : '∞';
+                const path = [];
+                const seen = new Set();
+                let cur = target;
+                while(cur && !seen.has(cur)) {
+                    seen.add(cur);
+                    path.unshift(cur);
+                    if(cur === src) break;
+                    cur = data.pred[cur];
+                }
+                if(path[0] === src) alternate = [path.join(' → ')];
+                detail = `Shortest distance ${src} → ${target} = ${expected}` +
+                    (alternate.length ? `; one shortest path = ${alternate[0]}` : '');
+            } else if(module === 'floyd') {
+                runFloydWarshall();
+                const u = Number(document.getElementById('fw-query-src').value);
+                const v = Number(document.getElementById('fw-query-dst').value);
+                const finalD = fwHistory[fwMatrix.length];
+                const finalPred = fwPredHistory[fwMatrix.length];
+                expected = Number.isFinite(finalD[u][v]) ? finalD[u][v] : '∞';
+                const labels = Array.from({length:fwMatrix.length},(_,k)=>String.fromCharCode(65+k));
+                if(Number.isFinite(expected) && u !== v) {
+                    const path = [v], seen = new Set([v]), curState = {value:v};
+                    while(curState.value !== u) {
+                        const prev = finalPred[u][curState.value];
+                        if(prev === null || prev === undefined || seen.has(prev)) break;
+                        seen.add(prev);
+                        path.unshift(prev);
+                        curState.value = prev;
+                    }
+                    if(curState.value === u) alternate = [path.map(k=>labels[k]).join(' → ')];
+                }
+                detail = `Floyd-Warshall distance = ${expected}` +
+                    (alternate.length ? `; one shortest path = ${alternate[0]}` : '');
+            } else if(module === 'multistage') {
+                const data = runMultistage();
+                if(!data) return;
+                expected = Number.isFinite(data.cost[data.source]) ? data.cost[data.source] : '∞';
+                alternate = [data.path.join(' → ')];
+                detail = `Minimum multistage path cost = ${expected}; optimal path = ${alternate[0]}`;
+            } else if(module === 'obst') {
+                const data = runOBST();
+                if(!data) return;
+                expected = data.C[1][data.p.length];
+                detail = `Optimal BST expected cost = ${expected.toFixed(4)} (${data.mode==='q'?'q-base':'zero-base'} convention)`;
+            } else if(module === 'tsp') {
+                const data = runTSP();
+                expected = Number.isFinite(data.minTour) ? data.minTour : '∞';
+                const labels = Array.from({length:tspMatrix.length},(_,k)=>String.fromCharCode(65+k));
+                alternate = Number.isFinite(data.minTour) ? [data.tour.map(k=>labels[k]).join(' → ')] : [];
+                detail = `Minimum TSP tour cost = ${expected}` +
+                    (alternate.length ? `; optimal tour = ${alternate[0]}` : '');
+            } else if(module === 'edit') {
+                const data = runEditDistance();
+                expected = data.distance;
+                detail = `Minimum edit distance = ${expected}`;
+            }
+
+            const entered = enteredRaw;
+            const enteredUpper = entered.toUpperCase();
+            let ok = false;
+
+            if(expected === '∞') {
+                ok = enteredUpper === '∞' || enteredUpper === 'INF' || enteredUpper === 'INFINITY';
+            } else if(module === 'lcs' && enteredUpper && normalizeNumber(entered) === null) {
+                ok = isSubsequence(enteredUpper, document.getElementById('lcs-x').value.toUpperCase()) &&
+                     isSubsequence(enteredUpper, document.getElementById('lcs-y').value.toUpperCase()) &&
+                     enteredUpper.length === expected;
+            } else if(alternate.length && enteredUpper.includes('→')) {
+                ok = normalizePath(entered) === normalizePath(alternate[0]);
+            } else {
+                ok = numericMatch(entered, expected);
+            }
+
+            res.className = ok
+                ? "p-4 rounded border text-xs font-mono bg-emerald-100 text-emerald-900 border-emerald-300"
+                : "p-4 rounded border text-xs font-mono bg-rose-100 text-rose-900 border-rose-300";
+            res.innerText = (ok ? "✓ VERIFIED: " : "✗ DIFFERENCE DETECTED: ") +
+                detail + ` | Your entry = "${entered}"`;
+            res.classList.remove('hidden');
+        }
+
+
+        // ==================== SOLVE / PLAY / PAUSE SIMULATION CONTROLS ====================
+        const solverUI = {};
+        const solverModules = ['bellman','floyd','multistage','obst','tsp','edit','lcs'];
+
+        function markSolverDirty(module) {
+            if(!solverUI[module]) solverUI[module]={dirty:false,solved:false,playing:false,timer:null,step:0};
+            pauseModule(module);
+            solverUI[module].dirty=true;
+            solverUI[module].solved=false;
+            const solve=document.getElementById(`solve-${module}`);
+            const play=document.getElementById(`play-${module}`);
+            const pause=document.getElementById(`pause-${module}`);
+            const reset=document.getElementById(`reset-${module}`);
+            const status=document.getElementById(`sim-status-${module}`);
+            if(solve) solve.classList.remove('hidden');
+            if(play) play.disabled=true;
+            if(pause) pause.disabled=true;
+            if(reset) reset.disabled=true;
+            if(status) status.innerText='Problem changed — press Solve to calculate it.';
+        }
+
+        function markSolverSolved(module) {
+            if(!solverUI[module]) solverUI[module]={dirty:false,solved:false,playing:false,timer:null,step:0};
+            solverUI[module].dirty=false;
+            solverUI[module].solved=true;
+            solverUI[module].step=0;
+            const solve=document.getElementById(`solve-${module}`);
+            const play=document.getElementById(`play-${module}`);
+            const pause=document.getElementById(`pause-${module}`);
+            const reset=document.getElementById(`reset-${module}`);
+            const status=document.getElementById(`sim-status-${module}`);
+            if(solve) solve.classList.add('hidden');
+            if(play) play.disabled=false;
+            if(pause) pause.disabled=true;
+            if(reset) reset.disabled=false;
+            if(status) status.innerText='Solved. Press Play to watch the solution step by step.';
+        }
+
+        function solveModule(module) {
+            pauseModule(module);
+            let ok=true;
+            try {
+                if(module==='bellman') ok=!!runBellmanFord();
+                else if(module==='floyd') { runFloydWarshall(); ok=true; }
+                else if(module==='multistage') ok=!!runMultistage();
+                else if(module==='obst') ok=!!runOBST();
+                else if(module==='tsp') ok=!!runTSP();
+                else if(module==='edit') ok=!!runEditDistance();
+                else if(module==='lcs') ok=!!runLCS();
+            } catch(e) {
+                ok=false;
+                const status=document.getElementById(`sim-status-${module}`);
+                if(status) status.innerText=`Could not solve: ${e.message}`;
+            }
+            if(ok) {
+                markSolverSolved(module);
+                resetModuleSimulation(module);
+            }
+        }
+
+        function pauseModule(module) {
+            const st=solverUI[module];
+            if(st && st.timer){ clearInterval(st.timer); st.timer=null; }
+            if(st) st.playing=false;
+            const play=document.getElementById(`play-${module}`), pause=document.getElementById(`pause-${module}`);
+            if(play) play.disabled=!st || !st.solved;
+            if(pause) pause.disabled=true;
+            const status=document.getElementById(`sim-status-${module}`);
+            if(status && st && st.solved && !st.dirty) status.innerText='Paused. Press Play to continue.';
+        }
+
+        function playModule(module) {
+            const st=solverUI[module];
+            if(!st || !st.solved || st.dirty) return;
+            if(st.timer) return;
+            st.playing=true;
+            const play=document.getElementById(`play-${module}`), pause=document.getElementById(`pause-${module}`);
+            if(play) play.disabled=true; if(pause) pause.disabled=false;
+            const status=document.getElementById(`sim-status-${module}`);
+            if(status) status.innerText='Playing solution simulation…';
+            st.timer=setInterval(()=>advanceSimulation(module), 1050);
+            advanceSimulation(module);
+        }
+
+        function resetModuleSimulation(module) {
+            const st=solverUI[module];
+            if(st && st.timer){clearInterval(st.timer);st.timer=null;}
+            if(st) {st.playing=false;st.step=0;}
+            const play=document.getElementById(`play-${module}`), pause=document.getElementById(`pause-${module}`), reset=document.getElementById(`reset-${module}`);
+            if(play) play.disabled=!(st&&st.solved); if(pause) pause.disabled=true; if(reset) reset.disabled=!(st&&st.solved);
+            if(module==='floyd') { fwKStep=0; renderFWStep(); }
+            else if(module==='bellman') highlightBellmanPass(0);
+            else if(module==='multistage') { if(msLastData) drawMultistageCanvas(msLastData.stagesJSON,msLastData.adj,msLastData.path.slice(0,1)); }
+            else if(module==='obst') highlightOBSTTrace(-1);
+            else if(module==='tsp') drawTSPCanvas(0);
+            else if(module==='edit') highlightEditOperation(-1);
+            else if(module==='lcs') highlightLCSTrace(-1);
+            const status=document.getElementById(`sim-status-${module}`);
+            if(status && st && st.solved) status.innerText='Solved. Press Play to watch the solution step by step.';
+        }
+
+        function advanceSimulation(module) {
+            const st=solverUI[module];
+            if(!st || !st.solved) { pauseModule(module); return; }
+            let done=false;
+            if(module==='floyd') {
+                st.step=Math.min(fwMatrix.length,st.step+1); fwKStep=st.step; renderFWStep(); done=st.step>=fwMatrix.length;
+            } else if(module==='bellman') {
+                const max=Math.max(0,(bfData.passes||[]).length-1); st.step=Math.min(max,st.step+1); highlightBellmanPass(st.step); done=st.step>=max;
+            } else if(module==='multistage') {
+                const max=Math.max(0,(msLastData?.path?.length||1)-1); st.step=Math.min(max,st.step+1); if(msLastData) drawMultistageCanvas(msLastData.stagesJSON,msLastData.adj,msLastData.path.slice(0,st.step+1)); done=st.step>=max;
+            } else if(module==='obst') {
+                const max=Math.max(0,(obstLastData?.traces?.length||1)-1); st.step=Math.min(max,st.step+1); highlightOBSTTrace(st.step); done=st.step>=max;
+            } else if(module==='tsp') {
+                const max=Math.max(0,(tspBestTour?.length||1)-1); st.step=Math.min(max,st.step+1); drawTSPCanvas(st.step); done=st.step>=max;
+            } else if(module==='edit') {
+                const max=Math.max(0,(editLastData?.operations?.length||1)-1); st.step=Math.min(max,st.step+1); highlightEditOperation(st.step); done=st.step>=max;
+            } else if(module==='lcs') {
+                const max=Math.max(0,(lcsLastData?.traceback?.length||1)-1); st.step=Math.min(max,st.step+1); highlightLCSTrace(st.step); done=st.step>=max;
+            }
+            const status=document.getElementById(`sim-status-${module}`);
+            if(done) {
+                pauseModule(module);
+                if(status) status.innerText='Simulation complete. Press Reset, then Play to replay it.';
+            } else if(status) status.innerText=`Step ${st.step} — playing…`;
+        }
+
+        function highlightBellmanPass(pass) {
+            const rows=document.querySelectorAll('#bf-table tr[data-bf-pass]');
+            rows.forEach(r=>r.classList.remove('bg-amber-100','ring-1','ring-amber-400'));
+            rows.forEach(r=>{if(Number(r.dataset.bfPass)===pass) r.classList.add('bg-amber-100','ring-1','ring-amber-400');});
+        }
+        function highlightOBSTTrace(index) {
+            const rows=document.querySelectorAll('#obst-trace tbody tr[data-obst-step]');
+            rows.forEach(r=>r.classList.remove('bg-amber-100','ring-1','ring-amber-400'));
+            if(index>=0) document.querySelector(`#obst-trace tbody tr[data-obst-step="${index}"]`)?.classList.add('bg-amber-100','ring-1','ring-amber-400');
+        }
+        function highlightEditOperation(index) {
+            const box=document.getElementById('edit-operations-script'); if(!box) return;
+            box.querySelectorAll('[data-edit-step]').forEach(x=>x.classList.remove('bg-cyan-100','font-bold'));
+            if(index>=0) box.querySelector(`[data-edit-step="${index}"]`)?.classList.add('bg-cyan-100','font-bold');
+        }
+        function highlightLCSTrace(index) {
+            const table=document.getElementById('lcs-direction-table'); if(!table || !lcsLastData) return;
+            table.querySelectorAll('[data-lcs-step]').forEach(x=>x.classList.remove('bg-indigo-200','font-bold'));
+            if(index>=0) { const cell=table.querySelector(`[data-lcs-step="${index}"]`); if(cell) cell.classList.add('bg-indigo-200','font-bold'); }
+        }
+
+        // ==================== WIZARD RECOMMENDATION ====================
+        function runWizardRecommendation() {
+            const q1=document.getElementById('wiz-q1').value;
+            const q2=document.getElementById('wiz-q2').value;
+            const box=document.getElementById('wiz-recommendation-box');
+            const map={
+                "graph|sssp":"Bellman-Ford",
+                "matrix|apsp":"Floyd-Warshall All-Pairs Shortest Path",
+                "graph|stage":"Multistage Graph Backward DP",
+                "matrix|tour":"Traveling Salesman Problem (TSP Bitmask DP)",
+                "probs|bst":"Optimal BST (OBST)",
+                "strings|align":"Edit Distance / String Editing",
+                "strings|seq":"Longest Common Subsequence (LCS)",
+                "sssp":"Bellman-Ford",
+                "apsp":"Floyd-Warshall All-Pairs Shortest Path",
+                "stage":"Multistage Graph Backward DP",
+                "tour":"Traveling Salesman Problem (TSP Bitmask DP)",
+                "bst":"Optimal BST (OBST)",
+                "align":"Edit Distance / String Editing",
+                "seq":"Longest Common Subsequence (LCS)"
+            };
+            const algo=map[`${q1}|${q2}`]||map[q2]||"Bellman-Ford";
+            box.innerHTML=`<strong>RECOMMENDED ALGORITHM:</strong> ${algo}<br><span class="text-xs text-blue-700">Selected from the problem objective.</span>`;
+            box.classList.remove('hidden');
+        }
+
+        // Initial Load
+        window.addEventListener('load', () => {
+            renderFWInputs();
+            refreshFWQuerySelectors();
+            renderTSPInputs();
+            // Compute every solver once at startup so opening a module never shows stale/blank output.
+            runBellmanFord();
+            runFloydWarshall();
+            runMultistage();
+            runOBST();
+            runTSP();
+            runEditDistance();
+            runLCS();
+            solverModules.forEach(markSolverSolved);
+            switchView('dashboard');
+        });
+    </script>
+</body>
+</html>
