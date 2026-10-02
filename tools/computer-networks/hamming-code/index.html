@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamming Code Interactive Engineering Workbench</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            200: '#bae0fd',
+                            500: '#0284c7',
+                            600: '#0265d6',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        parity: {
+                            light: '#f3e8ff',
+                            border: '#c084fc',
+                            text: '#6b21a8',
+                            bg: '#faf5ff'
+                        },
+                        databit: {
+                            light: '#e0f2fe',
+                            border: '#38bdf8',
+                            text: '#0369a1',
+                            bg: '#f0f9ff'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+                        sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .bit-tile {
+            transition: all 0.2s ease-in-out;
+        }
+        .bit-tile:hover {
+            transform: translateY(-2px);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Chosen Palette: Warm Neutral Slate & Academic Indigo -->
+    <!-- Application Structure Plan:
+         1. Header & Navigation: High-level purpose, quick jump links to major modules.
+         2. Section 1: Data Input & Parity Bounds (2^r >= m + r + 1 inequality solver, live parameter stats).
+         3. Section 2: Bit Position Mapping Architecture (Visual diagram connecting Big-Endian string indices to RTL Hamming positions).
+         4. Section 3: Parity Generation & Coverage Matrix (Expandable step-by-step XOR derivations, Even/Odd toggle).
+         5. Section 4: Complete Hamming Codeword Workbench (Comprehensive position table, interactive bit serialization, copy-to-clipboard).
+         6. Section 5: Interactive Channel, Error Injection & Syndrome Decoder (Single-click bit toggling, 1-bit / 2-bit error triggers, syndrome integer conversion, auto-correction).
+         7. Section 6: Hamming Distance & Sphere-Packing Workbench (Metric distance calculator d(x,y), detection/correction radius metrics).
+         8. Section 7: Theory, Bounds & Multi-Bit Limitations (SEC-DED explanation, syndrome aliasing mechanics, interactive educational accordion).
+    -->
+    <!-- Visualization & Content Choices:
+         - RTL Positional Pipeline: Dynamic HTML grid with connection arrows to highlight the Right-to-Left convention.
+         - Parity Calculation Cards: Modular UI cards with step-by-step XOR mathematical expansions.
+         - Interactive Bit Tiles: HTML/Tailwind buttons for 1-click channel noise simulation without raster graphics or SVG.
+         - Distance Matrix: Comparative side-by-side binary string alignment with mismatch indicators.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <!-- Top Navigation / Header -->
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-600 text-white font-mono font-bold px-2.5 py-1 rounded text-lg tracking-wider border border-brand-400">
+                    [H_7,4]
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-100">Hamming Code Educational Workbench</h1>
+                    <p class="text-xs text-slate-400">Encoding • Right-to-Left Bit Mapping • Syndrome Decoding • Metric Distance</p>
+                </div>
+            </div>
+            
+            <nav class="flex flex-wrap items-center gap-1.5 text-xs font-medium">
+                <a href="#input-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">1. Input & Bounds</a>
+                <a href="#mapping-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">2. RTL Mapping</a>
+                <a href="#parity-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">3. Parity Derivation</a>
+                <a href="#codeword-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">4. Codeword Table</a>
+                <a href="#channel-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">5. Channel & Syndrome</a>
+                <a href="#distance-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">6. Distance Lab</a>
+                <a href="#theory-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">7. Theory & SEC-DED</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Notification / Toast Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+        <!-- Introductory Banner / Context -->
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-sm text-slate-200">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <span class="inline-block bg-brand-900/80 text-brand-300 text-xs font-semibold px-2.5 py-0.5 rounded border border-brand-700">Interactive Learning Module</span>
+                    <h2 class="text-lg font-bold text-white">Linear Block Code Analysis & Forward Error Correction</h2>
+                    <p class="text-sm text-slate-300 max-w-3xl">
+                        This interactive laboratory translates raw user data into error-correcting binary codewords using systematic Hamming block codes.
+                        Notice how the system strictly adheres to the <strong>Right-to-Left Hamming position indexing convention</strong>, placing Position 1 at the extreme right while allowing standard left-to-right user input.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 self-shrink-0">
+                    <button id="btn-reset-app" class="px-3.5 py-2 text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg transition-colors border border-slate-600 shadow-sm flex items-center gap-1.5">
+                        <span class="text-sm">↺</span> Reset Demonstration
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 1: Input & Parity Bounds -->
+        <section id="input-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">1</span>
+                        Data Word Input & Inequality Solver
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Enter binary message bits to compute redundancy bounds via the Hamming inequality $2^r \ge m + r + 1$.</p>
+                </div>
+                <span class="text-xs font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded">Parameter Solver</span>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                    
+                    <!-- Input Form -->
+                    <div class="md:col-span-5 space-y-4">
+                        <div>
+                            <label for="input-data-word" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                                User Input Data Word (Big-Endian LTR)
+                            </label>
+                            <div class="relative">
+                                <input type="text" id="input-data-word" value="1011" maxlength="16" placeholder="e.g. 1011" 
+                                    class="w-full px-4 py-2.5 font-mono text-lg font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all tracking-widest uppercase">
+                                <span id="input-validation-indicator" class="absolute right-3 top-3 text-xs font-bold text-emerald-600 hidden">✓ Valid</span>
+                            </div>
+                            <p id="input-error-msg" class="text-xs text-rose-600 mt-1 font-medium hidden">Input must contain only binary digits (0 or 1) and cannot be empty.</p>
+                        </div>
+
+                        <!-- Parity Mode Toggle -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                                Parity Configuration Mode
+                            </label>
+                            <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-medium">
+                                <button type="button" id="btn-mode-even" class="py-2 px-3 rounded-md font-semibold text-center transition-all bg-white text-brand-700 shadow-sm border border-slate-200">
+                                    Even Parity (Default)
+                                </button>
+                                <button type="button" id="btn-mode-odd" class="py-2 px-3 rounded-md font-semibold text-center transition-all text-slate-600 hover:text-slate-900">
+                                    Odd Parity
+                                </button>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-1">Even parity forces total parity set sum to 0 (mod 2); Odd parity forces sum to 1.</p>
+                        </div>
+                    </div>
+
+                    <!-- Computed Parameters Display -->
+                    <div class="md:col-span-7 bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200 pb-2">
+                            Calculated Code Parameters
+                        </h4>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="bg-white p-3 rounded-lg border border-slate-200 text-center">
+                                <div class="text-2xl font-mono font-bold text-brand-700" id="stat-m">4</div>
+                                <div class="text-[11px] font-medium text-slate-500 mt-0.5">Data Bits ($m$)</div>
+                            </div>
+                            <div class="bg-white p-3 rounded-lg border border-slate-200 text-center">
+                                <div class="text-2xl font-mono font-bold text-purple-700" id="stat-r">3</div>
+                                <div class="text-[11px] font-medium text-slate-500 mt-0.5">Parity Bits ($r$)</div>
+                            </div>
+                            <div class="bg-white p-3 rounded-lg border border-slate-200 text-center">
+                                <div class="text-2xl font-mono font-bold text-slate-800" id="stat-n">7</div>
+                                <div class="text-[11px] font-medium text-slate-500 mt-0.5">Total Length ($n$)</div>
+                            </div>
+                        </div>
+
+                        <!-- Step-by-Step Inequality Evaluation -->
+                        <div class="bg-white p-4 rounded-lg border border-slate-200 font-mono text-xs space-y-2">
+                            <div class="text-slate-500 font-sans font-bold text-[11px] border-b border-slate-100 pb-1">Hamming Redundancy Inequality Evaluation:</div>
+                            <div id="inequality-steps-container" class="space-y-1 text-slate-700">
+                                <!-- JS Populated -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Bit Position Mapping Architecture -->
+        <section id="mapping-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">2</span>
+                        Right-to-Left Bit Position Mapping Architecture
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Visually bridges user big-endian input string indices to physical Right-to-Left Hamming codeword coordinates.</p>
+                </div>
+                <span class="text-xs font-mono bg-purple-100 text-purple-800 px-2 py-1 rounded border border-purple-200 font-semibold">RTL Convention</span>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <div class="bg-amber-50/60 border border-amber-200/80 rounded-lg p-4 text-xs text-amber-900 space-y-1">
+                    <div class="font-bold flex items-center gap-1.5 text-amber-950">
+                        <span>💡</span> Key Architectural Insight: Right-to-Left Positional Inversion
+                    </div>
+                    <p>
+                        In standard binary notation, users write binary numbers from left to right (e.g. <code class="font-bold bg-amber-100 px-1 rounded">1011</code> where leftmost '1' is the most significant). However, <strong>Hamming Code parity check matrices mandate that physical Position 1 resides at the extreme right</strong>.
+                        Below, observe how the system maps the input string index to internal data labels ($D_1 \dots D_m$) and interleaves parity bit placeholders ($P_1, P_2, P_4 \dots$) into physical positions $n \dots 1$.
+                    </p>
+                </div>
+
+                <!-- Interactive RTL Flow Pipeline -->
+                <div class="space-y-6">
+                    
+                    <!-- Step A: User Input String Breakdown -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3 flex items-center gap-2">
+                            <span>Step A:</span> User Input String Analysis (Left-to-Right String Indices)
+                        </h4>
+                        <div id="mapping-input-grid" class="flex flex-wrap gap-2 items-center">
+                            <!-- Dynamically generated input tiles -->
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Mapping Connector Graphic -->
+                    <div class="flex items-center justify-center py-1">
+                        <div class="text-center font-mono text-xs font-bold text-slate-400 bg-slate-100 px-4 py-1.5 rounded-full border border-slate-200">
+                            ↓ Index Inversion & Parity Placeholder Interleaving ↓
+                        </div>
+                    </div>
+
+                    <!-- Step B: Right-to-Left Codeword Target Grid -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
+                                <span>Step B:</span> Structured Codeword Block (Physical Positions $n \to 1$, Rightmost = Pos 1)
+                            </h4>
+                            <div class="flex items-center gap-3 text-xs font-semibold">
+                                <span class="flex items-center gap-1 text-databit-text"><span class="w-3 h-3 bg-databit-light border border-databit-border rounded-sm"></span> Data Bit ($D$)</span>
+                                <span class="flex items-center gap-1 text-parity-text"><span class="w-3 h-3 bg-parity-light border border-parity-border rounded-sm"></span> Parity Bit ($P$)</span>
+                            </div>
+                        </div>
+
+                        <div id="mapping-codeword-grid" class="flex flex-wrap gap-2 items-center">
+                            <!-- Dynamically generated codeword position tiles -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Parity Bit Calculation Breakdown -->
+        <section id="parity-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">3</span>
+                        Individual Parity Bit Derivation & Coverage Sets
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Parity bits occupy powers-of-two coordinates ($1, 2, 4, 8 \dots$). Each parity bit verifies coordinates with a '1' at that bit weight.</p>
+                </div>
+                <span id="badge-parity-mode" class="text-xs font-mono bg-brand-100 text-brand-800 px-2.5 py-1 rounded font-bold border border-brand-200">EVEN PARITY MODE</span>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Parity Coverage Cards Container -->
+                <div id="parity-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Dynamically populated parity cards -->
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Complete Hamming Codeword Workbench -->
+        <section id="codeword-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">4</span>
+                        Systematic Codeword Master Table
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Complete synthesized transmission block mapping positions, structural roles, generated values, and parity dependencies.</p>
+                </div>
+                <button id="btn-copy-codeword" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                    <span>📋</span> Copy Codeword
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6">
+                
+                <!-- Codeword Display Callout Banner -->
+                <div class="bg-slate-900 text-white p-5 rounded-xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-inner">
+                    <div class="space-y-1">
+                        <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Final Encoded Hamming Codeword (Standard Serialization LTR)</div>
+                        <div id="codeword-string-display" class="text-3xl font-mono font-bold tracking-[0.3em] text-brand-300">
+                            1010101
+                        </div>
+                        <div class="text-[11px] text-slate-400">
+                            * Note: Displayed left-to-right as conventional text representation. Position 7 is the leftmost character; Position 1 is the rightmost character.
+                        </div>
+                    </div>
+                    <div class="bg-slate-800 px-4 py-3 rounded-lg border border-slate-700 font-mono text-xs text-slate-300 space-y-1">
+                        <div>Data Bits ($m$): <span id="banner-m-val" class="font-bold text-sky-400">4</span></div>
+                        <div>Parity Bits ($r$): <span id="banner-r-val" class="font-bold text-purple-400">3</span></div>
+                        <div>Parity Rule: <span id="banner-parity-rule" class="font-bold text-emerald-400">Even</span></div>
+                    </div>
+                </div>
+
+                <!-- Master Codeword Position Table -->
+                <div class="overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="w-full text-left text-xs font-sans">
+                        <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4 text-center">Hamming Pos ($p$)</th>
+                                <th class="py-3 px-4 text-center">Binary Coord</th>
+                                <th class="py-3 px-4">Bit Designation</th>
+                                <th class="py-3 px-4 text-center">Source Mapping</th>
+                                <th class="py-3 px-4 text-center">Assigned Value</th>
+                                <th class="py-3 px-4">Parity Check Coverage Inclusion</th>
+                            </tr>
+                        </thead>
+                        <tbody id="master-table-body" class="divide-y divide-slate-200 bg-white font-mono">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECTION 5: Error Detection & Correction (Syndrome Analysis) -->
+        <section id="channel-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">5</span>
+                        Interactive Channel Noise & Syndrome Decoder
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Simulate transmission channel bit flips. Click any bit tile to invert it, or use simulator buttons below.</p>
+                </div>
+                <span class="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-semibold border border-emerald-200">Channel Simulator</span>
+            </div>
+
+            <div class="p-6 space-y-6">
+
+                <!-- Simulator Action Control Bar -->
+                <div class="flex flex-wrap items-center gap-2 p-3 bg-slate-100 rounded-lg border border-slate-200 text-xs font-semibold">
+                    <span class="text-slate-600 mr-1">Inject Channel Perturbation:</span>
+                    <button id="btn-inject-1bit" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded transition-colors shadow-sm">
+                        ⚡ Introduce 1-Bit Error
+                    </button>
+                    <button id="btn-inject-2bit" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded transition-colors shadow-sm">
+                        ⚡ Introduce 2-Bit Error
+                    </button>
+                    <button id="btn-inject-random" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors shadow-sm">
+                        🎲 Random Corruption
+                    </button>
+                    <button id="btn-reset-channel" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white rounded transition-colors shadow-sm ml-auto">
+                        ✓ Clear Noise / Clean Vector
+                    </button>
+                </div>
+
+                <!-- Received Codeword Interactive Tiles -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Received Vector ($R$) — Click any bit to flip manually:
+                        </label>
+                        <span class="text-xs text-slate-500">Positions ordered Left-to-Right: $n \to 1$</span>
+                    </div>
+
+                    <div id="received-tiles-container" class="flex flex-wrap gap-2 items-center">
+                        <!-- Dynamic interactive bit tiles -->
+                    </div>
+                </div>
+
+                <!-- Comparison: Transmitted vs Received -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs font-mono">
+                    <div>
+                        <span class="text-slate-500 font-sans font-bold">Transmitted Codeword ($C$):</span>
+                        <div id="compare-transmitted" class="text-base font-bold text-slate-800 tracking-wider mt-1">1010101</div>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 font-sans font-bold">Received Codeword ($R$):</span>
+                        <div id="compare-received" class="text-base font-bold text-slate-800 tracking-wider mt-1">1010101</div>
+                    </div>
+                </div>
+
+                <!-- Syndrome Calculation Display -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 space-y-4">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200 pb-2">
+                        Syndrome Vector Evaluation ($S = [S_r \dots S_1]^T$)
+                    </h4>
+
+                    <div id="syndrome-bits-grid" class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        <!-- JS populated syndrome check cards -->
+                    </div>
+
+                    <!-- Syndrome Integer Conversion -->
+                    <div class="bg-slate-900 text-white p-4 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3 font-mono text-xs">
+                        <div class="flex items-center gap-3">
+                            <span class="text-slate-400">Binary Syndrome:</span>
+                            <span id="syndrome-binary-text" class="text-lg font-bold text-amber-300 tracking-widest">000</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-slate-400">Calculated Integer Position:</span>
+                            <span id="syndrome-integer-text" class="text-lg font-bold text-sky-300">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnostic Outcome Banner -->
+                <div id="syndrome-status-banner" class="p-5 rounded-xl border transition-all">
+                    <!-- Dynamic status banner content -->
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECTION 6: Hamming Distance Workbench -->
+        <section id="distance-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">6</span>
+                        Hamming Distance & Vector Metric Workbench
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Calculate the metric Hamming distance $d(x,y) = \sum x_i \oplus y_i$ between two equal-length binary strings.</p>
+                </div>
+                <span class="text-xs font-mono bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-semibold border border-indigo-200">Vector Geometry</span>
+            </div>
+
+            <div class="p-6 space-y-6">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="dist-input-a" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                            Codeword A ($x$)
+                        </label>
+                        <input type="text" id="dist-input-a" value="1011011" maxlength="24"
+                            class="w-full px-4 py-2 font-mono text-base font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none uppercase tracking-widest">
+                    </div>
+                    <div>
+                        <label for="dist-input-b" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                            Codeword B ($y$)
+                        </label>
+                        <input type="text" id="dist-input-b" value="1001011" maxlength="24"
+                            class="w-full px-4 py-2 font-mono text-base font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none uppercase tracking-widest">
+                    </div>
+                </div>
+
+                <!-- Distance Alignment Visualization -->
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3 font-mono">
+                    <div class="text-xs font-sans font-bold text-slate-600 border-b border-slate-200 pb-1">Position-by-Position Comparison:</div>
+                    
+                    <div id="distance-alignment-container" class="space-y-1">
+                        <!-- JS populated alignment rows -->
+                    </div>
+                </div>
+
+                <!-- Calculated Metrics Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 text-center">
+                        <div id="stat-dist-value" class="text-3xl font-mono font-bold text-brand-700">1</div>
+                        <div class="text-xs font-semibold text-slate-600 mt-1">Hamming Distance $d(x,y)$</div>
+                        <div class="text-[10px] text-slate-400 mt-0.5">Bit positions that differ</div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 text-center">
+                        <div id="stat-dist-detect" class="text-3xl font-mono font-bold text-emerald-600">0</div>
+                        <div class="text-xs font-semibold text-slate-600 mt-1">Guaranteed Detection ($t_{\text{detect}}$)</div>
+                        <div class="text-[10px] text-slate-400 mt-0.5">$t = d - 1$</div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 text-center">
+                        <div id="stat-dist-correct" class="text-3xl font-mono font-bold text-purple-600">0</div>
+                        <div class="text-xs font-semibold text-slate-600 mt-1">Guaranteed Correction ($t_{\text{correct}}$)</div>
+                        <div class="text-[10px] text-slate-400 mt-0.5">$t = \lfloor (d-1)/2 \rfloor$</div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECTION 7: Minimum Hamming Distance, SEC-DED & Multi-Bit Limitations -->
+        <section id="theory-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">7</span>
+                        Code Geometry, SEC-DED & Multi-Bit Limitations
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Understand minimum distance properties, syndrome aliasing during multi-bit noise, and Extended Hamming codes.</p>
+                </div>
+                <span class="text-xs font-mono bg-amber-100 text-amber-800 px-2 py-1 rounded font-semibold border border-amber-200">Limitations & Theory</span>
+            </div>
+
+            <div class="p-6 space-y-6">
+
+                <!-- Warning Banner: Multi-Bit Corruption -->
+                <div class="bg-rose-50 border border-rose-200 rounded-xl p-5 space-y-2 text-xs text-rose-950">
+                    <h4 class="font-bold text-sm text-rose-800 flex items-center gap-2">
+                        <span>⚠️</span> CRITICAL LIMITATION: Standard Hamming Code Multi-Bit Aliasing
+                    </h4>
+                    <p>
+                        Standard Hamming codes achieve a minimum Hamming distance of <strong>$d_{\min} = 3$</strong>. This mathematically guarantees 
+                        <strong>single-bit error correction</strong> ($t_{\text{correct}} = 1$) or <strong>double-bit error detection</strong> ($t_{\text{detect}} = 2$), but <em>not both simultaneously</em>.
+                    </p>
+                    <p>
+                        If a transmission suffers two simultaneous bit errors ($w_H(e) = 2$), the modulo-2 sum of two parity matrix columns yields a third valid column within the matrix. 
+                        <strong>The decoder suffers syndrome aliasing: it mistakes the double error for a single error at an uncorrupted bit position, flips that bit, and increases the total corruption to 3 errors!</strong>
+                    </p>
+                </div>
+
+                <!-- Architecture Comparison Cards: Standard vs Extended SEC-DED -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Standard Hamming -->
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3 text-xs">
+                        <div class="flex items-center justify-between">
+                            <h5 class="font-bold text-slate-900 text-sm">Standard Hamming Code</h5>
+                            <span class="bg-slate-200 text-slate-800 px-2 py-0.5 rounded font-mono font-bold">$d_{\min} = 3$</span>
+                        </div>
+                        <ul class="space-y-1.5 text-slate-600 list-disc list-inside">
+                            <li>Parity Bits: $r$ occupying power-of-two positions.</li>
+                            <li>Syndrome State ($S$): Directly identifies 1-bit error location ($1 \dots n$).</li>
+                            <li><strong>Vulnerability:</strong> Multi-bit errors produce aliased syndromes, causing silent miscorrection.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Extended Hamming SEC-DED -->
+                    <div class="bg-purple-50/70 p-5 rounded-xl border border-purple-200 space-y-3 text-xs">
+                        <div class="flex items-center justify-between">
+                            <h5 class="font-bold text-purple-950 text-sm">Extended Hamming (SEC-DED)</h5>
+                            <span class="bg-purple-200 text-purple-900 px-2 py-0.5 rounded font-mono font-bold">$d_{\min} = 4$</span>
+                        </div>
+                        <ul class="space-y-1.5 text-purple-900 list-disc list-inside">
+                            <li>Adds a global parity bit $P_0$ covering all $n$ bits at Position 0.</li>
+                            <li><strong>If $S \ne 0$ and $P_0$ fails:</strong> Confirmed single-bit error (Corrected).</li>
+                            <li><strong>If $S \ne 0$ and $P_0$ passes:</strong> Confirmed double-bit error (Halt correction to avoid silent corruption).</li>
+                        </ul>
+                    </div>
+
+                </div>
+
+                <!-- Collapsible Educational Walkthrough -->
+                <div class="border border-slate-200 rounded-xl overflow-hidden">
+                    <button id="btn-toggle-guide" class="w-full bg-slate-100 hover:bg-slate-200 px-6 py-3.5 text-left text-xs font-bold text-slate-800 flex items-center justify-between transition-colors">
+                        <span class="flex items-center gap-2">
+                            <span>📖</span> Step-by-Step Practical Guide: How Hamming Code Works
+                        </span>
+                        <span id="guide-chevron" class="text-sm font-bold">▼</span>
+                    </button>
+
+                    <div id="guide-content-panel" class="p-6 bg-white space-y-4 text-xs text-slate-700 hidden border-t border-slate-200">
+                        <ol class="list-decimal list-inside space-y-3 leading-relaxed">
+                            <li><strong>Data Word Ingestion:</strong> Accept binary data string (e.g. `1011`). Internal indices map rightmost bit to $D_1$.</li>
+                            <li><strong>Parity Bound Calculation:</strong> Solve $2^r \ge m + r + 1$ to determine required parity bits ($r$).</li>
+                            <li><strong>Power-of-Two Interleaving:</strong> Reserve positions $1, 2, 4, 8 \dots$ for parity bits. Insert data bits into non-power-of-two coordinates ($3, 5, 6, 7 \dots$).</li>
+                            <li><strong>Parity Evaluation:</strong> For each $P_{2^j}$, evaluate modulo-2 XOR sum across covered positions where bit weight $2^j$ is set.</li>
+                            <li><strong>Codeword Assembly:</strong> Serialize parity and data bits into the final block.</li>
+                            <li><strong>Channel Transmission:</strong> Codeword travels across noisy physical medium.</li>
+                            <li><strong>Syndrome Recalculation:</strong> Recheck parity equations over received vector $R$ to produce syndrome bits $S_1, S_2, S_4 \dots$.</li>
+                            <li><strong>Error Localization & Inversion:</strong> Integer value of binary syndrome $S$ indicates the exact error position ($R(S) \oplus 1$). If $S=0$, vector is valid.</li>
+                        </ol>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 border-t border-slate-800 py-6 text-center text-xs mt-12">
+        <div class="max-w-7xl mx-auto px-4 space-y-1">
+            <p class="font-medium text-slate-300">Hamming Code Interactive Educational Engineering Simulator</p>
+            <p class="text-slate-500">Strict Right-to-Left Bit Position Convention ($p_n \dots p_1$) • Pure Client-Side Computation</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        /**
+         * Hamming Code Simulator Engine
+         * Implements right-to-left bit mapping, dynamic parity bounds, parity generation,
+         * syndrome decoding, error injection, and distance metrics.
+         */
+        const AppState = {
+            dataInput: '1011',
+            parityMode: 'even', // 'even' or 'odd'
+            m: 4,
+            r: 3,
+            n: 7,
+            dataBits: [], // [{label: 'D1', inputIdx: 3, val: 1}, ...]
+            codewordPositions: [], // [{pos: 7, type: 'D', name: 'D4', val: 1, coveredBy: ['P1','P2','P4']}, ...]
+            transmittedCodeword: [], // array of 0/1 indexed 0..n-1 (left-to-right representation)
+            receivedCodeword: [], // array of 0/1 indexed 0..n-1
+            syndromeBits: [], // [{weight: 1, val: 0}, ...]
+            syndromeInt: 0,
+            distA: '1011011',
+            distB: '1001011'
+        };
+
+        // DOM Element Cache
+        const DOM = {
+            inputDataWord: document.getElementById('input-data-word'),
+            inputErrorMsg: document.getElementById('input-error-msg'),
+            inputValidationIndicator: document.getElementById('input-validation-indicator'),
+            btnModeEven: document.getElementById('btn-mode-even'),
+            btnModeOdd: document.getElementById('btn-mode-odd'),
+            badgeParityMode: document.getElementById('badge-parity-mode'),
+            statM: document.getElementById('stat-m'),
+            statR: document.getElementById('stat-r'),
+            statN: document.getElementById('stat-n'),
+            inequalityStepsContainer: document.getElementById('inequality-steps-container'),
+            mappingInputGrid: document.getElementById('mapping-input-grid'),
+            mappingCodewordGrid: document.getElementById('mapping-codeword-grid'),
+            parityCardsContainer: document.getElementById('parity-cards-container'),
+            codewordStringDisplay: document.getElementById('codeword-string-display'),
+            bannerMVal: document.getElementById('banner-m-val'),
+            bannerRVal: document.getElementById('banner-r-val'),
+            bannerParityRule: document.getElementById('banner-parity-rule'),
+            masterTableBody: document.getElementById('master-table-body'),
+            btnCopyCodeword: document.getElementById('btn-copy-codeword'),
+            btnResetApp: document.getElementById('btn-reset-app'),
+            btnInject1Bit: document.getElementById('btn-inject-1bit'),
+            btnInject2Bit: document.getElementById('btn-inject-2bit'),
+            btnInjectRandom: document.getElementById('btn-inject-random'),
+            btnResetChannel: document.getElementById('btn-reset-channel'),
+            receivedTilesContainer: document.getElementById('received-tiles-container'),
+            compareTransmitted: document.getElementById('compare-transmitted'),
+            compareReceived: document.getElementById('compare-received'),
+            syndromeBitsGrid: document.getElementById('syndrome-bits-grid'),
+            syndromeBinaryText: document.getElementById('syndrome-binary-text'),
+            syndromeIntegerText: document.getElementById('syndrome-integer-text'),
+            syndromeStatusBanner: document.getElementById('syndrome-status-banner'),
+            distInputA: document.getElementById('dist-input-a'),
+            distInputB: document.getElementById('dist-input-b'),
+            distanceAlignmentContainer: document.getElementById('distance-alignment-container'),
+            statDistValue: document.getElementById('stat-dist-value'),
+            statDistDetect: document.getElementById('stat-dist-detect'),
+            statDistCorrect: document.getElementById('stat-dist-correct'),
+            btnToggleGuide: document.getElementById('btn-toggle-guide'),
+            guideContentPanel: document.getElementById('guide-content-panel'),
+            guideChevron: document.getElementById('guide-chevron')
+        };
+
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-800 border-emerald-600' : 'bg-slate-800 border-slate-700';
+            toast.className = `${bgClass} text-white text-xs font-semibold px-4 py-2.5 rounded-lg border shadow-lg transition-all transform translate-y-2 opacity-0 pointer-events-auto flex items-center gap-2`;
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : 'ℹ'}</span> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Helper: Check power of 2
+        function isPowerOfTwo(x) {
+            return (x & (x - 1)) === 0 && x > 0;
+        }
+
+        // Engine 1: Compute Parity Bits Bounds (2^r >= m + r + 1)
+        function calculateParityBounds(m) {
+            let r = 1;
+            const steps = [];
+            while ((Math.pow(2, r)) < (m + r + 1)) {
+                steps.push({
+                    r: r,
+                    pow: Math.pow(2, r),
+                    required: m + r + 1,
+                    satisfied: false
+                });
+                r++;
+            }
+            steps.push({
+                r: r,
+                pow: Math.pow(2, r),
+                required: m + r + 1,
+                satisfied: true
+            });
+            return { r, steps };
+        }
+
+        // Engine 2: Core Hamming Encoder
+        function encodeHamming() {
+            const str = AppState.dataInput;
+            const m = str.length;
+            const bounds = calculateParityBounds(m);
+            const r = bounds.r;
+            const n = m + r;
+
+            AppState.m = m;
+            AppState.r = r;
+            AppState.n = n;
+
+            // Right-to-Left Data Mapping:
+            // Rightmost string character (str[m-1]) -> D1
+            // Leftmost string character (str[0]) -> Dm
+            const dataBits = [];
+            for (let i = 0; i < m; i++) {
+                const dataIndex = m - i; // D1 for i=m-1, Dm for i=0
+                const charVal = parseInt(str[i], 10);
+                dataBits.push({
+                    label: `D${dataIndex}`,
+                    dataNumber: dataIndex,
+                    inputStringIdx: i,
+                    val: charVal
+                });
+            }
+            AppState.dataBits = dataBits;
+
+            // Construct positions 1 to n (stored RTL in memory, displayed n down to 1)
+            // position p=1..n
+            const positions = [];
+            let currentDataPtr = m; // start from highest Dm down to D1
+
+            for (let p = 1; p <= n; p++) {
+                if (isPowerOfTwo(p)) {
+                    positions.push({
+                        pos: p,
+                        type: 'P',
+                        name: `P${p}`,
+                        val: 0, // placeholder
+                        coveredBy: []
+                    });
+                } else {
+                    // Find corresponding data bit label
+                    // non-power-of-two position p maps to ascending data bit numbers
+                    positions.push({
+                        pos: p,
+                        type: 'D',
+                        name: '', // will set below
+                        val: 0,
+                        coveredBy: []
+                    });
+                }
+            }
+
+            // Assign data bit labels sequentially to non-parity positions
+            let dCount = 1;
+            for (let p = 1; p <= n; p++) {
+                if (!isPowerOfTwo(p)) {
+                    const posObj = positions[p - 1];
+                    posObj.name = `D${dCount}`;
+                    // Find value from dataBits array where dataNumber == dCount
+                    const dBitObj = dataBits.find(d => d.dataNumber === dCount);
+                    posObj.val = dBitObj ? dBitObj.val : 0;
+                    dCount++;
+                }
+            }
+
+            // Calculate parity values and coverage sets
+            const parityWeights = [];
+            for (let j = 0; j < r; j++) {
+                parityWeights.push(Math.pow(2, j));
+            }
+
+            // For each parity bit P_k (where k = 2^j)
+            parityWeights.forEach(pWeight => {
+                const coveredPositions = [];
+                let xorSum = 0;
+
+                for (let p = 1; p <= n; p++) {
+                    if ((p & pWeight) !== 0) {
+                        coveredPositions.push(p);
+                        if (p !== pWeight) {
+                            xorSum ^= positions[p - 1].val;
+                        }
+                    }
+                }
+
+                // Determine Parity bit value
+                let pVal = xorSum;
+                if (AppState.parityMode === 'odd') {
+                    pVal = xorSum === 0 ? 1 : 0;
+                }
+
+                // Set parity position value
+                positions[pWeight - 1].val = pVal;
+
+                // Record coveredBy tags for all covered positions
+                coveredPositions.forEach(p => {
+                    positions[p - 1].coveredBy.push(`P${pWeight}`);
+                });
+            });
+
+            AppState.codewordPositions = positions;
+
+            // Generate serialized codeword string (LTR: pos n down to 1)
+            const serialized = [];
+            for (let p = n; p >= 1; p--) {
+                serialized.push(positions[p - 1].val);
+            }
+            AppState.transmittedCodeword = [...serialized];
+
+            // Do NOT reset the received vector here.
+            // The channel simulator must preserve injected/manual errors across re-renders.
+            // A reset is performed explicitly by the input/parity/reset controls.
+        }
+
+        // Engine 3: Syndrome Evaluator over Received Vector
+        function evaluateSyndrome() {
+            const n = AppState.n;
+            const r = AppState.r;
+            const received = AppState.receivedCodeword; // indexed 0..n-1 (Pos n down to Pos 1)
+
+            // Convert received array (LTR display order pos n..1) back to position map p=1..n
+            const posValMap = {};
+            for (let idx = 0; idx < n; idx++) {
+                const pos = n - idx;
+                posValMap[pos] = received[idx];
+            }
+
+            const syndromeBits = [];
+            let syndromeInt = 0;
+
+            for (let j = 0; j < r; j++) {
+                const pWeight = Math.pow(2, j);
+                let xorSum = 0;
+                const checkedPositions = [];
+
+                for (let p = 1; p <= n; p++) {
+                    if ((p & pWeight) !== 0) {
+                        checkedPositions.push(p);
+                        xorSum ^= posValMap[p];
+                    }
+                }
+
+                let synBit = xorSum;
+                if (AppState.parityMode === 'odd') {
+                    // For odd parity, check fails if xorSum is not 1
+                    synBit = xorSum === 1 ? 0 : 1;
+                }
+
+                syndromeBits.push({
+                    weight: pWeight,
+                    bitName: `S${pWeight}`,
+                    val: synBit,
+                    checkedPositions: checkedPositions
+                });
+
+                if (synBit === 1) {
+                    syndromeInt += pWeight;
+                }
+            }
+
+            AppState.syndromeBits = syndromeBits;
+            AppState.syndromeInt = syndromeInt;
+        }
+
+        // Render UI Pipeline
+        function renderUI() {
+            encodeHamming();
+
+            // Initialize the channel only when there is no valid received vector.
+            // Otherwise preserve manually injected/simulated errors across re-renders.
+            if (!Array.isArray(AppState.receivedCodeword) ||
+                AppState.receivedCodeword.length !== AppState.transmittedCodeword.length) {
+                AppState.receivedCodeword = [...AppState.transmittedCodeword];
+            }
+
+            evaluateSyndrome();
+
+            // 1. Render Stats & Inequality Steps
+            DOM.statM.textContent = AppState.m;
+            DOM.statR.textContent = AppState.r;
+            DOM.statN.textContent = AppState.n;
+            DOM.bannerMVal.textContent = AppState.m;
+            DOM.bannerRVal.textContent = AppState.r;
+            DOM.bannerParityRule.textContent = AppState.parityMode === 'even' ? 'Even' : 'Odd';
+            DOM.badgeParityMode.textContent = `${AppState.parityMode.toUpperCase()} PARITY MODE`;
+
+            const bounds = calculateParityBounds(AppState.m);
+            DOM.inequalityStepsContainer.innerHTML = bounds.steps.map(step => `
+                <div class="flex items-center justify-between border-b border-slate-100 py-0.5">
+                    <span>Checking r = ${step.r}: 2<sup>${step.r}</sup> (${step.pow}) ≥ ${AppState.m} + ${step.r} + 1 (${step.required})</span>
+                    <span class="font-bold ${step.satisfied ? 'text-emerald-600' : 'text-slate-400'}">
+                        ${step.satisfied ? '✓ Satisfied' : '✗ Insufficient'}
+                    </span>
+                </div>
+            `).join('');
+
+            // 2. Render RTL Mapping Diagram
+            // Step A: User Input String Breakdown
+            DOM.mappingInputGrid.innerHTML = AppState.dataInput.split('').map((char, idx) => {
+                const dBit = AppState.dataBits.find(d => d.inputStringIdx === idx);
+                return `
+                    <div class="bg-databit-bg border border-databit-border p-2.5 rounded-lg text-center shadow-sm min-w-[70px]">
+                        <div class="text-[10px] text-slate-500 font-sans font-semibold">String [${idx}]</div>
+                        <div class="text-lg font-mono font-bold text-databit-text">${char}</div>
+                        <div class="text-[11px] font-mono font-bold text-brand-700 mt-0.5">${dBit ? dBit.label : ''}</div>
+                    </div>
+                `;
+            }).join('<span class="text-slate-300 font-bold">→</span>');
+
+            // Step B: Target Hamming Block (Positions n down to 1)
+            const codewordPosDescending = [...AppState.codewordPositions].reverse();
+            DOM.mappingCodewordGrid.innerHTML = codewordPosDescending.map(pObj => {
+                const isP = pObj.type === 'P';
+                const bgStyle = isP ? 'bg-parity-bg border-parity-border text-parity-text' : 'bg-databit-bg border-databit-border text-databit-text';
+                return `
+                    <div class="${bgStyle} border p-2.5 rounded-lg text-center shadow-sm min-w-[75px] relative">
+                        <div class="text-[10px] text-slate-500 font-sans font-bold">Pos ${pObj.pos}</div>
+                        <div class="text-base font-mono font-bold mt-0.5">${pObj.val}</div>
+                        <div class="text-[11px] font-mono font-extrabold mt-0.5">${pObj.name}</div>
+                        ${pObj.pos === 1 ? '<span class="absolute -top-2 -right-1 bg-amber-500 text-white text-[9px] px-1 rounded font-bold">RTL #1</span>' : ''}
+                    </div>
+                `;
+            }).join('');
+
+            // 3. Render Parity Cards
+            const parityPositions = AppState.codewordPositions.filter(p => p.type === 'P');
+            DOM.parityCardsContainer.innerHTML = parityPositions.map(pObj => {
+                const pWeight = pObj.pos;
+                const coveredDataObjs = AppState.codewordPositions.filter(p => (p.pos & pWeight) !== 0 && p.pos !== pWeight);
+                const checkPosList = AppState.codewordPositions.filter(p => (p.pos & pWeight) !== 0).map(p => p.pos).join(', ');
+                
+                const terms = coveredDataObjs.map(d => `${d.name} (${d.val})`);
+                const xorExpression = coveredDataObjs.map(d => d.val).join(' ⊕ ');
+                
+                return `
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                            <span class="font-bold text-sm text-purple-900">${pObj.name} (Position ${pObj.pos})</span>
+                            <span class="font-mono text-xs font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Val = ${pObj.val}</span>
+                        </div>
+                        <div class="text-xs space-y-1 text-slate-600">
+                            <div><strong class="text-slate-800">Checked Positions:</strong> {${checkPosList}}</div>
+                            <div><strong class="text-slate-800">Data Covered:</strong> ${coveredDataObjs.map(d => d.name).join(', ')}</div>
+                        </div>
+                        <div class="bg-white p-2.5 rounded border border-slate-200 font-mono text-xs space-y-1">
+                            <div class="text-slate-500 text-[11px]">${pObj.name} Equation (${AppState.parityMode}):</div>
+                            <div class="font-bold text-slate-800">${pObj.name} = ${coveredDataObjs.map(d => d.name).join(' ⊕ ')}</div>
+                            <div class="text-brand-700">${pObj.name} = ${xorExpression || '0'} → <strong>${pObj.val}</strong></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 4. Render Master Codeword Table
+            DOM.codewordStringDisplay.textContent = AppState.transmittedCodeword.join('');
+            DOM.masterTableBody.innerHTML = codewordPosDescending.map(pObj => {
+                const isP = pObj.type === 'P';
+                const rowBg = isP ? 'bg-purple-50/50' : 'bg-white';
+                
+                let sourceMappingText = '';
+                if (isP) {
+                    sourceMappingText = `<span class="text-purple-700 font-bold">Parity Generator 2<sup>${Math.log2(pObj.pos)}</sup></span>`;
+                } else {
+                    const dObj = AppState.dataBits.find(d => d.label === pObj.name);
+                    sourceMappingText = dObj ? `Input Str [${dObj.inputStringIdx}]` : '-';
+                }
+
+                return `
+                    <tr class="${rowBg} hover:bg-slate-100/80 transition-colors">
+                        <td class="py-2.5 px-4 text-center font-bold text-slate-900">${pObj.pos}</td>
+                        <td class="py-2.5 px-4 text-center text-slate-500 text-xs">${pObj.pos.toString(2).padStart(AppState.r, '0')}</td>
+                        <td class="py-2.5 px-4 font-bold ${isP ? 'text-purple-800' : 'text-brand-800'}">
+                            ${pObj.name} (${pObj.type === 'P' ? 'Parity' : 'Data'})
+                        </td>
+                        <td class="py-2.5 px-4 text-center text-slate-600 text-xs">${sourceMappingText}</td>
+                        <td class="py-2.5 px-4 text-center font-bold text-base ${isP ? 'text-purple-900' : 'text-brand-900'}">${pObj.val}</td>
+                        <td class="py-2.5 px-4 text-slate-600 text-xs font-sans">${pObj.coveredBy.join(', ')}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 5. Render Received Vector Interactive Bit Tiles
+            const n = AppState.n;
+            DOM.receivedTilesContainer.innerHTML = AppState.receivedCodeword.map((bitVal, idx) => {
+                const pos = n - idx; // Pos n down to 1
+                const origVal = AppState.transmittedCodeword[idx];
+                const isFlipped = bitVal !== origVal;
+                
+                const posObj = AppState.codewordPositions.find(p => p.pos === pos);
+                const isP = posObj && posObj.type === 'P';
+
+                const tileBg = isFlipped 
+                    ? 'bg-rose-600 border-rose-700 text-white animate-pulse' 
+                    : (isP ? 'bg-purple-100 border-purple-300 text-purple-900 hover:bg-purple-200' : 'bg-sky-100 border-sky-300 text-sky-900 hover:bg-sky-200');
+
+                return `
+                    <button type="button" onclick="toggleReceivedBit(${idx})" 
+                        class="bit-tile ${tileBg} border-2 px-3.5 py-2 rounded-lg text-center shadow-sm cursor-pointer transition-all">
+                        <div class="text-[10px] font-sans font-bold opacity-80">Pos ${pos}</div>
+                        <div class="text-xl font-mono font-extrabold my-0.5">${bitVal}</div>
+                        <div class="text-[10px] font-mono font-bold">${posObj ? posObj.name : ''}</div>
+                    </button>
+                `;
+            }).join('');
+
+            // Comparison strings
+            DOM.compareTransmitted.textContent = AppState.transmittedCodeword.join('');
+            DOM.compareReceived.textContent = AppState.receivedCodeword.join('');
+
+            // 6. Render Syndrome Vector Cards
+            DOM.syndromeBitsGrid.innerHTML = AppState.syndromeBits.map(sBit => {
+                const statusColor = sBit.val === 1 ? 'text-rose-600 bg-rose-50 border-rose-200' : 'text-emerald-600 bg-emerald-50 border-emerald-200';
+                return `
+                    <div class="p-3 rounded-lg border ${statusColor} space-y-1">
+                        <div class="flex items-center justify-between font-bold">
+                            <span>Check ${sBit.bitName} (2<sup>${Math.log2(sBit.weight)}</sup>)</span>
+                            <span class="text-base font-mono">${sBit.val}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 font-sans">
+                            Checked Positions: {${sBit.checkedPositions.join(', ')}}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Syndrome text
+            const synBinStr = [...AppState.syndromeBits].reverse().map(s => s.val).join('');
+            DOM.syndromeBinaryText.textContent = synBinStr || '0';
+            DOM.syndromeIntegerText.textContent = AppState.syndromeInt;
+
+            // 7. Render Syndrome Status Banner & Correction
+            renderSyndromeStatus();
+
+            // 8. Render Distance Workbench
+            renderDistanceWorkbench();
+        }
+
+        // Render Syndrome Status & Correction Logic
+        function renderSyndromeStatus() {
+            const S = AppState.syndromeInt;
+            const transmittedStr = AppState.transmittedCodeword.join('');
+            const receivedStr = AppState.receivedCodeword.join('');
+            
+            // Calculate actual physical differences between transmitted and received
+            const diffPositions = [];
+            for (let idx = 0; idx < AppState.n; idx++) {
+                if (AppState.transmittedCodeword[idx] !== AppState.receivedCodeword[idx]) {
+                    diffPositions.push(AppState.n - idx); // position 1..n
+                }
+            }
+
+            const banner = DOM.syndromeStatusBanner;
+
+            if (diffPositions.length === 0 && S === 0) {
+                // NO ERROR
+                banner.className = 'p-5 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-950 space-y-2';
+                banner.innerHTML = `
+                    <div class="flex items-center gap-2 text-base font-bold text-emerald-800">
+                        <span>✓</span> No Error Detected
+                    </div>
+                    <p class="text-xs text-emerald-900">
+                        All syndrome checks evaluated to zero ($S = 000_2$). The received vector matches the transmitted codeword perfectly and is valid.
+                    </p>
+                `;
+            } else if (diffPositions.length === 1) {
+                // SINGLE BIT ERROR CORRECTED
+                const errPos = S;
+                const correctedArray = [...AppState.receivedCodeword];
+                const errIdx = AppState.n - errPos; // index in 0..n-1
+                if (errIdx >= 0 && errIdx < AppState.n) {
+                    correctedArray[errIdx] = correctedArray[errIdx] === 1 ? 0 : 1;
+                }
+                const correctedStr = correctedArray.join('');
+
+                banner.className = 'p-5 rounded-xl border bg-amber-50 border-amber-200 text-amber-950 space-y-3';
+                banner.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-base font-bold text-amber-900">
+                            <span>⚡</span> Single-Bit Error Localized & Corrected
+                        </div>
+                        <span class="bg-amber-200 text-amber-900 font-mono font-bold text-xs px-2.5 py-1 rounded">Syndrome S = ${S}</span>
+                    </div>
+                    
+                    <p class="text-xs text-amber-900">
+                        Syndrome integer $S = ${S}$ unambiguously points to <strong>Hamming Position ${S}</strong> as the corrupted bit. By flipping bit at Position ${S}, the decoder perfectly restores the original message.
+                    </p>
+
+                    <div class="bg-white p-3 rounded-lg border border-amber-200 font-mono text-xs space-y-1">
+                        <div>Transmitted: <span class="font-bold text-slate-800">${transmittedStr}</span></div>
+                        <div>Received:    <span class="font-bold text-rose-600">${receivedStr}</span></div>
+                        <div>Corrected:   <span class="font-bold text-emerald-600">${correctedStr}</span></div>
+                    </div>
+                `;
+            } else {
+                // MULTI-BIT ERROR DETECTED IN SIMULATION
+                banner.className = 'p-5 rounded-xl border bg-rose-50 border-rose-200 text-rose-950 space-y-3';
+                banner.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-base font-bold text-rose-900">
+                            <span>⚠️</span> Multiple-Bit Error Detected in Simulation
+                        </div>
+                        <span class="bg-rose-200 text-rose-900 font-mono font-bold text-xs px-2.5 py-1 rounded">Channel Multi-Noise</span>
+                    </div>
+
+                    <p class="text-xs text-rose-900">
+                        Physical channel noise inverted <strong>${diffPositions.length} bits</strong> at positions {${diffPositions.join(', ')}}. 
+                        Because standard Hamming codes have minimum distance $d_{\min} = 3$, double errors cause <strong>syndrome aliasing</strong>.
+                        The evaluator computed $S = ${S}$, which points to Position ${S}, but correcting Position ${S} will fail to restore the true transmission.
+                    </p>
+
+                    <div class="bg-white p-3 rounded-lg border border-rose-200 font-mono text-xs space-y-1">
+                        <div>Original Transmitted : <span class="font-bold text-slate-800">${transmittedStr}</span></div>
+                        <div>Multi-Corrupted Vector: <span class="font-bold text-rose-600">${receivedStr}</span></div>
+                        <div class="text-rose-700 font-sans font-bold text-[11px] mt-1">
+                            ↳ Recommendation: Implement Extended Hamming Code (SEC-DED) with overall parity bit $P_0$ to reliably detect double-bit errors.
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Render Distance Workbench
+        function renderDistanceWorkbench() {
+            const strA = DOM.distInputA.value.trim();
+            const strB = DOM.distInputB.value.trim();
+
+            if (!strA || !strB || strA.length !== strB.length || !/^[01]+$/.test(strA) || !/^[01]+$/.test(strB)) {
+                DOM.distanceAlignmentContainer.innerHTML = `
+                    <div class="text-xs text-rose-600 font-sans font-bold">
+                        Please enter valid binary strings of equal length to evaluate Hamming Distance metrics.
+                    </div>
+                `;
+                DOM.statDistValue.textContent = '-';
+                DOM.statDistDetect.textContent = '-';
+                DOM.statDistCorrect.textContent = '-';
+                return;
+            }
+
+            let dist = 0;
+            const rowA = [];
+            const rowB = [];
+            const rowDiff = [];
+
+            for (let i = 0; i < strA.length; i++) {
+                const charA = strA[i];
+                const charB = strB[i];
+                if (charA !== charB) {
+                    dist++;
+                    rowA.push(`<span class="text-rose-600 font-bold bg-rose-100 px-1 rounded">${charA}</span>`);
+                    rowB.push(`<span class="text-rose-600 font-bold bg-rose-100 px-1 rounded">${charB}</span>`);
+                    rowDiff.push(`<span class="text-rose-600 font-bold">↑</span>`);
+                } else {
+                    rowA.push(`<span class="text-slate-800">${charA}</span>`);
+                    rowB.push(`<span class="text-slate-800">${charB}</span>`);
+                    rowDiff.push(`<span class="text-slate-300">•</span>`);
+                }
+            }
+
+            DOM.distanceAlignmentContainer.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="w-24 text-xs font-sans text-slate-500 font-bold">Codeword A:</span>
+                    <div class="tracking-widest font-bold">${rowA.join(' ')}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-24 text-xs font-sans text-slate-500 font-bold">Codeword B:</span>
+                    <div class="tracking-widest font-bold">${rowB.join(' ')}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-24 text-xs font-sans text-slate-500 font-bold">Mismatches:</span>
+                    <div class="tracking-widest font-bold">${rowDiff.join(' ')}</div>
+                </div>
+            `;
+
+            const tDetect = Math.max(0, dist - 1);
+            const tCorrect = Math.max(0, Math.floor((dist - 1) / 2));
+
+            DOM.statDistValue.textContent = dist;
+            DOM.statDistDetect.textContent = tDetect;
+            DOM.statDistCorrect.textContent = tCorrect;
+        }
+
+        // Interactive Received Bit Toggle Callback
+        window.toggleReceivedBit = function(idx) {
+            AppState.receivedCodeword[idx] = AppState.receivedCodeword[idx] === 1 ? 0 : 1;
+            evaluateSyndrome();
+            renderUI();
+            showToast(`Flipped bit at Hamming Position ${AppState.n - idx}`, 'info');
+        };
+
+        // Event Listeners
+        function setupEventListeners() {
+            // Data Word Input
+            DOM.inputDataWord.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                if (/^[01]+$/.test(val) && val.length > 0) {
+                    AppState.dataInput = val;
+                    // Changing the source data creates a new transmission; clear old channel noise.
+                    AppState.receivedCodeword = [];
+                    DOM.inputErrorMsg.classList.add('hidden');
+                    DOM.inputValidationIndicator.classList.remove('hidden');
+                    renderUI();
+                } else {
+                    DOM.inputErrorMsg.classList.remove('hidden');
+                    DOM.inputValidationIndicator.classList.add('hidden');
+                }
+            });
+
+            // Parity Mode Toggles
+            DOM.btnModeEven.addEventListener('click', () => {
+                AppState.parityMode = 'even';
+                // Parity mode changes the transmitted codeword; discard stale channel errors.
+                AppState.receivedCodeword = [];
+                DOM.btnModeEven.className = 'py-2 px-3 rounded-md font-semibold text-center transition-all bg-white text-brand-700 shadow-sm border border-slate-200';
+                DOM.btnModeOdd.className = 'py-2 px-3 rounded-md font-semibold text-center transition-all text-slate-600 hover:text-slate-900';
+                renderUI();
+                showToast('Switched to Even Parity mode', 'info');
+            });
+
+            DOM.btnModeOdd.addEventListener('click', () => {
+                AppState.parityMode = 'odd';
+                // Parity mode changes the transmitted codeword; discard stale channel errors.
+                AppState.receivedCodeword = [];
+                DOM.btnModeOdd.className = 'py-2 px-3 rounded-md font-semibold text-center transition-all bg-white text-purple-700 shadow-sm border border-slate-200';
+                DOM.btnModeEven.className = 'py-2 px-3 rounded-md font-semibold text-center transition-all text-slate-600 hover:text-slate-900';
+                renderUI();
+                showToast('Switched to Odd Parity mode', 'info');
+            });
+
+            // Copy Codeword Button
+            DOM.btnCopyCodeword.addEventListener('click', () => {
+                const text = AppState.transmittedCodeword.join('');
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast(`Copied codeword '${text}' to clipboard`, 'success');
+                });
+            });
+
+            // Reset Demonstration App
+            DOM.btnResetApp.addEventListener('click', () => {
+                AppState.dataInput = '1011';
+                AppState.parityMode = 'even';
+                AppState.receivedCodeword = [];
+                DOM.inputDataWord.value = '1011';
+                DOM.btnModeEven.click();
+                showToast('Reset application state to default demo (1011)', 'info');
+            });
+
+            // Simulator Actions
+            DOM.btnInject1Bit.addEventListener('click', () => {
+                // Invert transmitted codeword at random position
+                AppState.receivedCodeword = [...AppState.transmittedCodeword];
+                const randIdx = Math.floor(Math.random() * AppState.n);
+                AppState.receivedCodeword[randIdx] = AppState.receivedCodeword[randIdx] === 1 ? 0 : 1;
+                renderUI();
+                showToast(`Injected 1-bit noise at Position ${AppState.n - randIdx}`, 'info');
+            });
+
+            DOM.btnInject2Bit.addEventListener('click', () => {
+                AppState.receivedCodeword = [...AppState.transmittedCodeword];
+                const idx1 = Math.floor(Math.random() * AppState.n);
+                let idx2 = Math.floor(Math.random() * AppState.n);
+                while (idx2 === idx1 && AppState.n > 1) {
+                    idx2 = Math.floor(Math.random() * AppState.n);
+                }
+                AppState.receivedCodeword[idx1] = AppState.receivedCodeword[idx1] === 1 ? 0 : 1;
+                AppState.receivedCodeword[idx2] = AppState.receivedCodeword[idx2] === 1 ? 0 : 1;
+                renderUI();
+                showToast(`Injected 2-bit noise at Positions ${AppState.n - idx1} & ${AppState.n - idx2}`, 'info');
+            });
+
+            DOM.btnInjectRandom.addEventListener('click', () => {
+                AppState.receivedCodeword = AppState.transmittedCodeword.map(b => Math.random() > 0.7 ? (b === 1 ? 0 : 1) : b);
+                renderUI();
+                showToast('Injected random channel perturbations', 'info');
+            });
+
+            DOM.btnResetChannel.addEventListener('click', () => {
+                AppState.receivedCodeword = [...AppState.transmittedCodeword];
+                renderUI();
+                showToast('Cleared channel noise vector', 'success');
+            });
+
+            // Distance Inputs
+            DOM.distInputA.addEventListener('input', renderDistanceWorkbench);
+            DOM.distInputB.addEventListener('input', renderDistanceWorkbench);
+
+            // Collapsible Guide Panel
+            DOM.btnToggleGuide.addEventListener('click', () => {
+                DOM.guideContentPanel.classList.toggle('hidden');
+                const isHidden = DOM.guideContentPanel.classList.contains('hidden');
+                DOM.guideChevron.textContent = isHidden ? '▼' : '▲';
+            });
+        }
+
+        // Application Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            
+            // Load the clean default transmission first.
+            renderUI();
+
+            // Auto-trigger a 1-bit error simulation on load to give immediate visual value
+            setTimeout(() => {
+                const defaultErrIdx = 2; // Position 5 (D2 bit in 7-bit codeword 1010101 -> 1000101)
+                AppState.receivedCodeword[defaultErrIdx] = 0;
+                renderUI();
+                showToast('Pre-loaded 1-bit channel error simulation at Position 5', 'info');
+            }, 400);
+        });
+    </script>
+</body>
+</html>
