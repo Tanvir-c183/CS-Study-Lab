@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Computer Networks — Collision & Broadcast Domain Visual Lab</title>
+<style>
+:root{
+  --bg:#f4f7fb;--card:#fff;--line:#d9e2ec;--text:#172033;--muted:#64748b;
+  --blue:#2563eb;--blue2:#1d4ed8;--cyan:#0891b2;--purple:#7c3aed;
+  --green:#16a34a;--amber:#d97706;--red:#dc2626;--shadow:0 10px 30px rgba(15,23,42,.08)
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(135deg,#f8fafc,#eef5fb);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
+.wrap,main{max-width:1260px;margin:auto;padding:15px 22px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:grid;place-items:center;font-weight:950;letter-spacing:-.5px;box-shadow:0 8px 20px #2563eb30}
+h1{margin:0;font-size:20px}.muted{color:var(--muted);font-size:12px}.author{margin-left:auto;text-align:right}.author b{display:block;color:var(--blue);font-size:15px}
+.nav{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
+.nav button,.btn{border:1px solid var(--line);background:#f8fafc;color:var(--text);padding:9px 13px;border-radius:10px;font-weight:850;cursor:pointer;transition:.18s}
+.nav button:hover,.btn:hover{transform:translateY(-1px);box-shadow:0 5px 14px #0f172a12}
+.nav button.active{background:linear-gradient(135deg,#dbeafe,#ede9fe);border-color:#93c5fd;color:#1e40af}
+.btn.primary{background:#2563eb;color:#fff;border-color:#2563eb}.btn.green{background:#16a34a;color:#fff;border-color:#16a34a}.btn.red{background:#dc2626;color:#fff;border-color:#dc2626}
+.hero,.panel{background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow)}
+.hero{margin-top:8px;padding:25px}.hero h2{font-size:31px;line-height:1.12;margin:9px 0}.hero p{max-width:950px;line-height:1.7;color:#52657c}
+.section{margin-top:18px}.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:12px}.title{font-size:18px;font-weight:950}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,input{background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px;color:var(--text)}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.statcard{padding:15px}.stat{font-size:27px;font-weight:950;margin-top:4px}.tag{display:inline-block;padding:5px 8px;border-radius:999px;font-size:9px;font-weight:950}
+.blue{background:#eff6ff;color:#1d4ed8}.purple{background:#f5f3ff;color:#6d28d9}.greenTag{background:#ecfdf5;color:#15803d}.amberTag{background:#fffbeb;color:#b45309}.redTag{background:#fef2f2;color:#b91c1c}
+.note{font-size:11px;color:var(--muted);line-height:1.6}.callout{padding:12px;border:1px solid #dbeafe;background:#eff6ff;color:#1e40af;border-radius:11px;font-size:11px;line-height:1.6}.callout.good{border-color:#bbf7d0;background:#f0fdf4;color:#166534}.callout.warn{border-color:#fed7aa;background:#fff7ed;color:#9a3412}.callout.danger{border-color:#fecaca;background:#fef2f2;color:#991b1b}
+.hidden{display:none!important}
+.stage-wrap{background:linear-gradient(135deg,#fbfdff,#f4f7ff);border:1px solid #d8e3ef;border-radius:17px;padding:14px}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:11px}
+.mode{border:1px solid var(--line);background:#fff;padding:8px 11px;border-radius:999px;font-size:10px;font-weight:900;cursor:pointer;color:#475569}.mode.active{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}
+.legend{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.legend span{font-size:9px;font-weight:900;padding:5px 8px;border-radius:999px}
+.legend .broadcast{background:#f5f3ff;color:#6d28d9}.legend .collision{background:#fff7ed;color:#b45309}.legend .link{background:#eff6ff;color:#1d4ed8}
+#labStage,#routerStage,#interStage{position:relative;height:500px;border-radius:15px;overflow:hidden;background:
+ radial-gradient(circle at 50% 50%,#ffffff 0 22%,transparent 52%),
+ linear-gradient(135deg,#f8fbff,#f4f0ff)}
+#interStage{isolation:isolate;contain:layout paint;min-height:500px}
+#interStage .stageGrid{z-index:0}
+#interStage svg.topology{z-index:1}
+.stageGrid{position:absolute;inset:0;background-image:linear-gradient(#dbe4f0 1px,transparent 1px),linear-gradient(90deg,#dbe4f0 1px,transparent 1px);background-size:42px 42px;opacity:.22}
+svg.topology{position:absolute;inset:0;width:100%;height:100%}
+.device{cursor:pointer}.device:hover .deviceBody{filter:brightness(1.04);stroke:#2563eb}
+.deviceLabel{font:900 13px Inter,system-ui,sans-serif;fill:#172033}.deviceSub{font:700 9px Inter,system-ui,sans-serif;fill:#64748b}
+.domainRing{fill:none;stroke-width:2;stroke-dasharray:9 8;opacity:.72}
+.broadcastRing{stroke:#8b5cf6}.collisionRing{stroke:#f59e0b}
+.linkLine{stroke:#94a3b8;stroke-width:4;stroke-linecap:round}.linkFull{stroke:#2563eb}.linkHalf{stroke:#f59e0b;stroke-dasharray:9 7}
+.packet{filter:drop-shadow(0 3px 5px #0f172a33);pointer-events:none}.packetPulse{animation:packetPulse .7s ease-out infinite}@keyframes packetPulse{0%,100%{opacity:.65;transform:scale(.92)}50%{opacity:1;transform:scale(1.08)}}.simBusy{opacity:.72;pointer-events:none}
+.packetText{font:950 9px Inter,system-ui,sans-serif;fill:#fff;text-anchor:middle;dominant-baseline:middle}
+.halo{fill:none;stroke-width:3;opacity:.9}
+.statusbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;padding:10px;border:1px solid #dbe3ee;background:#fff;border-radius:11px;font-size:10px}
+.kpi{font:950 11px ui-monospace,SFMono-Regular,Menlo,monospace}
+.table{width:100%;border-collapse:collapse}.table th,.table td{padding:9px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:10px}.table th{background:#eff6ff;color:#1e3a8a}
+.deviceInfo{min-height:125px;padding:14px}.deviceInfo h3{margin:0 0 4px;font-size:15px}.deviceInfo .value{font-weight:900;color:#1e40af}.deviceInfo .sub{margin-top:7px;color:var(--muted);font-size:10px;line-height:1.55}
+.log{height:205px;overflow:auto;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px;font:10px ui-monospace,monospace}.log div{padding:5px 0;border-bottom:1px dashed #e2e8f0}
+.formula{font:900 12px ui-monospace,monospace;background:#f8fafc;border:1px solid var(--line);padding:11px;border-radius:10px}
+.quiz-option{width:100%;text-align:left;border:1px solid var(--line);background:#fff;padding:11px;border-radius:10px;font-weight:750;cursor:pointer;margin-top:7px}.quiz-option:hover{border-color:#93c5fd;background:#f8fbff}.quiz-option.correct{border-color:#86efac;background:#f0fdf4;color:#166534}.quiz-option.wrong{border-color:#fca5a5;background:#fef2f2;color:#991b1b}
+.rule{padding:10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;font-size:10px}
+.rangeRow{display:flex;align-items:center;gap:10px}.rangeRow input{flex:1}
+footer{text-align:center;padding:28px;color:#94a3b8;font-size:11px}
+@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr 1fr}.author{display:none}}
+@media(max-width:620px){.g2,.g3,.g4{grid-template-columns:1fr}.wrap,main{padding-left:12px;padding-right:12px}.hero h2{font-size:25px}#labStage,#routerStage,#interStage{height:570px}.legend{margin-left:0}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="brand">
+    <div class="logo">NET</div>
+    <div><h1>Collision & Broadcast Domain Visual Lab</h1><div class="muted">Ethernet • Hub • Switch • Router • VLAN • Duplex • Domain Simulation</div></div>
+    <div class="author"><span class="muted">Created by</span><b>Tanvir Ahmed</b></div>
+  </div>
+  <div class="nav" id="nav">
+    <button class="active" data-page="domains">Domain Simulator</button>
+    <button data-page="router">Router & VLAN</button>
+    <button data-page="intervlan">Inter-VLAN Routing</button>
+    <button data-page="duplex">Full / Half Duplex</button>
+    <button data-page="theory">Theory</button>
+    <button data-page="quiz">Quiz</button>
+  </div>
+</div></header>
+
+<main>
+<section class="hero">
+  <div class="muted">COMPUTER NETWORKS VISUAL LAB</div>
+  <h2>See exactly why hubs, switches and routers create different domains.</h2>
+  <p>Build a small Ethernet topology, change the central device between a hub and a switch, add or remove hosts, and watch the collision-domain and broadcast-domain boundaries update live. The same topology is reused for the simulation so the diagram, counters and explanation always describe the network you are looking at.</p>
+  <span class="tag blue">🔵 Ethernet link</span>
+  <span class="tag amberTag">🟠 Collision domain</span>
+  <span class="tag purple">🟣 Broadcast domain</span>
+  <span class="tag greenTag">🟢 Full duplex</span>
+</section>
+
+<section id="domains" class="page section">
+  <div class="head">
+    <div><div class="title">① Unified Hub ↔ Switch Domain Simulator</div><div class="muted">One diagram. Change the central device without changing the topology.</div></div>
+    <div class="controls">
+      <button class="btn primary" id="sendUnicast">➡ Send Unicast</button>
+      <button class="btn" id="sendBroadcast">📣 Send Broadcast</button>
+      <button class="btn red" id="collisionTest">💥 Collision Test</button>
+      <button class="btn" id="resetDomain">↺ Reset</button>
+    </div>
+  </div>
+
+  <div class="panel" style="padding:14px">
+    <div class="controls">
+      <label class="muted">Central device
+        <select id="deviceMode"><option value="switch">Switch — Layer 2</option><option value="hub">Hub — Layer 1</option></select>
+      </label>
+      <label class="muted">Number of PCs
+        <input id="pcCount" type="number" min="2" max="8" value="4" style="width:78px">
+      </label>
+      <label class="muted">Duplex
+        <select id="duplexMode" disabled aria-label="Duplex is determined by central device"><option value="full">Full Duplex — Switch</option><option value="half">Half Duplex — Hub</option></select>
+      </label>
+      <button class="btn green" id="applyTopology">Apply Topology</button>
+      <span class="note">Tip: 4 PCs is the classic classroom example; try 2–8.</span>
+    </div>
+  </div>
+
+  <div class="grid g4 section">
+    <div class="panel statcard"><div class="muted">Collision domains</div><div class="stat" id="collisionCount">4</div><div class="note" id="collisionNote">One per active switch port/link; collisions occur only on a shared half-duplex medium.</div></div>
+    <div class="panel statcard"><div class="muted">Broadcast domains</div><div class="stat" id="broadcastCount">1</div><div class="note">One VLAN / Layer-2 broadcast domain.</div></div>
+    <div class="panel statcard"><div class="muted">Duplex</div><div class="stat" id="duplexStat">FULL</div><div class="note" id="duplexNote">Collisions do not occur on a correctly operating full-duplex link.</div></div>
+    <div class="panel statcard"><div class="muted">Connected hosts</div><div class="stat" id="hostCount">4</div><div class="note">Edit the PC count and apply.</div></div>
+  </div>
+
+  <div class="stage-wrap section">
+    <div class="toolbar">
+      <button class="mode active" id="viewAll">All boundaries</button>
+      <button class="mode" id="viewCollision">Collision only</button>
+      <button class="mode" id="viewBroadcast">Broadcast only</button>
+      <div class="legend"><span class="link">— link</span><span class="collision">- - collision</span><span class="broadcast">- - broadcast</span></div>
+    </div>
+    <div id="labStage">
+      <div class="stageGrid"></div>
+      <svg id="domainSvg" class="topology" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="statusbar">
+      <span><b>Topology:</b> <span id="topologyText">PCs → Switch</span></span>
+      <span><b>Current event:</b> <span id="eventText">Ready</span></span>
+      <span><b>Rule:</b> <span id="ruleText">Switch separates collision domains but not the broadcast domain.</span></span>
+    </div>
+  </div>
+
+  <div class="grid g2 section">
+    <div class="panel deviceInfo" id="deviceInfo">
+      <h3>Click a device</h3><div class="sub">The inspector will explain what the selected PC, hub or switch does at the relevant OSI layer.</div>
+    </div>
+    <div class="panel" style="padding:14px">
+      <div class="title">📊 Live domain calculation</div>
+      <div class="callout section" id="liveExplanation">With a switch, each active switch-to-host Ethernet link is a separate collision domain, while all hosts in the same VLAN share one broadcast domain.</div>
+      <div class="formula section" id="liveFormula">Collision domains = number of active switch links = 4<br>Broadcast domains = number of VLANs = 1</div>
+    </div>
+  </div>
+
+  <div class="grid g2 section">
+    <div class="panel" style="padding:14px"><div class="title">🧾 Simulation log</div><div class="log section" id="domainLog"></div></div>
+    <div class="panel" style="padding:14px"><div class="title">🧠 What the animation proves</div><div class="callout section" id="proofBox">A unicast is forwarded toward one destination by a switch. A broadcast is flooded within the same Layer-2 broadcast domain. A hub repeats the signal to all ports and shares one collision domain.</div></div>
+  </div>
+</section>
+
+<section id="router" class="page section hidden">
+  <div class="head">
+    <div><div class="title">② Router + VLAN / Layer-3 Routing Boundary</div><div class="muted">A separate tab for Layer-3 routing: VLAN-backed Layer-2 domains remain separate, while routed unicast can cross the router.</div></div>
+    <div class="controls"><button class="btn" id="routerBroadcast">📣 Test Broadcast</button><button class="btn primary" id="routerUnicast">➡ Test Routed Unicast</button><button class="btn" id="routerReset">↺ Reset</button></div>
+  </div>
+
+  <div class="panel" style="padding:14px">
+    <div class="controls">
+      <label class="muted">Left VLAN <select id="leftVlan"><option>VLAN 10</option><option>VLAN 20</option><option>VLAN 30</option></select></label>
+      <label class="muted">Right VLAN <select id="rightVlan"><option>VLAN 20</option><option>VLAN 30</option><option>VLAN 40</option></select></label>
+      <label class="muted">Hosts per side <input id="hostsSide" type="number" min="1" max="4" value="2" style="width:70px"></label>
+      <button class="btn green" id="applyRouter">Apply</button>
+      <span class="tag blue" id="routerVlanMode">2 VLAN-backed L2 domains → routed by R1</span>
+    </div>
+  </div>
+
+  <div class="grid g4 section">
+    <div class="panel statcard"><div class="muted">Left broadcast domain</div><div class="stat" id="leftDomain">VLAN 10</div><div class="note">One local Layer-2/VLAN domain.</div></div>
+    <div class="panel statcard"><div class="muted">Right broadcast domain</div><div class="stat" id="rightDomain">VLAN 20</div><div class="note">A separate local Layer-2/VLAN domain.</div></div>
+    <div class="panel statcard"><div class="muted">Total broadcast domains</div><div class="stat" id="routerBdCount">2</div><div class="note">Router separates the two.</div></div>
+    <div class="panel statcard"><div class="muted">Router boundary</div><div class="stat">L3</div><div class="note">Broadcasts are not bridged across routed interfaces.</div></div>
+  </div>
+
+  <div class="stage-wrap section">
+    <div id="routerStage"><div class="stageGrid"></div><svg id="routerSvg" class="topology" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="statusbar"><span><b>Broadcast domains:</b> <span id="routerRule">VLAN 10 ≠ VLAN 20</span></span><span><b>Current event:</b> <span id="routerEvent">Ready</span></span></div>
+  </div>
+
+  <div class="grid g2 section">
+    <div class="panel" style="padding:14px"><div class="title">🧾 Router simulation log</div><div class="log section" id="routerLog"></div></div>
+    <div class="panel" style="padding:14px"><div class="title">🧠 Critical rule</div><div class="callout warn section" id="routerCritical"><b>Router rule:</b> a Layer-2 broadcast stays inside its source VLAN/L2 broadcast domain and is not forwarded by R1 into the other domain. R1 can route normal unicast traffic between the two IP networks.</div></div>
+  </div>
+</section>
+
+<section id="intervlan" class="page section hidden">
+  <div class="head">
+    <div><div class="title">③ Inter-VLAN Routing Lab</div><div class="muted">Send traffic from one VLAN to another through a Layer-3 router. This is routing, not Layer-2 broadcasting.</div></div>
+    <div class="controls"><button class="btn primary" id="interSend">➡ Send Inter-VLAN Packet</button><button class="btn" id="interBroadcast">📣 Test VLAN Broadcast</button><button class="btn" id="interReset">↺ Reset</button></div>
+  </div>
+  <div class="panel" style="padding:14px">
+    <div class="controls">
+      <label class="muted">Source VLAN <select id="interLeftVlan"><option>VLAN 10</option><option>VLAN 20</option><option>VLAN 30</option></select></label>
+      <label class="muted">Destination VLAN <select id="interRightVlan"><option>VLAN 20</option><option>VLAN 30</option><option>VLAN 40</option></select></label>
+      <label class="muted">Source PC <select id="interSourcePc"><option>PC-A1</option><option>PC-A2</option></select></label>
+      <label class="muted">Destination PC <select id="interDestPc"><option>PC-B1</option><option>PC-B2</option></select></label>
+      <button class="btn green" id="applyInter">Apply</button>
+    </div>
+  </div>
+  <div class="grid g4 section">
+    <div class="panel statcard"><div class="muted">Source L2 domain</div><div class="stat" id="interSourceDomain">VLAN 10</div><div class="note">Broadcast stays inside this VLAN.</div></div>
+    <div class="panel statcard"><div class="muted">Destination L2 domain</div><div class="stat" id="interDestDomain">VLAN 20</div><div class="note">Separate broadcast domain.</div></div>
+    <div class="panel statcard"><div class="muted">Router role</div><div class="stat">L3</div><div class="note">Routes packets between IP subnets.</div></div>
+    <div class="panel statcard"><div class="muted">Broadcast crossing</div><div class="stat">BLOCKED</div><div class="note">R1 does not forward the original L2 broadcast.</div></div>
+  </div>
+  <div class="stage-wrap section">
+    <div id="interStage"><div class="stageGrid"></div><svg id="interSvg" class="topology" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="statusbar"><span><b>Path:</b> <span id="interPath">VLAN 10 → R1 → VLAN 20</span></span><span><b>Event:</b> <span id="interEvent">Ready</span></span></div>
+  </div>
+  <div class="grid g2 section">
+    <div class="panel" style="padding:14px"><div class="title">🧾 Inter-VLAN log</div><div class="log section" id="interLog"></div></div>
+    <div class="panel" style="padding:14px"><div class="title">🧠 What this proves</div><div class="callout section" id="interProof"><b>Inter-VLAN routing:</b> a unicast packet can cross R1 because the router removes the incoming Layer-2 frame, routes the IP packet, and creates a new Layer-2 frame on the destination interface.</div></div>
+  </div>
+</section>
+
+<section id="duplex" class="page section hidden">
+  <div class="title">③ Full Duplex vs Half Duplex</div>
+  <div class="muted">The same Ethernet principle, isolated so you can see why a legacy hub behaves differently from a switched full-duplex link.</div>
+  <div class="controls section">
+    <button class="btn primary" id="fullBtn">Full Duplex</button>
+    <button class="btn" id="halfBtn">Half Duplex</button>
+  </div>
+  <div class="stage-wrap section">
+    <svg id="duplexSvg" class="topology" viewBox="0 0 1000 430" style="height:430px;background:linear-gradient(135deg,#fbfdff,#f6f2ff);border-radius:14px"></svg>
+  </div>
+  <div class="callout section" id="duplexExplain"></div>
+</section>
+
+<section id="theory" class="page section hidden">
+  <div class="title">④ Exam Theory — Domain Rules</div>
+  <div class="grid g2 section">
+    <div class="panel" style="padding:15px">
+      <span class="tag amberTag">COLLISION DOMAIN</span>
+      <h3>What is it?</h3>
+      <p class="note">A collision domain is a portion of an Ethernet network in which simultaneous transmissions can contend for the same shared medium and potentially collide.</p>
+      <div class="rule">Hub: all attached stations share one collision domain.</div>
+      <div class="rule section">Switch: each active switch port is a separate collision domain.</div>
+      <div class="rule section">Correct full-duplex Ethernet: collisions do not occur, so CSMA/CD is not used on that link.</div>
+    </div>
+    <div class="panel" style="padding:15px">
+      <span class="tag purple">BROADCAST DOMAIN</span>
+      <h3>What is it?</h3>
+      <p class="note">A broadcast domain is the set of Layer-2 interfaces that receive a Layer-2 broadcast unless a Layer-3 boundary or another configured mechanism stops it.</p>
+      <div class="rule">Hub: one broadcast domain for the connected segment.</div>
+      <div class="rule section">Switch: one broadcast domain per VLAN.</div>
+      <div class="rule section">Router: separates broadcast domains at routed interfaces.</div>
+    </div>
+  </div>
+  <div class="panel section" style="padding:15px">
+    <div class="title">📌 Quick comparison</div>
+    <table class="table section">
+      <thead><tr><th>Device</th><th>Layer</th><th>Collision domains</th><th>Broadcast domains</th><th>Key behavior</th></tr></thead>
+      <tbody>
+        <tr><td>Hub</td><td>Layer 1</td><td>1 shared segment</td><td>1</td><td>Repeats signals; no MAC learning.</td></tr>
+        <tr><td>Switch</td><td>Layer 2</td><td>1 per active port/link</td><td>1 per VLAN</td><td>Learns MAC addresses; forwards/floods frames.</td></tr>
+        <tr><td>Router</td><td>Layer 3</td><td>Depends on attached links</td><td>Separates domains</td><td>Routes between networks; does not bridge L2 broadcasts by default.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="quiz" class="page section hidden">
+  <div class="title">⑤ Quick Quiz</div>
+  <div class="muted">Eight non-repetitive questions. Answer, read the explanation, then continue.</div>
+  <div class="panel section" style="padding:16px;max-width:850px">
+    <div class="statusbar"><span id="qNum">Question 1 / 8</span><span id="qScore">Score: 0</span></div>
+    <div class="progress" style="height:7px;background:#e2e8f0;border-radius:8px;margin-top:12px"><div id="qProgress" style="height:100%;width:0;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:8px"></div></div>
+    <h3 id="qText" style="margin-top:18px"></h3>
+    <div id="qOptions"></div>
+    <div id="qFeedback" class="callout hidden"></div>
+    <div class="controls section"><button class="btn primary" id="qNext">Next Question</button><button class="btn" id="qReset">Restart Quiz</button></div>
+  </div>
+</section>
+
+<footer>Computer Networks Visual Lab • Collision Domains • Broadcast Domains • Ethernet Duplex • <b style="color:#2563eb">Tanvir Ahmed</b></footer>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const NS="http://www.w3.org/2000/svg";
+let domainState={mode:"switch",pcCount:4,duplex:"full",view:"all"};
+let routerState={leftVlan:"VLAN 10",rightVlan:"VLAN 20",hosts:2};
+let simGeneration=0;
+let activeFrames=new Set();
+let activeTimeouts=new Set();
+let simBusy=false;
+
+function cancelAnimations(){
+  simGeneration++;
+  activeFrames.forEach(id=>cancelAnimationFrame(id));
+  activeFrames.clear();
+  activeTimeouts.forEach(id=>clearTimeout(id));
+  activeTimeouts.clear();
+  document.querySelectorAll(".simBusy").forEach(b=>b.classList.remove("simBusy"));
+  simBusy=false;
+}
+function setSimulationBusy(busy){
+  simBusy=busy;
+  ["sendUnicast","sendBroadcast","collisionTest","routerBroadcast","routerUnicast"].forEach(id=>{
+    const b=$(id); if(b) b.classList.toggle("simBusy",busy);
+  });
+}
+function later(fn,ms){
+  const id=setTimeout(()=>{activeTimeouts.delete(id);fn();},ms);activeTimeouts.add(id);return id;
+}
+
+function svgEl(tag,attrs={},text=""){
+  const e=document.createElementNS(NS,tag);
+  Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));
+  if(text)e.textContent=text;
+  return e;
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+function defs(svg){
+  const d=svgEl("defs");
+  const g=svgEl("linearGradient",{id:"deviceBlue",x1:"0",x2:"1",y1:"0",y2:"1"});
+  g.append(svgEl("stop",{offset:"0","stop-color":"#f8fbff"}),svgEl("stop",{offset:"1","stop-color":"#dbeafe"}));
+  const g2=svgEl("linearGradient",{id:"deviceDark",x1:"0",x2:"1",y1:"0",y2:"1"});
+  g2.append(svgEl("stop",{offset:"0","stop-color":"#eef2f7"}),svgEl("stop",{offset:"1","stop-color":"#cbd5e1"}));
+  const shadow=svgEl("filter",{id:"shadow",x:"-30%",y:"-30%",width:"160%",height:"170%"});
+  shadow.append(svgEl("feDropShadow",{dx:"0",dy:"5",stdDeviation:"5","flood-color":"#0f172a","flood-opacity":".16"}));
+  d.append(g,g2,shadow);svg.append(d);
+}
+function pcIcon(svg,x,y,name,sub="",active=false){
+  const g=svgEl("g",{class:"device",transform:`translate(${x} ${y})`});
+  const screen=svgEl("rect",{x:-36,y:-30,width:72,height:48,rx:6,fill:"url(#deviceBlue)",stroke:active?"#2563eb":"#64748b","stroke-width":2,class:"deviceBody",filter:"url(#shadow)"});
+  g.append(screen,svgEl("rect",{x:-27,y:-21,width:54,height:30,rx:3,fill:"#eff6ff",stroke:"#93c5fd"}));
+  g.append(svgEl("path",{d:"M-12 24H12L18 32H-18Z",fill:"#94a3b8",stroke:"#64748b"}));
+  g.append(svgEl("text",{x:0,y:54,class:"deviceLabel","text-anchor":"middle"},name));
+  if(sub)g.append(svgEl("text",{x:0,y:69,class:"deviceSub","text-anchor":"middle"},sub));
+  return g;
+}
+function switchIcon(svg,x,y,name,sub=""){
+  const g=svgEl("g",{class:"device",transform:`translate(${x} ${y})`});
+  g.append(svgEl("rect",{x:-66,y:-27,width:132,height:54,rx:9,fill:"url(#deviceBlue)",stroke:"#475569","stroke-width":2,class:"deviceBody",filter:"url(#shadow)"}));
+  g.append(svgEl("rect",{x:-55,y:-15,width:110,height:30,rx:5,fill:"#e2e8f0",stroke:"#94a3b8"}));
+  for(let i=0;i<8;i++)g.append(svgEl("rect",{x:-48+i*14,y:-8,width:8,height:6,rx:2,fill:i<4?"#22c55e":"#94a3b8"}));
+  g.append(svgEl("circle",{cx:-52,cy:22,r:3,fill:"#22c55e"}),svgEl("circle",{cx:-40,cy:22,r:3,fill:"#60a5fa"}));
+  g.append(svgEl("text",{x:0,y:52,class:"deviceLabel","text-anchor":"middle"},name));
+  if(sub)g.append(svgEl("text",{x:0,y:67,class:"deviceSub","text-anchor":"middle"},sub));
+  return g;
+}
+function hubIcon(svg,x,y,name,sub=""){
+  const g=svgEl("g",{class:"device",transform:`translate(${x} ${y})`});
+  g.append(svgEl("rect",{x:-66,y:-27,width:132,height:54,rx:9,fill:"url(#deviceDark)",stroke:"#64748b","stroke-width":2,class:"deviceBody",filter:"url(#shadow)"}));
+  g.append(svgEl("rect",{x:-55,y:-15,width:110,height:30,rx:5,fill:"#f1f5f9",stroke:"#94a3b8"}));
+  for(let i=0;i<8;i++)g.append(svgEl("circle",{cx:-48+i*14,cy:0,r:3,fill:"#f59e0b"}));
+  g.append(svgEl("circle",{cx:-52,cy:22,r:3,fill:"#22c55e"}),svgEl("circle",{cx:-40,cy:22,r:3,fill:"#f59e0b"}));
+  g.append(svgEl("text",{x:0,y:52,class:"deviceLabel","text-anchor":"middle"},name));
+  if(sub)g.append(svgEl("text",{x:0,y:67,class:"deviceSub","text-anchor":"middle"},sub));
+  return g;
+}
+function routerIcon(svg,x,y,name,sub=""){
+  // Clean Cisco-style logical router glyph: distinct chassis, status LEDs and crossed routing arrows.
+  const g=svgEl("g",{class:"device",transform:`translate(${x} ${y})`});
+  const shadowBody=svgEl("path",{d:"M-62-34H62Q72-34 72-24V24Q72 34 62 34H-62Q-72 34-72 24V-24Q-72-34-62-34Z",fill:"url(#deviceDark)",stroke:"#334155","stroke-width":2.5,class:"deviceBody",filter:"url(#shadow)"});
+  const face=svgEl("rect",{x:-58,y:-28,width:116,height:56,rx:8,fill:"#f8fafc",stroke:"#94a3b8","stroke-width":1.5});
+  const vent=svgEl("path",{d:"M-50-17H-10M-50-10H-10M10-17H50M10-10H50",stroke:"#cbd5e1","stroke-width":2,"stroke-linecap":"round"});
+  const arrow1=svgEl("path",{d:"M-28 8H24L15 0M24 8L15 16",fill:"none",stroke:"#2563eb","stroke-width":2.8,"stroke-linecap":"round","stroke-linejoin":"round"});
+  const arrow2=svgEl("path",{d:"M28-2H-24L-15-10M-24-2L-15 6",fill:"none",stroke:"#7c3aed","stroke-width":2.8,"stroke-linecap":"round","stroke-linejoin":"round"});
+  g.append(shadowBody,face,vent,arrow1,arrow2);
+  [-45,-30,30,45].forEach((dx,i)=>g.append(svgEl("circle",{cx:dx,cy:23,r:3.2,fill:i<2?"#22c55e":"#60a5fa",stroke:"#fff","stroke-width":1})));
+  g.append(svgEl("text",{x:0,y:53,class:"deviceLabel","text-anchor":"middle"},name));
+  if(sub)g.append(svgEl("text",{x:0,y:68,class:"deviceSub","text-anchor":"middle"},sub));
+  return g;
+}
+function edge(svg,x1,y1,x2,y2,duplex="full"){
+  svg.append(svgEl("line",{x1,y1,x2,y2,class:`linkLine ${duplex==="full"?"linkFull":"linkHalf"}`}));
+}
+function ring(svg,cx,cy,rx,ry,cls,label){
+  svg.append(svgEl("ellipse",{cx,cy,rx,ry,class:`domainRing ${cls}`}));
+  const w=label.length*6.2+18;
+  svg.append(svgEl("rect",{x:cx-w/2,y:cy-ry-20,width:w,height:18,rx:9,fill:"#fff",stroke:cls==="broadcastRing"?"#c4b5fd":"#fed7aa"}));
+  svg.append(svgEl("text",{x:cx,y:cy-ry-8,"text-anchor":"middle",fill:cls==="broadcastRing"?"#6d28d9":"#b45309","font-size":"9","font-weight":"950"},label));
+}
+function packet(svg,x,y,label,color){
+  const g=svgEl("g",{class:"packet",transform:`translate(${x} ${y})`});
+  g.append(svgEl("circle",{r:13,fill:color,stroke:"#fff","stroke-width":3}),svgEl("text",{x:0,y:1,class:"packetText"},label));
+  svg.append(g);return g;
+}
+function animatePacket(svg,path,label,color,duration=650,generation=simGeneration){
+  return new Promise(resolve=>{
+    if(generation!==simGeneration){resolve(false);return;}
+    const p=packet(svg,path[0][0],path[0][1],label,color);
+    const start=performance.now();
+    let frameId=0;
+    function finish(ok){
+      if(frameId)activeFrames.delete(frameId);
+      if(p.isConnected)p.remove();
+      resolve(ok);
+    }
+    function step(now){
+      if(generation!==simGeneration || !p.isConnected){finish(false);return;}
+      const t=Math.min(1,(now-start)/duration);
+      const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+      const n=Math.floor(e*(path.length-1));const local=e*(path.length-1)-n;
+      const a=path[n],b=path[Math.min(n+1,path.length-1)];
+      p.setAttribute("transform",`translate(${a[0]+(b[0]-a[0])*local} ${a[1]+(b[1]-a[1])*local})`);
+      if(t<1){frameId=requestAnimationFrame(step);activeFrames.add(frameId);}else finish(true);
+    }
+    frameId=requestAnimationFrame(step);activeFrames.add(frameId);
+  });
+}
+function clearSvg(svg){svg.innerHTML="";defs(svg);}
+
+function syncDuplexControl(){
+  const mode=$("deviceMode").value;
+  const select=$("duplexMode");
+  // Main topology rule: Switch => Full Duplex; Hub => Half Duplex.
+  // The main simulator never permits Switch+Half or Hub+Full.
+  domainState.duplex = mode==="hub" ? "half" : "full";
+  select.value = domainState.duplex;
+  select.title = mode==="hub" ? "Hub: Half Duplex only — shared medium" : "Switch: Full Duplex only — dedicated host links";
+  updateCollisionButton();
+}
+
+function updateCollisionButton(){
+  const b=$("collisionTest");
+  if(!b)return;
+  b.textContent=domainState.mode==="switch" ? "💥 Collision Test • Switch Ports" : "💥 Collision Test • Shared Hub";
+  b.title=domainState.mode==="switch"
+    ? "Simultaneous transmissions from two different switch ports: separate collision domains, so no collision."
+    : "Simultaneous transmissions on a shared hub medium: collision occurs in the one shared collision domain.";
+}
+
+function renderDomain(){
+  // Enforce the topology rule every time the domain view renders, including after
+  // visiting the standalone duplex lesson: Switch => Full, Hub => Half.
+  syncDuplexControl();
+  const svg=$("domainSvg");clearSvg(svg);
+  const n=domainState.pcCount, mode=domainState.mode;
+  const cx=500,cy=280, hubX=500,hubY=270;
+  const positions=[];
+  for(let i=0;i<n;i++){
+    const angle=-Math.PI/2 + i*(2*Math.PI/n);
+    positions.push([cx+300*Math.cos(angle),cy+175*Math.sin(angle)]);
+  }
+  // broadcast boundary always one same-VLAN domain
+  const showB=domainState.view!=="collision";
+  const showC=domainState.view!=="broadcast";
+  if(showB)ring(svg,500,280,430,205,"broadcastRing","1 BROADCAST DOMAIN • ONE VLAN");
+  if(mode==="hub" && showC)ring(svg,500,280,210,125,"collisionRing","1 SHARED COLLISION DOMAIN");
+  if(mode==="switch" && showC){
+    positions.forEach((p,i)=>{
+      const mx=(p[0]+hubX)/2,my=(p[1]+hubY)/2;
+      const dx=p[0]-hubX,dy=p[1]-hubY,len=Math.hypot(dx,dy);
+      const px=-dy/len*22,py=dx/len*22;
+      svg.append(svgEl("ellipse",{cx:mx+px,cy:my+py,rx:len/2-5,ry:19,transform:`rotate(${Math.atan2(dy,dx)*180/Math.PI} ${mx+px} ${my+py})`,class:"domainRing collisionRing"}));
+    });
+  }
+  positions.forEach((p,i)=>edge(svg,p[0],p[1],hubX,hubY,domainState.duplex));
+  positions.forEach((p,i)=>svg.append(pcIcon(svg,p[0],p[1],`PC-${i+1}`,`Host • VLAN 10`,i===0)));
+  if(mode==="switch")svg.append(switchIcon(svg,hubX,hubY,"SW-1","Layer 2 • VLAN 10"));
+  else svg.append(hubIcon(svg,hubX,hubY,"HUB-1","Layer 1 • shared medium"));
+  // central labels
+  svg.append(svgEl("text",{x:500,y:466,"text-anchor":"middle",fill:"#64748b","font-size":"10","font-weight":"800"},
+    mode==="hub" ? "Shared half-duplex medium: every attached station hears the signal." :
+    "Switched Ethernet: MAC learning + per-port collision separation; broadcast still stays inside VLAN 10."));
+  $("collisionCount").textContent=mode==="hub"?"1":n;
+  $("broadcastCount").textContent="1";$("hostCount").textContent=n;
+  $("duplexStat").textContent=domainState.duplex.toUpperCase();
+  $("duplexNote").textContent=domainState.duplex==="full"?"Correct full-duplex Ethernet has no collisions.":"Half-duplex shared access permits contention and legacy CSMA/CD collisions.";
+  $("collisionNote").textContent=mode==="hub"?"All attached hosts share one collision domain.":"Each active switch port/link is a separate collision domain.";
+  $("topologyText").textContent=`${n} PCs → ${mode==="hub"?"Hub":"Switch"}`;
+  $("ruleText").textContent=mode==="hub"?"Hub repeats signals on one shared medium; it creates one collision domain.":"Switch separates collision domains but does not break the broadcast domain unless VLANs are separated.";
+  $("liveExplanation").innerHTML=mode==="hub"
+    ? `<b>Hub calculation:</b> Collision domains = <b>1</b> shared segment. Broadcast domains = <b>1</b> for the connected Layer-2 segment.`
+    : `<b>Switch calculation:</b> Collision domains = <b>${n}</b> active host links. Broadcast domains = <b>1</b> because all hosts are in the same VLAN.`;
+  $("liveFormula").innerHTML=mode==="hub"
+    ? `Collision domains = 1 shared medium<br>Broadcast domains = 1`
+    : `Collision domains = active switch links = ${n}<br>Broadcast domains = VLAN count = 1`;
+  $("proofBox").innerHTML=mode==="hub"
+    ? `<b>Hub proof:</b> the hub has no MAC table. A signal arriving on one port is repeated to the others, so all stations share the same collision domain.`
+    : `<b>Switch proof:</b> a known unicast can be sent only toward the destination port, while a broadcast is flooded to eligible ports in the same VLAN. Each switched full-duplex link is isolated from collisions.`;
+}
+function logDomain(msg){
+  const el=$("domainLog");const d=document.createElement("div");d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;el.prepend(d);while(el.children.length>80)el.lastElementChild.remove();
+}
+function selectDevice(type,name){
+  const text={
+    pc:`<h3>${esc(name)}</h3><div class="value">End host • Layer 2/3 endpoint</div><div class="sub">The PC creates Ethernet frames and sends them through its attached port. It does not forward a received broadcast to other interfaces.</div>`,
+    switch:`<h3>SW-1</h3><div class="value">Layer-2 Ethernet switch</div><div class="sub">Learns source MAC addresses and forwards known unicast frames toward the destination port. Broadcasts are flooded within the same VLAN. Each active port/link is a separate collision-domain boundary.</div>`,
+    hub:`<h3>HUB-1</h3><div class="value">Layer-1 repeater</div><div class="sub">A hub does not learn MAC addresses. It repeats an incoming electrical/bit signal to the other ports, creating one shared collision domain. Legacy Ethernet hubs operate half duplex.</div>`
+  };
+  $("deviceInfo").innerHTML=text[type]||text.pc;
+}
+
+async function sendUnicast(){
+  if(simBusy)return;
+  cancelAnimations(); const generation=simGeneration; setSimulationBusy(true);
+  renderDomain(); // renderDomain increments generation, so capture again
+  const g=simGeneration, svg=$("domainSvg"), n=domainState.pcCount;
+  const pts=[];for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n;pts.push([500+300*Math.cos(a),280+175*Math.sin(a)]);}
+  const source=pts[0],dest=pts[Math.min(1,n-1)];
+  $("eventText").textContent="Unicast in progress";
+  logDomain(`Unicast: PC-1 → ${domainState.mode==="hub"?"HUB-1":"SW-1"} → PC-${Math.min(2,n)}.`);
+  if(domainState.mode==="switch"){
+    await animatePacket(svg,[source,[500,270],dest],"U","#2563eb",1050,g);
+    if(g!==simGeneration)return;
+    $("proofBox").innerHTML="<b>Unicast:</b> the switch forwards a known destination frame only toward the destination port after MAC learning. Other hosts do not receive the unicast frame.";
+  }else{
+    await animatePacket(svg,[source,[500,270]],"U","#f59e0b",900,g);
+    if(g!==simGeneration)return;
+    for(let i=1;i<n;i++){
+      const pg=packet(svg,pts[i][0],pts[i][1],"U","#f59e0b");
+      later(()=>{if(pg.isConnected)pg.remove();},500);
+    }
+    $("proofBox").innerHTML="<b>Hub:</b> the signal is repeated to the other ports because the hub has no MAC forwarding table.";
+  }
+  $("eventText").textContent="Unicast complete";setSimulationBusy(false);
+}
+async function sendBroadcast(){
+  if(simBusy)return;
+  cancelAnimations();setSimulationBusy(true);renderDomain();const g=simGeneration,svg=$("domainSvg"),n=domainState.pcCount;
+  const pts=[];for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n;pts.push([500+300*Math.cos(a),280+175*Math.sin(a)]);}
+  $("eventText").textContent="Broadcast in progress";logDomain(`Broadcast: PC-1 sends FF:FF:FF:FF:FF:FF into ${domainState.mode==="hub"?"shared hub medium":"VLAN 10 switch fabric"}.`);
+  if(!(await animatePacket(svg,[pts[0],[500,270]],"B","#7c3aed",900,g))||g!==simGeneration)return;
+  for(let i=1;i<n;i++){
+    if(!(await animatePacket(svg,[[500,270],pts[i]],"B","#7c3aed",520,g))||g!==simGeneration)return;
+  }
+  $("eventText").textContent="Broadcast flooded within VLAN 10";
+  $("proofBox").innerHTML="<b>Broadcast:</b> the Layer-2 broadcast is delivered to every eligible host in the same broadcast domain. A switch does not create a new broadcast domain by itself.";
+  setSimulationBusy(false);
+}
+async function collisionTest(){
+  if(simBusy)return;
+  cancelAnimations();setSimulationBusy(true);renderDomain();const g=simGeneration,svg=$("domainSvg"),n=domainState.pcCount;
+  const pts=[];for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n;pts.push([500+300*Math.cos(a),280+175*Math.sin(a)]);}
+
+  // Important networking rule: two PCs on different switch ports are in different collision domains.
+  // Therefore a central switch does NOT create a collision between PC-1 and PC-2, even in half duplex.
+  if(domainState.mode==="switch"){
+    $("eventText").textContent="Switch collision test: two ports transmit together";
+    logDomain(`Switch test: PC-1 and PC-2 transmit simultaneously on different switch ports.`);
+    // The packets meet the switch at the same time, but they arrive on separate
+    // collision domains. This is the visual proof that a switch does not create
+    // one shared collision domain for all attached hosts.
+    await Promise.all([
+      animatePacket(svg,[pts[0],[500,270]],"A","#2563eb",1050,g),
+      animatePacket(svg,[pts[1],[500,270]],"B","#16a34a",1050,g)
+    ]);
+    if(g!==simGeneration)return;
+    const ok=svgEl("g",{transform:"translate(500 270)"});
+    ok.append(svgEl("circle",{r:28,fill:"#16a34a",opacity:.16}),svgEl("circle",{r:20,fill:"#16a34a",stroke:"#fff","stroke-width":3}),svgEl("text",{x:0,y:1,class:"packetText"},"✓"));
+    svg.append(ok);
+    later(()=>{if(ok.isConnected)ok.remove();},1100);
+    $("proofBox").innerHTML="<b>✓ No collision.</b> The two transmissions arrive on different switch ports, so they belong to separate collision domains. With the enforced full-duplex switch mode, each link has independent TX/RX paths and Ethernet collisions do not occur.";
+    $("eventText").textContent="Switch test complete — separate collision domains";setSimulationBusy(false);return;
+  }
+  // Hub: all stations share one half-duplex collision domain.
+  if(domainState.duplex==="full"){
+    $("eventText").textContent="No collision: full duplex";
+    logDomain("Collision test: full-duplex operation prevents Ethernet collisions.");
+    $("proofBox").innerHTML="<b>✓ No collision.</b> A correctly operating full-duplex link has separate transmit and receive paths. A legacy hub, however, is normally half duplex.";
+    setSimulationBusy(false);return;
+  }
+  $("eventText").textContent="Collision detected";logDomain("Two stations transmit into the same shared half-duplex hub medium at the same time.");
+  await Promise.all([animatePacket(svg,[pts[0],[500,270]],"A","#dc2626",900,g),animatePacket(svg,[pts[1],[500,270]],"B","#f59e0b",900,g)]);
+  if(g!==simGeneration)return;
+  const pulse=svgEl("g",{transform:"translate(500 270)",class:"packetPulse"});
+  pulse.append(svgEl("circle",{r:44,fill:"#dc2626",opacity:.14}),svgEl("circle",{r:25,fill:"#dc2626",stroke:"#fff","stroke-width":4}),svgEl("text",{x:0,y:1,class:"packetText"},"X"));svg.append(pulse);
+  later(()=>{if(pulse.isConnected)pulse.remove();},1200);
+  $("proofBox").innerHTML="<b>💥 Collision:</b> both stations used the same shared half-duplex medium at the same time. This is the classic collision-domain behavior of a hub/shared segment.";
+  $("eventText").textContent="Collision shown";setSimulationBusy(false);
+}
+
+function renderRouter(){
+  const svg=$("routerSvg");clearSvg(svg);const h=routerState.hosts;
+  const left=[],right=[];
+  for(let i=0;i<h;i++){left.push([110,150+i*95]);right.push([890,150+i*95]);}
+  ring(svg,270,285,190,205,"broadcastRing",routerState.leftVlan+" • BROADCAST DOMAIN");
+  ring(svg,730,285,190,205,"broadcastRing",routerState.rightVlan+" • BROADCAST DOMAIN");
+  left.forEach(p=>edge(svg,p[0],p[1],300,250,"full"));
+  right.forEach(p=>edge(svg,700,250,p[0],p[1],"full"));
+  edge(svg,365,250,635,250,"full");
+  left.forEach((p,i)=>svg.append(pcIcon(svg,p[0],p[1],`L-PC-${i+1}`,routerState.leftVlan)));
+  right.forEach((p,i)=>svg.append(pcIcon(svg,p[0],p[1],`R-PC-${i+1}`,routerState.rightVlan)));
+  svg.append(switchIcon(svg,300,250,"SW-L",routerState.leftVlan));
+  svg.append(routerIcon(svg,500,250,"R1","Layer 3 boundary"));
+  svg.append(switchIcon(svg,700,250,"SW-R",routerState.rightVlan));
+  svg.append(svgEl("text",{x:500,y:430,"text-anchor":"middle",fill:"#64748b","font-size":"10","font-weight":"800"},
+    "R1 is a Layer-3 boundary: each side keeps its own Layer-2 broadcast domain. Routed unicast may cross R1; the original L2 broadcast does not."));
+  $("leftDomain").textContent=routerState.leftVlan;$("rightDomain").textContent=routerState.rightVlan;
+  $("routerBdCount").textContent="2";
+  const same=routerState.leftVlan===routerState.rightVlan;
+  $("routerRule").textContent=same
+    ? `${routerState.leftVlan} = ${routerState.rightVlan} by ID, but R1 still separates the L2 domains`
+    : `${routerState.leftVlan} ≠ ${routerState.rightVlan}`;
+  $("routerVlanMode").textContent=same
+    ? "Same VLAN ID label ≠ one end-to-end L2 VLAN across a router"
+    : "Different VLAN IDs → separate L2 domains with L3 routing";
+  $("routerVlanMode").className=same ? "tag amberTag" : "tag blue";
+  $("routerCritical").innerHTML=same
+    ? `<b>Important:</b> The same VLAN number may be reused as a local label on both sides, but it does <b>not</b> make one end-to-end Layer-2 broadcast domain across R1. The broadcast still stops at R1. For routed unicast, the two routed interfaces must belong to appropriate IP networks/subnets.`
+    : `<b>Router rule:</b> a Layer-2 broadcast stays inside its source VLAN/L2 broadcast domain and is not forwarded by R1 into the other domain. R1 can route normal unicast traffic between the two IP networks.`;
+}
+function routerLog(msg){const el=$("routerLog");const d=document.createElement("div");d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;el.prepend(d);while(el.children.length>80)el.lastElementChild.remove();}
+async function routerBroadcast(){
+  if(simBusy)return;
+  cancelAnimations();setSimulationBusy(true);renderRouter();
+  const g=simGeneration,svg=$("routerSvg"),h=routerState.hosts;
+  const left=[];
+  for(let i=0;i<h;i++) left.push([110,150+i*95]);
+  const source=left[0];
+  $("routerEvent").textContent=`Broadcast flooding inside ${routerState.leftVlan}`;
+  routerLog(`Broadcast launched from L-PC-1 in ${routerState.leftVlan}. It may flood only inside the source L2 broadcast domain.`);
+  if(!(await animatePacket(svg,[source,[300,250]],"B","#7c3aed",900,g))||g!==simGeneration)return;
+
+  // Flood only to eligible hosts on the SOURCE side. The router is the L3 boundary.
+  const fanout=left.slice(1).map((p,i)=>animatePacket(svg,[[300,250],p],"B","#7c3aed",650,g));
+  await Promise.all(fanout);
+  if(g!==simGeneration)return;
+  const stop=packet(svg,500,250,"STOP","#dc2626");stop.classList.add("packetPulse");
+  later(()=>{if(stop.isConnected)stop.remove();},1000);
+  $("routerEvent").textContent="Broadcast stopped at R1 — right VLAN untouched";
+  $("routerRule").textContent=routerState.leftVlan===routerState.rightVlan
+    ? `${routerState.leftVlan}: same ID, but broadcast still stops at R1`
+    : `${routerState.leftVlan} broadcast stays local; ${routerState.rightVlan} is not flooded`;
+  routerLog(routerState.leftVlan===routerState.rightVlan
+    ? `Broadcast reached the other hosts on the LEFT side only, then stopped at R1. Same VLAN ID does not bridge an L3 boundary.`
+    : `Broadcast flooded to ${routerState.leftVlan} hosts only. R1 blocked it from entering ${routerState.rightVlan}.`);
+  $("routerCritical").innerHTML=`<b>✓ Broadcast behavior:</b> the frame is flooded to eligible ports inside <b>${esc(routerState.leftVlan)}</b>, but it is <b>not forwarded through R1</b>. The right-side broadcast domain remains untouched. Use the Inter-VLAN tab to see how a normal unicast crosses R1.`;
+  setSimulationBusy(false);
+}
+async function routerUnicast(){
+  if(simBusy)return;cancelAnimations();setSimulationBusy(true);renderRouter();const g=simGeneration,svg=$("routerSvg");
+  $("routerEvent").textContent="Routed unicast in progress";
+  routerLog(routerState.leftVlan===routerState.rightVlan
+    ? `Unicast: L-PC-1 → SW-L → R1 → SW-R → R-PC-1. The VLAN number is reused as a local label, but the two L2 domains remain separated by R1.`
+    : `Unicast: L-PC-1 → SW-L → R1 → SW-R → R-PC-1.`);
+  if(!(await animatePacket(svg,[[110,150],[300,250],[500,250],[700,250],[890,150]],"U","#2563eb",2200,g))||g!==simGeneration)return;
+  $("routerEvent").textContent="Routed unicast delivered";setSimulationBusy(false);
+}
+let interState={left:"VLAN 10",right:"VLAN 20"};
+function interLog(msg){const el=$("interLog");const d=document.createElement("div");d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;el.prepend(d);while(el.children.length>60)el.lastElementChild.remove();}
+function renderInter(){
+  const svg=$("interSvg");clearSvg(svg);
+  /* Fixed, contained canvas: nothing is allowed to escape the topology stage. */
+  const left=[[115,165],[115,335]], right=[[885,165],[885,335]];
+  const swL=[300,250], router=[500,250], swR=[700,250];
+
+  // Thin broadcast-domain boundaries, deliberately kept around each L2 segment.
+  ring(svg,300,250,205,195,"broadcastRing",interState.left+" • BROADCAST DOMAIN");
+  ring(svg,700,250,205,195,"broadcastRing",interState.right+" • BROADCAST DOMAIN");
+
+  // Physical links: PCs → switches → router → switch → PCs.
+  left.forEach(p=>edge(svg,p[0],p[1],swL[0],swL[1],"full"));
+  right.forEach(p=>edge(svg,swR[0],swR[1],p[0],p[1],"full"));
+  edge(svg,swL[0]+62,250,router[0]-82,250,"full");
+  edge(svg,router[0]+82,250,swR[0]-62,250,"full");
+
+  // Device labels are inside the canvas and have dedicated space.
+  left.forEach((p,i)=>svg.append(pcIcon(svg,p[0],p[1],`PC-A${i+1}`,interState.left)));
+  right.forEach((p,i)=>svg.append(pcIcon(svg,p[0],p[1],`PC-B${i+1}`,interState.right)));
+  svg.append(switchIcon(svg,swL[0],swL[1],"SW-A",interState.left));
+  svg.append(routerIcon(svg,router[0],router[1],"R1","L3 • INTER-VLAN ROUTER"));
+  svg.append(switchIcon(svg,swR[0],swR[1],"SW-B",interState.right));
+
+  // Clear L3 boundary marker between the two L2 domains.
+  svg.append(svgEl("line",{x1:500,y1:82,x2:500,y2:418,stroke:"#cbd5e1","stroke-width":2,"stroke-dasharray":"5 7"}));
+  svg.append(svgEl("text",{x:500,y:68,"text-anchor":"middle",fill:"#475569","font-size":"10","font-weight":"950"},"L3 ROUTING BOUNDARY"));
+
+  $("interSourceDomain").textContent=interState.left;
+  $("interDestDomain").textContent=interState.right;
+  $("interPath").textContent=`${interState.left} → SW-A → R1 → SW-B → ${interState.right}`;
+  $("interProof").innerHTML=`<b>Inter-VLAN routing:</b> ${esc(interState.left)} and ${esc(interState.right)} remain separate Layer-2 broadcast domains. A normal IP unicast may cross R1 because R1 performs Layer-3 routing between the two networks.`;
+}
+async function interSend(){
+  if(simBusy)return;
+  if(interState.left===interState.right){
+    $("interEvent").textContent="Choose two different VLANs";
+    $("interProof").innerHTML=`<b>Not an inter-VLAN case:</b> both sides are ${esc(interState.left)}. Choose different VLANs to demonstrate Layer-3 routing.`;
+    interLog(`Blocked test: source and destination are both ${interState.left}.`);
+    return;
+  }
+  cancelAnimations();setSimulationBusy(true);renderInter();const g=simGeneration,svg=$("interSvg");
+  const src=$("interSourcePc").value,dst=$("interDestPc").value;
+  $("interEvent").textContent="Routing unicast through R1";
+  interLog(`${src} (${interState.left}) → SW-A → R1 → SW-B → ${dst} (${interState.right})`);
+  const y1=src.endsWith("1")?165:335,y2=dst.endsWith("1")?165:335;
+  const path=[[115,y1],[300,250],[500,250],[700,250],[885,y2]];
+  if(!(await animatePacket(svg,path,"IP","#2563eb",2800,g))||g!==simGeneration)return;
+  $("interEvent").textContent="Inter-VLAN unicast delivered ✓";
+  $("interProof").innerHTML=`<b>✓ Routed successfully:</b> the IP packet crossed R1 from ${esc(interState.left)} to ${esc(interState.right)}. This is Layer-3 inter-VLAN unicast routing, not broadcasting.`;
+  setSimulationBusy(false);
+}
+async function interBroadcast(){
+  if(simBusy)return;
+  cancelAnimations();setSimulationBusy(true);renderInter();const g=simGeneration,svg=$("interSvg");
+  $("interEvent").textContent=`Broadcast confined to ${interState.left}`;
+  interLog(`Broadcast from PC-A1 floods only inside ${interState.left}; R1 blocks it from ${interState.right}.`);
+  if(!(await animatePacket(svg,[[115,165],[300,250]],"B","#7c3aed",900,g))||g!==simGeneration)return;
+  await Promise.all([
+    animatePacket(svg,[[300,250],[115,335]],"B","BROADCAST","#7c3aed",800,g)
+  ]);
+  if(g!==simGeneration)return;
+  const stop=packet(svg,500,250,"STOP","#dc2626");stop.classList.add("packetPulse");
+  $("interProof").innerHTML=`<b>✓ Broadcast blocked:</b> the frame is flooded within ${esc(interState.left)} only. R1 terminates the Layer-2 broadcast at its interface; ${esc(interState.right)} does not receive it.`;
+  $("interEvent").textContent="Broadcast blocked by R1 ✓";
+  later(()=>{if(stop.isConnected)stop.remove();},1000);
+  setSimulationBusy(false);
+}
+
+function renderDuplex(mode="full"){
+  const svg=$("duplexSvg");clearSvg(svg);
+  edge(svg,180,215,820,215,mode);
+  svg.append(pcIcon(svg,180,215,"PC-A","Sender"),switchIcon(svg,500,215,"SW-1","Ethernet"),pcIcon(svg,820,215,"PC-B","Receiver"));
+  if(mode==="full"){
+    svg.append(svgEl("path",{d:"M235 185H445",stroke:"#2563eb","stroke-width":5,"marker-end":"none"}),svgEl("path",{d:"M555 245H765",stroke:"#16a34a","stroke-width":5}));
+    svg.append(svgEl("text",{x:340,y:160,"text-anchor":"middle",fill:"#2563eb","font-size":"13","font-weight":"950"},"TX →"),svgEl("text",{x:660,y:270,"text-anchor":"middle",fill:"#16a34a","font-size":"13","font-weight":"950"},"← RX"));
+    $("duplexExplain").className="callout good section";$("duplexExplain").innerHTML="<b>Full duplex:</b> transmit and receive can occur simultaneously on the link. A correctly operating full-duplex Ethernet link has no collisions, so CSMA/CD is not used.";
+  }else{
+    svg.append(svgEl("path",{d:"M240 195H760",stroke:"#f59e0b","stroke-width":5,"stroke-dasharray":"13 9"}));
+    svg.append(svgEl("text",{x:500,y:165,"text-anchor":"middle",fill:"#b45309","font-size":"13","font-weight":"950"},"ONE SHARED HALF-DUPLEX MEDIUM"));
+    $("duplexExplain").className="callout warn section";$("duplexExplain").innerHTML="<b>Half duplex:</b> stations share access to the medium and cannot safely transmit at the same time. Legacy shared Ethernet used CSMA/CD to detect and recover from collisions.";
+  }
+}
+const questions=[
+ {q:"Four PCs are attached to one hub. How many collision domains are there?",o:["1","2","4","5"],a:0,e:"A hub repeats signals over one shared medium, so all attached stations share one collision domain."},
+ {q:"Four PCs are attached to a switch in one VLAN. How many broadcast domains are there?",o:["1","2","4","8"],a:0,e:"A switch does not break broadcasts by itself. One VLAN represents one broadcast domain."},
+ {q:"What device normally separates Layer-2 broadcast domains?",o:["Hub","Switch","Router","Repeater"],a:2,e:"A router operates at Layer 3 and separates networks at routed interfaces."},
+ {q:"A switch receives an Ethernet broadcast. What normally happens?",o:["Only the gateway receives it","It is flooded within the same VLAN","It is discarded","It is sent into every VLAN"],a:1,e:"The switch floods the broadcast to eligible ports in the same VLAN, excluding the incoming port."},
+ {q:"On a correctly operating full-duplex Ethernet link, how many Ethernet collisions should occur?",o:["0","1 per frame","Depends on VLAN count","Always 2"],a:0,e:"Full duplex provides independent transmit and receive paths, so Ethernet collisions do not occur on that link."},
+ {q:"Two VLANs exist on one physical switch. How many broadcast domains do they represent?",o:["1","2","The number of PCs","0"],a:1,e:"Each VLAN is a separate logical Layer-2 broadcast domain."},
+ {q:"Which statement best describes a hub?",o:["It learns MAC addresses","It routes between networks","It repeats incoming signals to other ports","It creates one collision domain per port"],a:2,e:"A hub is a Layer-1 repeater and does not make MAC-based forwarding decisions."},
+ {q:"A router connects two separate LANs. What happens to an incoming Layer-2 broadcast?",o:["It is automatically bridged","It is terminated at the router interface","It is repeated by the router","It changes into a hub signal"],a:1,e:"The router does not forward the original Layer-2 broadcast as a Layer-2 frame into the other network."}
+];
+let qIndex=0,qScore=0,qAnswered=false;
+function renderQuestion(){
+  const q=questions[qIndex];$("qNum").textContent=`Question ${qIndex+1} / ${questions.length}`;$("qScore").textContent=`Score: ${qScore}`;$("qProgress").style.width=(qIndex/questions.length*100)+"%";$("qText").textContent=q.q;$("qFeedback").className="callout hidden";qAnswered=false;
+  $("qOptions").innerHTML=q.o.map((x,i)=>`<button class="quiz-option" data-i="${i}">${esc(x)}</button>`).join("");
+  $("qOptions").querySelectorAll("button").forEach(b=>b.onclick=()=>answerQuestion(+b.dataset.i));
+}
+function answerQuestion(i){
+  if(qAnswered)return;qAnswered=true;const q=questions[qIndex],bs=[...$("qOptions").children];bs[q.a].classList.add("correct");
+  if(i===q.a){qScore++;$("qFeedback").className="callout good section";$("qFeedback").innerHTML=`<b>✓ Correct.</b> ${q.e}`;}
+  else{bs[i].classList.add("wrong");$("qFeedback").className="callout danger section";$("qFeedback").innerHTML=`<b>✗ Incorrect.</b> Correct answer: <b>${esc(q.o[q.a])}</b>. ${q.e}`;}
+  $("qScore").textContent=`Score: ${qScore}`;$("qProgress").style.width=((qIndex+1)/questions.length*100)+"%";
+}
+$("qNext").onclick=()=>{
+  if(!qAnswered)return;
+  if(qIndex<questions.length-1){qIndex++;renderQuestion();}
+  else{$("qText").textContent=`Quiz complete — ${qScore}/${questions.length}`;$("qOptions").innerHTML="";$("qFeedback").className=qScore>=7?"callout good section":"callout section";$("qFeedback").innerHTML=qScore>=7?"<b>Excellent.</b> You have a strong grasp of domain boundaries.":qScore>=5?"<b>Good.</b> Review the VLAN/router boundary once more.":"<b>Revise.</b> Focus on the difference between shared collision media and Layer-2 broadcast scope."; $("qNext").textContent="Restart";$("qNext").onclick=()=>{qIndex=0;qScore=0;$("qNext").textContent="Next Question";renderQuestion();};}
+};
+$("qReset").onclick=()=>{qIndex=0;qScore=0;$("qNext").textContent="Next Question";renderQuestion();};
+
+document.querySelectorAll("#nav button").forEach(btn=>btn.onclick=()=>{
+  cancelAnimations();
+  document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));document.querySelectorAll("#nav button").forEach(b=>b.classList.remove("active"));
+  $(btn.dataset.page).classList.remove("hidden");btn.classList.add("active");
+  if(btn.dataset.page==="domains")renderDomain();if(btn.dataset.page==="router")renderRouter();if(btn.dataset.page==="intervlan")renderInter();if(btn.dataset.page==="duplex")renderDuplex(domainState.duplex);
+});
+$("applyTopology").onclick=()=>{
+  cancelAnimations();
+  domainState.mode=$("deviceMode").value;domainState.pcCount=Math.max(2,Math.min(8,+$("pcCount").value||4));syncDuplexControl();renderDomain();logDomain(`Topology applied: ${domainState.pcCount} PCs, ${domainState.mode}, ${domainState.duplex}.`);
+};
+$("deviceMode").onchange=()=>{cancelAnimations();domainState.mode=$("deviceMode").value;syncDuplexControl();renderDomain();};
+$("duplexMode").onchange=()=>{syncDuplexControl();renderDomain();};
+$("pcCount").onchange=()=>{$("pcCount").value=Math.max(2,Math.min(8,+$("pcCount").value||4));};
+$("resetDomain").onclick=()=>{cancelAnimations();domainState={mode:"switch",pcCount:4,duplex:"full",view:"all"};$("deviceMode").value="switch";$("pcCount").value=4;syncDuplexControl();renderDomain();logDomain("Domain simulator reset.");};
+$("sendUnicast").onclick=sendUnicast;$("sendBroadcast").onclick=sendBroadcast;$("collisionTest").onclick=collisionTest;
+$("viewAll").onclick=()=>{cancelAnimations();domainState.view="all";document.querySelectorAll(".mode").forEach(x=>x.classList.remove("active"));$("viewAll").classList.add("active");renderDomain();};
+$("viewCollision").onclick=()=>{cancelAnimations();domainState.view="collision";document.querySelectorAll(".mode").forEach(x=>x.classList.remove("active"));$("viewCollision").classList.add("active");renderDomain();};
+$("viewBroadcast").onclick=()=>{cancelAnimations();domainState.view="broadcast";document.querySelectorAll(".mode").forEach(x=>x.classList.remove("active"));$("viewBroadcast").classList.add("active");renderDomain();};
+$("domainSvg").onclick=e=>{
+  const t=e.target.closest(".device");if(!t)return;
+  const label=t.querySelector(".deviceLabel")?.textContent||"Device";
+  selectDevice(label.startsWith("PC-")?"pc":label.startsWith("SW")?"switch":"hub",label);
+};
+$("applyRouter").onclick=()=>{
+  cancelAnimations();
+  routerState.leftVlan=$("leftVlan").value;
+  routerState.rightVlan=$("rightVlan").value;
+  routerState.hosts=Math.max(1,Math.min(4,+$("hostsSide").value||2));
+  renderRouter();
+  routerLog(`Applied: ${routerState.leftVlan} ↔ R1 ↔ ${routerState.rightVlan}. Broadcast domains remain 2 because R1 is a Layer-3 boundary.`);
+};
+$("routerBroadcast").onclick=routerBroadcast;$("routerUnicast").onclick=routerUnicast;$("routerReset").onclick=()=>{cancelAnimations();routerState={leftVlan:"VLAN 10",rightVlan:"VLAN 20",hosts:2};$("leftVlan").value="VLAN 10";$("rightVlan").value="VLAN 20";$("hostsSide").value=2;renderRouter();routerLog("Router lab reset.");};
+$("applyInter").onclick=()=>{cancelAnimations();interState.left=$("interLeftVlan").value;interState.right=$("interRightVlan").value;renderInter();interLog(`Applied: ${interState.left} ↔ R1 ↔ ${interState.right}.`);};
+$("interSend").onclick=interSend;$("interBroadcast").onclick=interBroadcast;$("interReset").onclick=()=>{cancelAnimations();interState={left:"VLAN 10",right:"VLAN 20"};$("interLeftVlan").value="VLAN 10";$("interRightVlan").value="VLAN 20";renderInter();interLog("Inter-VLAN lab reset.");};
+$("fullBtn").onclick=()=>{domainState.duplex="full";renderDuplex("full");};$("halfBtn").onclick=()=>{domainState.duplex="half";renderDuplex("half");};
+
+renderDomain();renderRouter();renderInter();renderDuplex("full");renderQuestion();
+logDomain("System ready. Default: 4 PCs → Switch, one VLAN, full duplex.");
+routerLog("System ready. Default: VLAN 10 ↔ Router ↔ VLAN 20.");interLog("System ready. Default: VLAN 10 → R1 → VLAN 20.");
+</script>
+</body>
+</html>
