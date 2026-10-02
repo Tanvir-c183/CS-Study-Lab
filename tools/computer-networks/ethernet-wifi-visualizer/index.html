@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ethernet & Wi‑Fi Visualizer — Tanvir Ahmed</title>
+<style>
+:root{
+  --bg:#f4f7fb;--card:#fff;--line:#d9e2ec;--text:#172033;--muted:#64748b;
+  --blue:#2563eb;--blue-soft:#dbeafe;--cyan:#0891b2;--purple:#7c3aed;
+  --green:#16a34a;--amber:#d97706;--red:#dc2626;--shadow:0 10px 30px rgba(15,23,42,.08)
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(135deg,#f8fafc,#eef5fb);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
+.wrap,main{max-width:1220px;margin:auto;padding:16px 22px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:48px;height:48px;border-radius:15px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:grid;place-items:center;font-weight:900;box-shadow:0 8px 20px #2563eb30}
+h1{margin:0;font-size:20px}.muted{color:var(--muted);font-size:12px}.author{margin-left:auto;text-align:right}.author b{display:block;color:var(--blue);font-size:15px}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.nav button,.btn{border:1px solid var(--line);background:#f8fafc;color:var(--text);padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer;transition:.18s}.nav button:hover,.btn:hover{transform:translateY(-1px);box-shadow:0 5px 14px #0f172a12}.nav button.active{background:linear-gradient(135deg,#dbeafe,#e0f2fe);border-color:#7dd3fc;color:#1e40af}.primary{background:#2563eb;color:#fff;border-color:#2563eb}
+.hero,.panel{background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow)}.hero{margin-top:8px;padding:24px}.hero h2{font-size:32px;line-height:1.12;margin:10px 0}.hero p{max-width:900px;line-height:1.7;color:#52657c}.pill{display:inline-block;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:900;margin:3px}
+.section{margin-top:20px}.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:12px}.title{font-size:18px;font-weight:900}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}select,input{background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px;color:var(--text)}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(2,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.stage-wrap{background:linear-gradient(135deg,#fbfdff,#f4f7ff);border:1px solid #d8e3ef;border-radius:17px;padding:14px}.stage-toolbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.mode-pill{border:1px solid var(--line);background:#fff;padding:8px 11px;border-radius:999px;font-size:10px;font-weight:900;cursor:pointer;color:#475569}.mode-pill.active{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}
+#networkStage{position:relative;height:390px;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 50% 50%,#ede9fe 0 8%,transparent 40%),linear-gradient(135deg,#fff,#f7faff)}
+.medium{position:absolute;height:4px;border-radius:10px;transform-origin:left center;background:repeating-linear-gradient(90deg,#7c3aed 0 8px,#ddd6fe 8px 15px);z-index:1}
+.node{position:absolute;transform:translate(-50%,-50%);width:100px;text-align:center;z-index:3}.node .circle{width:52px;height:52px;margin:auto;border-radius:16px;background:#fff;border:2px solid #94a3b8;display:grid;place-items:center;font-size:22px;box-shadow:0 8px 20px #64748b22}.node.ap .circle{border-color:#7c3aed}.node.active .circle{border-color:#2563eb;box-shadow:0 0 0 5px #2563eb18,0 10px 25px #2563eb25}.node b{display:block;font-size:10px;margin-top:5px}.node small{display:block;color:#64748b;font-size:8px}.node .ip-label{display:block;color:#2563eb;font:700 8px ui-monospace,monospace;margin-top:2px}.node .mac-label{display:block;color:#64748b;font:700 7px ui-monospace,monospace;margin-top:1px}.signal{position:absolute;width:15px;height:15px;border-radius:50%;z-index:6;background:#7c3aed;box-shadow:0 0 0 6px #7c3aed18,0 0 20px #7c3aed88;transform:translate(-50%,-50%);opacity:0}
+.progress{height:8px;background:#e2e8f0;border-radius:10px;overflow:hidden;margin-top:12px}.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2563eb,#7c3aed);transition:width .05s}
+.hop-strip{display:flex;gap:7px;overflow:auto;padding:10px 0}.hop-card{min-width:155px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px;cursor:pointer}.hop-card.current{border-color:#60a5fa;box-shadow:0 6px 18px #2563eb18}.hop-card b{font-size:11px}.hop-card span{display:block;font-size:9px;color:var(--muted);margin-top:4px}
+.four-address-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.address-card{padding:12px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fbff}.address-card .tag{display:inline-block;padding:4px 7px;border-radius:999px;background:#dbeafe;color:#1e3a8a;font-size:9px;font-weight:900}.address-card b{display:block;color:#1e3a8a;font-size:11px;margin-top:7px}.address-card code{display:block;margin-top:6px;font-size:10px;word-break:break-all}.address-card span{display:block;margin-top:5px;color:var(--muted);font-size:9px;line-height:1.4}
+.address-chip{display:inline-flex;padding:6px 8px;border-radius:8px;font:800 10px ui-monospace,monospace;margin:2px}.ip{background:#eff6ff;color:#1d4ed8}.ipdst{background:#f5f3ff;color:#6d28d9}.macsrc{background:#ecfdf5;color:#15803d}.macdst{background:#fef2f2;color:#dc2626}
+.wifi-hop-table{width:100%;border-collapse:collapse}.wifi-hop-table th,.wifi-hop-table td{padding:9px;border-bottom:1px solid #e2e8f0;text-align:left}.wifi-hop-table th{font-size:10px;background:#eff6ff;color:#1e3a8a}.wifi-hop-table td{font-size:10px}.wifi-hop-table code{font-size:9px}
+.log{height:180px;overflow:auto;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px;font:11px ui-monospace,monospace}.log div{padding:4px 0;border-bottom:1px dashed #e2e8f0}
+.layer{border-left:4px solid #2563eb;background:#f8fafc;padding:11px;border-radius:9px}.layer b{display:block}.layer span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.frame-visual{display:flex;border:1px solid #cbd5e1;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 8px 25px #0f172a0a}.frame-block{min-width:90px;flex:1;padding:12px 9px;border:0;border-right:1px solid #fff;color:#172033;cursor:pointer}.frame-block:last-child{border-right:0}.frame-block:hover{filter:brightness(.98);transform:translateY(-1px)}.frame-block small{display:block;font-size:8px;opacity:.75}.frame-block b{display:block;font-size:10px;margin-top:5px}.frame-block em{display:block;font-style:normal;font-size:8px;margin-top:4px;opacity:.75}
+.eth-dst,.eth-src,.a1,.a2,.a3,.a4{background:#dbeafe;color:#1e3a8a}.etype,.fc,.dur{background:#e0f2fe;color:#155e75}.payloadb,.seq{background:#ede9fe;color:#5b21b6}.fcs{background:#fef3c7;color:#92400e}.bodyb{background:#dcfce7;color:#166534}
+.field{flex:1;min-width:100px;padding:11px;border:0;border-right:1px solid var(--line);background:#f8fafc;cursor:pointer}.field b{display:block}.field span{display:block;color:var(--muted);font-size:9px;margin-top:3px}.frame{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.bits{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px;font:12px ui-monospace,monospace;line-height:1.9}.bit{background:#dbeafe;color:#1d4ed8;padding:2px 3px;border-radius:3px;margin:1px}
+.hidden{display:none!important}.note{font-size:11px;color:var(--muted);line-height:1.6}.callout{padding:12px;border:1px solid #dbeafe;background:#eff6ff;color:#1e40af;border-radius:11px;font-size:11px;line-height:1.6}.ack{border-color:#bbf7d0;background:#f0fdf4;color:#166534}
+@media(max-width:850px){.g2,.g4{grid-template-columns:1fr 1fr}.four-address-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.g2,.g4,.four-address-grid{grid-template-columns:1fr}.wrap,main{padding-left:12px;padding-right:12px}.hero h2{font-size:25px}.author{display:none}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="brand">
+    <div class="logo">NET</div>
+    <div><h1>Ethernet & Wi‑Fi Visualizer</h1><div class="muted">Frames • packets • bits • MAC addresses • four-address 802.11</div></div>
+    <div class="author"><span class="muted">Created by</span><b>Tanvir Ahmed</b></div>
+  </div>
+  <div class="nav" id="nav">
+    <button class="active" data-page="sim">Packet Simulator</button>
+    <button data-page="frame">Frame Anatomy</button>
+    <button data-page="bits">Bits & Sizes</button>
+    <button data-page="compare">Ethernet vs Wi‑Fi</button>
+    <button data-page="encap">Encapsulation</button>
+  </div>
+</div></header>
+
+<main>
+<section class="hero">
+  <div class="muted">COMPUTER NETWORKS VISUAL LAB</div>
+  <h2>Visualize every wireless hop — not just the final packet.</h2>
+  <p>Follow a transmission from Sender → Access Point 1 → Access Point 2 → Receiver. At every hop, inspect the four-address teaching model: Receiver Address (RA), Transmitter Address (TA), Destination Address (DA), and Source Address (SA).</p>
+  <span class="pill" style="background:#eff6ff;color:#1d4ed8">🔵 MAC / Address fields</span>
+  <span class="pill" style="background:#e0f2fe;color:#155e75">🩵 Control fields</span>
+  <span class="pill" style="background:#ede9fe;color:#5b21b6">🟣 Payload / sequence</span>
+  <span class="pill" style="background:#fef3c7;color:#92400e">🟡 FCS</span>
+</section>
+
+<section id="sim" class="page section">
+  <div class="head">
+    <div><div class="title">🚦 Packet Simulator</div><div class="muted">Choose exactly which transmission stage you want to visualize.</div></div>
+    <div class="controls"><button id="reset" class="btn">Reset</button><button id="send" class="btn primary">▶ Start Transmission</button></div>
+  </div>
+
+  <div class="panel" style="padding:14px">
+    <div class="controls">
+      <label class="muted">Sender
+        <select id="senderType">
+          <option value="phone">📱 Phone</option><option value="laptop">💻 Laptop</option><option value="computer">🖥️ Computer</option>
+        </select>
+      </label>
+      <label class="muted">Receiver
+        <select id="receiverType">
+          <option value="computer">🖥️ Computer</option><option value="laptop">💻 Laptop</option><option value="phone">📱 Phone</option>
+        </select>
+      </label>
+      <label class="muted">Stage
+        <select id="stageSelect">
+          <option value="full">1. Full data: Sender → AP1 → AP2 → Receiver</option>
+          <option value="s1">2. Sender → AP1</option>
+          <option value="s2">3. AP1 → AP2</option>
+          <option value="s3">4. AP2 → Receiver</option>
+          <option value="ack">5. ACK: Receiver → AP2 → AP1 → Sender</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="stage-wrap section">
+    <div class="stage-toolbar">
+      <button class="mode-pill active" data-stage="full">① Full Data</button>
+      <button class="mode-pill" data-stage="s1">② Sender → AP1</button>
+      <button class="mode-pill" data-stage="s2">③ AP1 → AP2</button>
+      <button class="mode-pill" data-stage="s3">④ AP2 → Receiver</button>
+      <button class="mode-pill" data-stage="ack">⑤ ACK / Reverse</button>
+      <span class="muted" style="margin-left:auto">Purple signal = Wi‑Fi transmission</span>
+    </div>
+
+    <div id="networkStage">
+      <div class="medium" style="left:12%;top:50%;width:25%"></div>
+      <div class="medium" style="left:37%;top:50%;width:26%"></div>
+      <div class="medium" style="left:63%;top:50%;width:25%"></div>
+
+      <div class="node active" data-node="sender" style="left:10%;top:50%"><div class="circle" id="senderIcon">📱</div><b id="senderLabel">Sender</b><small>Source / SA</small><span class="ip-label" id="senderIpLabel"></span><span class="mac-label" id="senderMacLabel"></span></div>
+      <div class="node ap" data-node="ap1" style="left:37%;top:50%"><div class="circle">📡</div><b>Access Point 1</b><small>AP1</small><span class="ip-label">IP: 192.168.10.1</span><span class="mac-label">MAC: 11:11:11:11:11:11</span></div>
+      <div class="node ap" data-node="ap2" style="left:63%;top:50%"><div class="circle">📡</div><b>Access Point 2</b><small>AP2</small><span class="ip-label">IP: 192.168.20.1</span><span class="mac-label">MAC: 22:22:22:22:22:22</span></div>
+      <div class="node active" data-node="receiver" style="left:90%;top:50%"><div class="circle" id="receiverIcon">🖥️</div><b id="receiverLabel">Receiver</b><small>Destination / DA</small><span class="ip-label" id="receiverIpLabel"></span><span class="mac-label" id="receiverMacLabel"></span></div>
+
+      <div id="signal1" class="signal"></div><div id="signal2" class="signal"></div><div id="signal3" class="signal"></div>
+      <div style="position:absolute;left:12px;right:12px;bottom:10px;background:#fff;border:1px solid #dbe3ee;border-radius:10px;padding:8px;font-size:9px;color:#64748b">
+        <b style="color:#334155">Current route:</b> <span id="routeText">Sender → AP1 → AP2 → Receiver</span>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:10px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <span><b>Source IP:</b> <code id="topSourceIp"></code></span>
+      <span><b>Destination IP:</b> <code id="topDestinationIp"></code></span>
+      <span><b>AP1 IP:</b> <code>192.168.10.1</code></span>
+      <span><b>AP2 IP:</b> <code>192.168.20.1</code></span>
+    </div>
+    <div class="progress"><i id="prog"></i></div>
+    <div id="hopStrip" class="hop-strip"></div>
+    <div id="status" class="note">Ready.</div>
+  </div>
+
+  <div class="panel section" style="padding:16px">
+    <div class="title">🧭 802.11 Address View for the Current Hop</div>
+    <div class="muted">The hop tree shows the semantic role AND the actual device for each address. Address 4 / Source appears only on the AP → AP WDS hop.</div>
+    <div id="fourAddressCards" class="four-address-grid"></div>
+  </div>
+
+  <div class="grid g2 section">
+    <div class="panel" style="padding:16px">
+      <div class="title">📡 Current transmission</div>
+      <div id="hop" class="muted">No transmission yet.</div>
+      <div class="grid g2" style="margin-top:12px">
+        <div class="layer"><b>Source IP</b><span id="sip">192.168.10.10</span></div>
+        <div class="layer"><b>Destination IP</b><span id="dip">192.168.20.20</span></div>
+        <div class="layer"><b>Transmitter / TA</b><span id="smac">10:10:10:10:10:10</span></div>
+        <div class="layer"><b>Receiver / RA</b><span id="dmac">11:11:11:11:11:11</span></div>
+      </div>
+      <div id="ackNote" class="callout ack" style="margin-top:12px;display:none"><b>ACK note:</b> a real 802.11 ACK is a control frame and is not a four-address data frame. This visualization shows the reverse path separately so you can study the acknowledgement journey.</div>
+    </div>
+    <div class="panel" style="padding:16px">
+      <div class="title">🔎 Hop-by-hop 802.11 address matrix</div>
+      <div style="overflow:auto;margin-top:8px">
+        <table class="wifi-hop-table"><thead><tr><th>Hop</th><th>Receiver</th><th>Transmitter</th><th>Source / Destination</th><th>Source / Address 4</th></tr></thead><tbody id="matrix"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2 section">
+    <div class="panel" style="padding:16px"><div class="title">🧾 Event log</div><div id="log" class="log" style="margin-top:10px"></div></div>
+    <div class="panel" style="padding:16px"><div class="title">🧠 What changes?</div><div id="explain" class="callout" style="margin-top:10px"></div></div>
+  </div>
+</section>
+
+<section id="frame" class="page section hidden">
+  <div class="title">🧩 Frame Anatomy — Visual Mode</div><div class="muted">Related fields share a color family to reduce clutter.</div>
+  <div class="panel section" style="padding:16px">
+    <div class="title">🔌 Ethernet II — typical data frame</div>
+    <div class="frame-visual" id="ethVisual" style="margin-top:12px"></div>
+  </div>
+  <div class="panel section" style="padding:16px">
+    <div class="title">📶 IEEE 802.11 — four-address teaching view</div>
+    <div class="frame-visual" id="wifiVisual" style="margin-top:12px"></div>
+    <div class="note" style="margin-top:9px">Address-field meaning depends on To DS / From DS. STA→AP and AP→STA use three address fields; AP→AP WDS uses all four: RA, TA, DA, SA.</div>
+  </div>
+  <div class="panel section" style="padding:16px"><div class="title">Field inspector</div><div id="inspect" class="layer"><b>Select a field.</b><span>Its meaning appears here.</span></div></div>
+</section>
+
+<section id="bits" class="page section hidden">
+  <div class="title">🔢 Bits, Bytes & Sizes</div>
+  <div class="grid g2 section">
+    <div class="panel" style="padding:16px">
+      <div class="controls"><label class="muted">Ethernet payload <input id="payload" type="number" min="0" max="1500" value="64" style="width:100px"></label><button id="build" class="btn primary">Build</button></div>
+      <table style="width:100%;border-collapse:collapse;margin-top:12px"><tbody id="sizes"></tbody></table>
+      <div id="bitsView" class="bits" style="margin-top:12px"></div>
+    </div>
+    <div class="panel" style="padding:16px"><div class="title">Important facts</div><div class="callout" style="margin-top:12px">1 byte = 8 bits. Ethernet II has a 14-byte header before payload and a 4-byte FCS. The common Ethernet IP MTU is 1500 bytes.</div></div>
+  </div>
+</section>
+
+<section id="compare" class="page section hidden">
+  <div class="title">⚖️ Ethernet vs Wi‑Fi</div>
+  <div class="panel section" style="padding:16px"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Concept</th><th>Ethernet</th><th>Wi‑Fi</th></tr></thead><tbody>
+    <tr><td>Layer 2 address</td><td>MAC</td><td>MAC</td></tr><tr><td>Medium</td><td>Copper / fiber</td><td>Radio</td></tr><tr><td>Frame</td><td>Ethernet II</td><td>802.11</td></tr><tr><td>Address fields</td><td>Destination + Source MAC</td><td>Address 1–4 depending on frame/context</td></tr><tr><td>FCS</td><td>4 B</td><td>Typically 4 B for data frames</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="encap" class="page section hidden">
+  <div class="head"><div><div class="title">📦 Encapsulation</div><div class="muted">Watch application data become a frame and then bits.</div></div><button id="animate" class="btn primary">Animate</button></div>
+  <div class="panel section" style="padding:16px"><div id="layers" class="grid"></div></div>
+</section>
+
+<footer style="text-align:center;padding:28px;color:#94a3b8;font-size:11px">Computer Networks Visual Lab • <b style="color:#2563eb">Tanvir Ahmed</b></footer>
+</main>
+
+<script>
+/* =========================================================
+   Ethernet & Wi‑Fi Visualizer
+   Structure:
+   AppState → DOM cache → data → calculation engines
+   → renderUI() → event listeners → DOMContentLoaded
+   ========================================================= */
+
+const AppState = {
+  stage: "full",
+  senderType: "phone",
+  receiverType: "computer",
+  running: false,
+  animationId: null,
+  currentHop: 0,
+  progress: 0,
+  path: []
+};
+
+const DOM = {
+  nav: document.getElementById("nav"),
+  senderType: document.getElementById("senderType"),
+  receiverType: document.getElementById("receiverType"),
+  stageSelect: document.getElementById("stageSelect"),
+  send: document.getElementById("send"),
+  reset: document.getElementById("reset"),
+  prog: document.getElementById("prog"),
+  hopStrip: document.getElementById("hopStrip"),
+  status: document.getElementById("status"),
+  routeText: document.getElementById("routeText"),
+  senderIcon: document.getElementById("senderIcon"),
+  senderLabel: document.getElementById("senderLabel"),
+  receiverIcon: document.getElementById("receiverIcon"),
+  receiverLabel: document.getElementById("receiverLabel"),
+  senderIpLabel: document.getElementById("senderIpLabel"),
+  receiverIpLabel: document.getElementById("receiverIpLabel"),
+  senderMacLabel: document.getElementById("senderMacLabel"),
+  receiverMacLabel: document.getElementById("receiverMacLabel"),
+  topSourceIp: document.getElementById("topSourceIp"),
+  topDestinationIp: document.getElementById("topDestinationIp"),
+  fourAddressCards: document.getElementById("fourAddressCards"),
+  hop: document.getElementById("hop"),
+  sip: document.getElementById("sip"),
+  dip: document.getElementById("dip"),
+  smac: document.getElementById("smac"),
+  dmac: document.getElementById("dmac"),
+  matrix: document.getElementById("matrix"),
+  log: document.getElementById("log"),
+  explain: document.getElementById("explain"),
+  ackNote: document.getElementById("ackNote"),
+  signal1: document.getElementById("signal1"),
+  signal2: document.getElementById("signal2"),
+  signal3: document.getElementById("signal3"),
+  ethVisual: document.getElementById("ethVisual"),
+  wifiVisual: document.getElementById("wifiVisual"),
+  inspect: document.getElementById("inspect"),
+  payload: document.getElementById("payload"),
+  build: document.getElementById("build"),
+  sizes: document.getElementById("sizes"),
+  bitsView: document.getElementById("bitsView"),
+  animate: document.getElementById("animate"),
+  layers: document.getElementById("layers")
+};
+
+const DeviceData = {
+  phone:    { label: "Phone", icon: "📱", mac: "10:10:10:10:10:10", ip: "192.168.10.10" },
+  laptop:   { label: "Laptop", icon: "💻", mac: "10:10:10:10:10:20", ip: "192.168.10.20" },
+  computer: { label: "Computer", icon: "🖥️", mac: "10:10:10:10:10:30", ip: "192.168.10.30" }
+};
+
+const Nodes = {
+  ap1: { label: "Access Point 1", mac: "11:11:11:11:11:11", ip: "192.168.10.1" },
+  ap2: { label: "Access Point 2", mac: "22:22:22:22:22:22", ip: "192.168.20.1" }
+};
+
+const Positions = {
+  sender: [10, 50], ap1: [37, 50], ap2: [63, 50], receiver: [90, 50]
+};
+
+const FrameData = {
+  ethernet: [
+    ["Destination MAC","6 B","Immediate Layer-2 destination.","eth-dst"],
+    ["Source MAC","6 B","Transmitting interface MAC.","eth-src"],
+    ["EtherType","2 B","Identifies the upper-layer protocol.","etype"],
+    ["Payload","46–1500 B*","Carried data and possible padding.","payloadb"],
+    ["FCS","4 B","Frame Check Sequence.","fcs"]
+  ],
+  wifi: [
+    ["Frame Control","2 B","Frame type, subtype and flags.","fc"],
+    ["Duration / ID","2 B","Medium reservation or identifier.","dur"],
+    ["Address 1 — RA","6 B","Receiver Address: immediate receiver.","a1"],
+    ["Address 2 — TA","6 B","Transmitter Address: immediate transmitter.","a2"],
+    ["Address 3 — DA","6 B","Destination Address: ultimate destination.","a3"],
+    ["Sequence Control","2 B","Sequence and fragmentation information.","seq"],
+    ["Address 4 — SA","6 B","Source Address: original source.","a4"],
+    ["Frame Body","Variable","Higher-layer payload.","bodyb"],
+    ["FCS","4 B","Frame Check Sequence.","fcs"]
+  ]
+};
+
+function getEndpoint(type, role = "sender") {
+  const d = DeviceData[type];
+  if (role === "receiver") {
+    const receiverMap = {
+      phone:    { mac: "20:20:20:20:20:10", ip: "192.168.20.10" },
+      laptop:   { mac: "20:20:20:20:20:20", ip: "192.168.20.20" },
+      computer: { mac: "20:20:20:20:20:30", ip: "192.168.20.30" }
+    };
+    return { ...d, ...receiverMap[type] };
+  }
+  return d;
+}
+
+function getRoute() {
+  const sender = getEndpoint(AppState.senderType);
+  const receiver = getEndpoint(AppState.receiverType, "receiver");
+
+  if (AppState.stage === "full") {
+    return [
+      { from: "sender", to: "ap1", label: `${sender.label} → Access Point 1` },
+      { from: "ap1", to: "ap2", label: "Access Point 1 → Access Point 2" },
+      { from: "ap2", to: "receiver", label: `Access Point 2 → ${receiver.label}` }
+    ];
+  }
+
+  if (AppState.stage === "s1") {
+    return [{ from: "sender", to: "ap1", label: `${sender.label} → Access Point 1` }];
+  }
+
+  if (AppState.stage === "s2") {
+    return [{ from: "ap1", to: "ap2", label: "Access Point 1 → Access Point 2" }];
+  }
+
+  if (AppState.stage === "s3") {
+    return [{ from: "ap2", to: "receiver", label: `Access Point 2 → ${receiver.label}` }];
+  }
+
+  // Reverse teaching path for the acknowledgement journey.
+  return [
+    { from: "receiver", to: "ap2", label: `${receiver.label} → Access Point 2` },
+    { from: "ap2", to: "ap1", label: "Access Point 2 → Access Point 1" },
+    { from: "ap1", to: "sender", label: `Access Point 1 → ${sender.label}` }
+  ];
+}
+
+function nodeAddress(nodeId) {
+  if (nodeId === "sender") return getEndpoint(AppState.senderType);
+  if (nodeId === "receiver") return getEndpoint(AppState.receiverType);
+  return Nodes[nodeId];
+}
+
+function calculateAddresses(hop) {
+  const link = AppState.path[hop];
+  const from = nodeAddress(link.from);
+  const to = nodeAddress(link.to);
+  const sender = getEndpoint(AppState.senderType);
+  const receiver = getEndpoint(AppState.receiverType, "receiver");
+  const ack = AppState.stage === "ack";
+
+  /*
+    Exact 802.11 teaching model:
+
+    STA -> AP:
+      To DS = 1, From DS = 0
+      Address 1 = BSSID / receiving AP
+      Address 2 = original Source / transmitting STA
+      Address 3 = final Destination
+      Address 4 = N/A
+
+    AP -> AP (WDS):
+      To DS = 1, From DS = 1
+      Address 1 = Receiver AP (RA)
+      Address 2 = Transmitter AP (TA)
+      Address 3 = final Destination (DA)
+      Address 4 = original Source (SA)
+
+    AP -> STA:
+      To DS = 0, From DS = 1
+      Address 1 = final Destination / receiving STA
+      Address 2 = sending AP / BSSID
+      Address 3 = original Source
+      Address 4 = N/A
+  */
+
+  const isApToAp = (link.from === "ap1" && link.to === "ap2") ||
+                   (link.from === "ap2" && link.to === "ap1");
+
+  const isStaToAp = link.from === "sender" && link.to === "ap1";
+  const isApToSta = link.from === "ap2" && link.to === "receiver";
+
+  if (isStaToAp) {
+    return {
+      mode: "STA → AP",
+      toDS: 1, fromDS: 0,
+      address1: to.mac,                 // BSSID / receiving AP
+      address2: sender.mac,             // SA = transmitting station
+      address3: receiver.mac,           // DA = final receiver
+      address4: "",
+      ra: to.mac, ta: sender.mac, da: receiver.mac, sa: "",
+      sourceIp: sender.ip, destinationIp: receiver.ip
+    };
+  }
+
+  if (isApToAp) {
+    return {
+      mode: "AP → AP (WDS)",
+      toDS: 1, fromDS: 1,
+      address1: to.mac,                 // RA = receiving AP
+      address2: from.mac,               // TA = sending AP
+      address3: receiver.mac,           // DA = final receiver
+      address4: sender.mac,             // SA = original sender
+      ra: to.mac, ta: from.mac, da: receiver.mac, sa: sender.mac,
+      sourceIp: sender.ip, destinationIp: receiver.ip
+    };
+  }
+
+  if (isApToSta) {
+    return {
+      mode: "AP → STA",
+      toDS: 0, fromDS: 1,
+      address1: receiver.mac,           // DA / receiving station
+      address2: from.mac,               // BSSID / sending AP
+      address3: sender.mac,             // original SA
+      address4: "",
+      ra: receiver.mac, ta: from.mac, da: receiver.mac, sa: "",
+      sourceIp: sender.ip, destinationIp: receiver.ip
+    };
+  }
+
+  // Reverse ACK teaching route: keep it explicitly separate from data-frame
+  // four-address logic. A real ACK is a control frame, not a four-address data frame.
+  if (ack) {
+    return {
+      mode: "Reverse / ACK teaching path",
+      toDS: "—", fromDS: "—",
+      address1: to.mac,
+      address2: from.mac,
+      address3: sender.mac,
+      address4: "",
+      ra: to.mac, ta: from.mac, da: sender.mac, sa: "",
+      sourceIp: receiver.ip, destinationIp: sender.ip
+    };
+  }
+
+  return {
+    mode: "802.11 data",
+    toDS: "—", fromDS: "—",
+    address1: to.mac, address2: from.mac, address3: receiver.mac, address4: "",
+    ra: to.mac, ta: from.mac, da: receiver.mac, sa: "",
+    sourceIp: sender.ip, destinationIp: receiver.ip
+  };
+}
+
+function getHopRoleRows(hopIndex) {
+  const a = calculateAddresses(hopIndex);
+  const link = AppState.path[hopIndex];
+  const from = nodeAddress(link.from);
+  const to = nodeAddress(link.to);
+  const sender = getEndpoint(AppState.senderType);
+  const receiver = getEndpoint(AppState.receiverType, "receiver");
+
+  if (a.mode === "STA → AP") {
+    return [
+      { role: "Receiver", field: "Address 1", value: a.address1, device: to.label },
+      { role: "Transmitter", field: "Address 2", value: a.address2, device: from.label },
+      { role: "Source / Destination", field: "Address 3", value: a.address3, device: receiver.label + " (Destination)" },
+      { role: "Source", field: "Address 4", value: "—", device: "Not present" }
+    ];
+  }
+
+  if (a.mode === "AP → AP (WDS)") {
+    return [
+      { role: "Receiver", field: "Address 1 / RA", value: a.address1, device: to.label },
+      { role: "Transmitter", field: "Address 2 / TA", value: a.address2, device: from.label },
+      { role: "Destination", field: "Address 3 / DA", value: a.address3, device: receiver.label },
+      { role: "Source", field: "Address 4 / SA", value: a.address4, device: sender.label }
+    ];
+  }
+
+  if (a.mode === "AP → STA") {
+    return [
+      { role: "Receiver / Destination", field: "Address 1", value: a.address1, device: to.label },
+      { role: "Transmitter", field: "Address 2", value: a.address2, device: from.label },
+      { role: "Source", field: "Address 3", value: a.address3, device: sender.label },
+      { role: "Source", field: "Address 4", value: "—", device: "Not present" }
+    ];
+  }
+
+  return [
+    { role: "Receiver", field: "Address 1", value: a.address1, device: to.label },
+    { role: "Transmitter", field: "Address 2", value: a.address2, device: from.label },
+    { role: "Source / Destination", field: "Address 3", value: a.address3, device: receiver.label },
+    { role: "Source", field: "Address 4", value: a.address4 || "—", device: a.address4 ? sender.label : "Not present" }
+  ];
+}
+
+function renderFourAddressCards() {
+  if (!AppState.path.length) return;
+
+  const index = Math.min(AppState.currentHop, AppState.path.length - 1);
+  const a = calculateAddresses(index);
+  const rows = getHopRoleRows(index);
+
+  DOM.fourAddressCards.innerHTML = rows.map(row => `
+    <div class="address-card">
+      <span class="tag">${row.field}</span>
+      <b>${row.role}</b>
+      <code>${row.value}</code>
+      <span>Device: <strong>${row.device}</strong></span>
+    </div>
+  `).join("");
+
+  DOM.sip.textContent = a.sourceIp;
+  DOM.dip.textContent = a.destinationIp;
+  DOM.smac.textContent = a.ta;
+  DOM.dmac.textContent = a.ra;
+
+  DOM.explain.innerHTML = `
+    <b>${a.mode}</b><br>
+    <b>To DS:</b> ${a.toDS} &nbsp;&nbsp; <b>From DS:</b> ${a.fromDS}<br>
+    ${a.mode === "AP → AP (WDS)"
+      ? "All four fields are used: Receiver, Transmitter, Destination, and original Source."
+      : "This is a three-address frame. Address 4 is not present."}
+  `;
+}
+
+function renderMatrix() {
+  const full = [
+    { from: "sender", to: "ap1" },
+    { from: "ap1", to: "ap2" },
+    { from: "ap2", to: "receiver" }
+  ];
+
+  const previousPath = AppState.path;
+  AppState.path = full;
+
+  DOM.matrix.innerHTML = full.map((link, i) => {
+    const a = calculateAddresses(i);
+    const rows = getHopRoleRows(i);
+
+    return `<tr>
+      <td><b>${i + 1}. ${nodeAddress(link.from).label} → ${nodeAddress(link.to).label}</b></td>
+      ${rows.map(row => `
+        <td>
+          <b style="font-size:9px">${row.role}</b><br>
+          <code>${row.value}</code>
+          <small style="display:block;color:#64748b;margin-top:2px">${row.device}</small>
+        </td>`).join("")}
+    </tr>`;
+  }).join("");
+
+  AppState.path = previousPath;
+}
+
+function renderHopStrip() {
+  DOM.hopStrip.innerHTML = AppState.path.map((link, i) => {
+    const rows = getHopRoleRows(i);
+    const current = i === AppState.currentHop;
+
+    return `
+      <div class="hop-card ${current ? "current" : ""}" data-hop="${i}" style="min-width:330px">
+        <b>Hop ${i + 1}: ${link.label}</b>
+        <div style="margin-top:7px;display:grid;gap:4px">
+          ${rows.map(row => `
+            <div style="display:grid;grid-template-columns:115px 1fr;gap:6px;align-items:start">
+              <span style="font-size:8px;color:#64748b;font-weight:900">${row.role}<br><small>${row.field}</small></span>
+              <span>
+                <code style="font-size:8px;color:#1e3a8a">${row.value}</code>
+                <small style="display:block;color:#64748b;font-size:8px;margin-top:1px">↳ ${row.device}</small>
+              </span>
+            </div>
+          `).join("")}
+        </div>
+      </div>`;
+  }).join("");
+
+  DOM.hopStrip.querySelectorAll(".hop-card").forEach(card => {
+    card.addEventListener("click", () => {
+      if (AppState.running) return;
+      AppState.currentHop = Number(card.dataset.hop);
+      renderUI();
+    });
+  });
+}
+
+function renderCurrentHop() {
+  if (!AppState.path.length) return;
+  const index = Math.min(AppState.currentHop, AppState.path.length - 1);
+  const link = AppState.path[index];
+  const a = calculateAddresses(index);
+  const ack = AppState.stage === "ack";
+
+  DOM.hop.textContent = `${link.label} • ${ack ? "Reverse acknowledgement path" : "802.11 four-address teaching view"}`;
+
+  DOM.explain.innerHTML = ack
+    ? `<b>Reverse acknowledgement journey</b><br>TA changes to the device/AP transmitting the acknowledgement journey, RA is the immediate receiver, while DA points back to the original sender and SA represents the receiver that initiated the reverse path. <br><br><b>Important:</b> a real 802.11 ACK control frame is not a four-address data frame; this reverse route is a learning visualization.`
+    : `<b>Current hop</b><br>RA = immediate receiver, TA = immediate transmitter, DA = final destination. ${a.fourAddress ? "SA is the original source in the four-address teaching path." : "SA / Address 4 is intentionally empty on this normal three-address hop."} The RA/TA pair changes at every hop.`;
+
+  DOM.ackNote.style.display = ack ? "block" : "none";
+  renderFourAddressCards();
+}
+
+function setStage(stage) {
+  AppState.stage = stage;
+  AppState.running = false;
+  if (AppState.animationId) cancelAnimationFrame(AppState.animationId);
+  AppState.animationId = null;
+  AppState.currentHop = 0;
+  AppState.progress = 0;
+  AppState.path = getRoute();
+  DOM.stageSelect.value = stage;
+  DOM.progressWidth = 0;
+  hideSignals();
+  renderUI();
+}
+
+function hideSignals() {
+  [DOM.signal1,DOM.signal2,DOM.signal3].forEach(s => { s.style.opacity = "0"; });
+}
+
+function addLog(text) {
+  const entry = document.createElement("div");
+  entry.innerHTML = text;
+  DOM.log.prepend(entry);
+}
+
+function moveSignal(signal, from, to, p) {
+  const a = Positions[from], b = Positions[to];
+  if (!a || !b) return;
+  signal.style.left = `${a[0] + (b[0]-a[0])*p}%`;
+  signal.style.top = `${a[1] + (b[1]-a[1])*p}%`;
+  signal.style.opacity = "1";
+}
+
+function animate(timestamp) {
+  if (!AppState.running) return;
+
+  if (!AppState.startTime) AppState.startTime = timestamp;
+
+  if (AppState.currentHop >= AppState.path.length) {
+    finish();
+    return;
+  }
+
+  const link = AppState.path[AppState.currentHop];
+  const elapsed = timestamp - AppState.startTime;
+  const p = Math.min(1, elapsed / 1100);
+  AppState.progress = p;
+
+  const signal = [DOM.signal1,DOM.signal2,DOM.signal3][AppState.currentHop];
+  moveSignal(signal, link.from, link.to, p);
+
+  DOM.prog.style.width = `${((AppState.currentHop+p)/AppState.path.length)*100}%`;
+  DOM.status.textContent = `Transmitting: ${link.label}`;
+
+  if (p >= 1) {
+    const a = calculateAddresses(AppState.currentHop);
+    addLog(`<b>HOP ${AppState.currentHop+1}</b> ${link.label}<br>
+      RA=${a.ra}<br>TA=${a.ta}<br>DA=${a.da}<br>SA=${a.sa}`);
+
+    AppState.currentHop++;
+    AppState.startTime = timestamp;
+    renderUI();
+  }
+
+  AppState.animationId = requestAnimationFrame(animate);
+}
+
+function startSimulation() {
+  if (AppState.running) return;
+
+  AppState.path = getRoute();
+  AppState.currentHop = 0;
+  AppState.progress = 0;
+  AppState.startTime = 0;
+  AppState.running = true;
+  DOM.log.innerHTML = "";
+  DOM.prog.style.width = "0%";
+  DOM.status.textContent = "Starting transmission…";
+  renderUI();
+  AppState.animationId = requestAnimationFrame(animate);
+}
+
+function finish() {
+  AppState.running = false;
+  AppState.animationId = null;
+  DOM.prog.style.width = "100%";
+  DOM.status.textContent = AppState.stage === "ack"
+    ? "Acknowledgement path completed: Receiver → AP2 → AP1 → Sender."
+    : "Data transmission completed: Sender → AP1 → AP2 → Receiver.";
+  hideSignals();
+  addLog("<b>✓ COMPLETE</b> Transmission reached its selected endpoint.");
+  AppState.currentHop = Math.max(0,AppState.path.length-1);
+  renderUI();
+}
+
+function resetSimulation() {
+  AppState.running = false;
+  if (AppState.animationId) cancelAnimationFrame(AppState.animationId);
+  AppState.animationId = null;
+  AppState.currentHop = 0;
+  AppState.progress = 0;
+  AppState.startTime = 0;
+  AppState.path = getRoute();
+  DOM.prog.style.width = "0%";
+  DOM.status.textContent = "Ready.";
+  DOM.log.innerHTML = "";
+  hideSignals();
+  renderUI();
+}
+
+function updateDevices() {
+  const s = getEndpoint(AppState.senderType);
+  const r = getEndpoint(AppState.receiverType, "receiver");
+  DOM.senderIcon.textContent = s.icon;
+  DOM.senderLabel.textContent = s.label;
+  DOM.receiverIcon.textContent = r.icon;
+  DOM.receiverLabel.textContent = r.label;
+  DOM.senderIpLabel.textContent = `IP: ${s.ip}`;
+  DOM.receiverIpLabel.textContent = `IP: ${r.ip}`;
+  DOM.senderMacLabel.textContent = `MAC: ${s.mac}`;
+  DOM.receiverMacLabel.textContent = `MAC: ${r.mac}`;
+  DOM.topSourceIp.textContent = s.ip;
+  DOM.topDestinationIp.textContent = r.ip;
+}
+
+function renderFrameVisual(id,data) {
+  const box = document.getElementById(id);
+  box.innerHTML = "";
+  data.forEach(f => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `frame-block ${f[3]}`;
+    button.innerHTML = `<small>${f[1]}</small><b>${f[0]}</b><em>${f[2]}</em>`;
+    button.addEventListener("click",() => {
+      DOM.inspect.innerHTML = `<b>${f[0]} — ${f[1]}</b><span>${f[2]}</span>`;
+    });
+    box.appendChild(button);
+  });
+}
+
+function renderBits() {
+  const requested = Math.max(0,Math.min(1500,Number(DOM.payload.value)||0));
+  DOM.payload.value = requested;
+  const payload = Math.max(46,requested), frame = 14+payload+4;
+  DOM.sizes.innerHTML = [
+    ["Ethernet header","14 B","112 bits"],["Payload / padding",`${payload} B`,`${payload*8} bits`],
+    ["FCS","4 B","32 bits"],["Frame",`${frame} B`,`${frame*8} bits`]
+  ].map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td></tr>`).join("");
+
+  let bits = "";
+  for(let i=0;i<Math.min(32,frame);i++){
+    const v=(i*53+17)&255;
+    bits += `<span class="bit">${v.toString(2).padStart(8,"0")}</span> `;
+  }
+  DOM.bitsView.innerHTML = `Example binary groups:<div style="margin-top:7px">${bits}</div>`;
+}
+
+function animateEncapsulation() {
+  const items = [
+    ["Application","Application data"],
+    ["Transport","TCP / UDP segment"],
+    ["Network","IP packet"],
+    ["Data Link","802.11 four-address data frame"],
+    ["Physical","Radio bits / signal"]
+  ];
+  DOM.layers.innerHTML = "";
+  items.forEach((item,i)=>{
+    setTimeout(()=>{
+      const el=document.createElement("div");
+      el.className="layer";
+      el.innerHTML=`<b>${item[0]}</b><span>${item[1]}</span>`;
+      DOM.layers.prepend(el);
+    },i*250);
+  });
+}
+
+function renderUI() {
+  AppState.path = AppState.path.length ? AppState.path : getRoute();
+  updateDevices();
+  DOM.routeText.textContent = AppState.stage === "full"
+    ? `${getEndpoint(AppState.senderType).label} → AP1 → AP2 → ${getEndpoint(AppState.receiverType).label}`
+    : AppState.stage === "ack"
+      ? `${getEndpoint(AppState.receiverType).label} → AP2 → AP1 → ${getEndpoint(AppState.senderType).label}`
+      : AppState.path.map(x=>x.label).join(" → ");
+
+  document.querySelectorAll("[data-stage]").forEach(b=>{
+    b.classList.toggle("active",b.dataset.stage===AppState.stage);
+  });
+
+  DOM.stageSelect.value = AppState.stage;
+  renderHopStrip();
+  renderCurrentHop();
+  renderMatrix();
+}
+
+function setupEventListeners() {
+  DOM.nav.querySelectorAll("button").forEach(button=>{
+    button.addEventListener("click",()=>{
+      DOM.nav.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
+      button.classList.add("active");
+      document.querySelectorAll(".page").forEach(page=>{
+        page.classList.toggle("hidden",page.id!==button.dataset.page);
+      });
+    });
+  });
+
+  DOM.senderType.addEventListener("change",()=>{
+    AppState.senderType=DOM.senderType.value;
+    resetSimulation();
+  });
+
+  DOM.receiverType.addEventListener("change",()=>{
+    AppState.receiverType=DOM.receiverType.value;
+    resetSimulation();
+  });
+
+  DOM.stageSelect.addEventListener("change",()=>setStage(DOM.stageSelect.value));
+
+  document.querySelectorAll("[data-stage]").forEach(button=>{
+    button.addEventListener("click",()=>setStage(button.dataset.stage));
+  });
+
+  DOM.send.addEventListener("click",startSimulation);
+  DOM.reset.addEventListener("click",resetSimulation);
+  DOM.build.addEventListener("click",renderBits);
+  DOM.payload.addEventListener("input",renderBits);
+  DOM.animate.addEventListener("click",animateEncapsulation);
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  renderFrameVisual("ethVisual",FrameData.ethernet);
+  renderFrameVisual("wifiVisual",FrameData.wifi);
+  renderBits();
+  setupEventListeners();
+  setStage("full");
+});
+</script>
+</body>
+</html>
