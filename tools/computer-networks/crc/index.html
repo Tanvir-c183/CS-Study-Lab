@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRC Interactive Engineering Workbench</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50:'#f0f7ff',100:'#e0effe',200:'#bae0fd',500:'#0284c7',600:'#0265d6',700:'#0369a1',800:'#075985',900:'#0c4a6e' },
+                        crc: { light:'#ecfeff', border:'#22d3ee', text:'#0e7490', bg:'#f0fdff' },
+                        work: { light:'#fff7ed', border:'#fb923c', text:'#c2410c', bg:'#fffaf5' }
+                    },
+                    fontFamily: {
+                        mono:['ui-monospace','SFMono-Regular','Menlo','Monaco','Consolas','Liberation Mono','Courier New','monospace'],
+                        sans:['system-ui','-apple-system','BlinkMacSystemFont','Segoe UI','Roboto','Helvetica Neue','Arial','sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .bit-tile { transition: all .2s ease-in-out; }
+        .bit-tile:hover { transform: translateY(-2px); }
+        .division-row { white-space: pre; overflow-x:auto; }
+        ::-webkit-scrollbar { width:8px; height:8px; }
+        ::-webkit-scrollbar-track { background:#f1f5f9; }
+        ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+        ::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+    <!-- Same engineering-workbench structure as the Hamming simulator: header, numbered sections, cards, live calculation, verification. -->
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-600 text-white font-mono font-bold px-2.5 py-1 rounded text-lg tracking-wider border border-brand-400">[CRC]</div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-100">CRC Interactive Engineering Workbench</h1>
+                    <p class="text-xs text-slate-400">Polynomial Division • CRC Generation • Error Detection • Answer Verification</p>
+                </div>
+            </div>
+            <nav class="flex flex-wrap items-center gap-1.5 text-xs font-medium">
+                <a href="#input-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white">1. Input & Type</a>
+                <a href="#division-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white">2. XOR Division</a>
+                <a href="#frame-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white">3. Codeword</a>
+                <a href="#check-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white">4. Receiver Check</a>
+                <a href="#verify-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white">5. Answer Checker</a>
+                <a href="#theory-section" class="px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white">6. CRC Theory</a>
+            </nav>
+        </div>
+    </header>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-sm text-slate-200">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <span class="inline-block bg-cyan-950 text-cyan-300 text-xs font-semibold px-2.5 py-0.5 rounded border border-cyan-800">Interactive Learning Module</span>
+                    <h2 class="text-lg font-bold text-white">Cyclic Redundancy Check — Exam & Simulator Workbench</h2>
+                    <p class="text-sm text-slate-300 max-w-4xl">Enter a binary dataword, choose a standard CRC generator or enter your own polynomial, perform modulo-2 long division, generate the transmitted codeword, inject errors, and verify CRC answers.</p>
+                </div>
+                <button id="btn-reset" class="px-3.5 py-2 text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg border border-slate-600 shadow-sm">↺ Reset Demonstration</button>
+            </div>
+        </div>
+
+        <!-- SECTION 1 -->
+        <section id="input-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">1</span> Data, CRC Type & Generator</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">CRC works on the bit stream left-to-right. Unlike Hamming position numbering, CRC does not reverse the displayed bit order.</p>
+                </div>
+                <span class="text-xs font-mono bg-cyan-100 text-cyan-800 px-2 py-1 rounded border border-cyan-200 font-semibold">LTR CRC Convention</span>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <div class="lg:col-span-5 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Input Data Word (Binary, Left-to-Right)</label>
+                            <input id="data-input" type="text" value="1101011011" maxlength="128" class="w-full px-4 py-2.5 font-mono text-lg font-bold tracking-widest bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
+                            <p id="data-error" class="text-xs text-rose-600 mt-1 hidden">Enter only 0 and 1.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">CRC Type / Generator</label>
+                            <select id="crc-preset" class="w-full px-3 py-2.5 font-mono text-sm bg-slate-50 border border-slate-300 rounded-lg">
+                                <option value="crc8">CRC-8 — x⁸ + x² + x + 1 (0x07)</option>
+                                <option value="crc12">CRC-12 — x¹² + x¹¹ + x³ + x² + x + 1</option>
+                                <option value="crc16ccitt" selected>CRC-16-CCITT — x¹⁶ + x¹² + x⁵ + 1 (0x1021)</option>
+                                <option value="crc16ibm">CRC-16-IBM — x¹⁶ + x¹⁵ + x² + 1 (0x8005)</option>
+                                <option value="crc32">CRC-32 IEEE — 0x04C11DB7</option>
+                                <option value="custom">Custom Generator Polynomial</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Generator Polynomial (binary)</label>
+                            <input id="generator-input" type="text" value="10001000000100001" class="w-full px-4 py-2.5 font-mono text-sm tracking-widest bg-slate-50 border border-slate-300 rounded-lg">
+                            <p class="text-[11px] text-slate-500 mt-1">The first and last bits must be 1. Degree = generator length − 1.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button id="btn-calc" class="px-4 py-2 text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-sm">Calculate CRC</button>
+                            <button id="btn-load-exam" class="px-4 py-2 text-xs font-bold bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg shadow-sm">Load Exam Example</button>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-7 bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200 pb-2">Calculated CRC Parameters</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="bg-white p-3 rounded-lg border text-center"><div id="stat-data" class="text-2xl font-mono font-bold text-brand-700">10</div><div class="text-[11px] text-slate-500">Data Bits</div></div>
+                            <div class="bg-white p-3 rounded-lg border text-center"><div id="stat-degree" class="text-2xl font-mono font-bold text-purple-700">16</div><div class="text-[11px] text-slate-500">CRC Degree</div></div>
+                            <div class="bg-white p-3 rounded-lg border text-center"><div id="stat-appended" class="text-2xl font-mono font-bold text-slate-800">26</div><div class="text-[11px] text-slate-500">Divided Bits</div></div>
+                            <div class="bg-white p-3 rounded-lg border text-center"><div id="stat-crc" class="text-2xl font-mono font-bold text-cyan-700">—</div><div class="text-[11px] text-slate-500">CRC Remainder</div></div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border font-mono text-xs space-y-2">
+                            <div class="font-sans font-bold text-[11px] text-slate-500 border-b border-slate-100 pb-1">Core CRC equation</div>
+                            <div id="equation" class="text-slate-800">Codeword = Data × xʳ + Remainder</div>
+                            <div id="parameter-status" class="text-emerald-700 font-bold">✓ Ready</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2 -->
+        <section id="division-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">2</span> Modulo-2 Long Division</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">CRC division is XOR division. No carries and no borrows are used.</p>
+                </div>
+                <span class="text-xs font-mono bg-orange-100 text-orange-800 px-2 py-1 rounded border border-orange-200 font-semibold">XOR Division</span>
+            </div>
+            <div class="p-6 space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-3"><div class="text-[11px] font-bold uppercase text-cyan-700">Dividend</div><div id="display-dividend" class="font-mono text-sm break-all mt-1">—</div></div>
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-3"><div class="text-[11px] font-bold uppercase text-purple-700">Divisor / Generator</div><div id="display-generator" class="font-mono text-sm break-all mt-1">—</div></div>
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3"><div class="text-[11px] font-bold uppercase text-emerald-700">Final Remainder</div><div id="display-remainder" class="font-mono text-sm break-all mt-1">—</div></div>
+                </div>
+                <div class="bg-slate-900 rounded-xl p-4 text-slate-100 overflow-x-auto">
+                    <div class="text-xs font-bold text-cyan-300 mb-2">Step-by-step XOR trace</div>
+                    <div id="division-trace" class="font-mono text-xs space-y-1"></div>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs text-amber-900">
+                    <b>Exam rule:</b> Append <b>r zeros</b> to the dataword, where <b>r = degree of G(x)</b>. Divide using XOR. The final <b>r-bit remainder</b> is appended to the original dataword.
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3 -->
+        <section id="frame-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">3</span> Transmitted CRC Codeword</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">The final frame is written normally from left to right: original data followed by the CRC remainder.</p>
+                </div>
+                <span class="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-1 rounded border border-emerald-200 font-semibold">Data + CRC</span>
+            </div>
+            <div class="p-6 space-y-5">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-8">
+                        <div class="flex flex-wrap items-end gap-1" id="codeword-tiles"></div>
+                        <div class="mt-3 flex flex-wrap gap-3 text-[11px] font-mono">
+                            <span class="px-2 py-1 rounded bg-cyan-50 text-cyan-800 border border-cyan-200">DATA</span>
+                            <span class="px-2 py-1 rounded bg-purple-50 text-purple-800 border border-purple-200">CRC BITS</span>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-4 bg-slate-50 rounded-xl border p-4 space-y-2 font-mono text-sm">
+                        <div><span class="text-slate-500">Data:</span> <b id="frame-data">—</b></div>
+                        <div><span class="text-slate-500">CRC:</span> <b id="frame-crc">—</b></div>
+                        <div><span class="text-slate-500">Codeword:</span> <b id="frame-codeword">—</b></div>
+                        <button id="btn-copy-codeword" class="mt-2 px-3 py-2 bg-slate-800 text-white rounded text-xs font-bold">Copy Codeword</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4 -->
+        <section id="check-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">4</span> Receiver / Channel Error Detection</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Enter or inject a received codeword. A zero remainder means the frame passes the selected CRC check.</p>
+                </div>
+                <span class="text-xs font-mono bg-rose-100 text-rose-800 px-2 py-1 rounded border border-rose-200 font-semibold">Receiver Check</span>
+            </div>
+            <div class="p-6 space-y-5">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div class="space-y-3">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Received Codeword (LTR)</label>
+                        <input id="received-input" type="text" class="w-full px-4 py-3 font-mono text-lg font-bold tracking-widest bg-slate-50 border rounded-lg">
+                        <div class="flex flex-wrap gap-2">
+                            <button id="btn-check-received" class="px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded text-xs font-bold">Check Received Word</button>
+                            <button id="btn-inject-1" class="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold">Flip 1 Bit</button>
+                            <button id="btn-reset-channel" class="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded text-xs font-bold">Reset to Valid</button>
+                        </div>
+                    </div>
+                    <div id="receiver-result" class="rounded-xl border p-5 bg-slate-50 flex flex-col justify-center">
+                        <div class="text-xs uppercase tracking-wider font-bold text-slate-500">CRC Syndrome / Remainder</div>
+                        <div id="receiver-remainder" class="font-mono text-2xl font-bold mt-2">—</div>
+                        <div id="receiver-status" class="text-sm font-bold mt-2">Awaiting check…</div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 rounded-xl border p-4">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Receiver Division Trace</div>
+                    <div id="receiver-trace" class="font-mono text-xs space-y-1 overflow-x-auto"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5 -->
+        <section id="verify-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">5</span> Answer Checker & Exam Verification</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Enter the CRC remainder or complete codeword you obtained by hand and compare it with the simulator's mathematically calculated answer.</p>
+            </div>
+            <div class="p-6 space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Your CRC Remainder</label>
+                        <input id="answer-crc" type="text" placeholder="e.g. 011001" class="w-full px-4 py-2.5 font-mono text-lg tracking-widest bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Your Complete Codeword (optional)</label>
+                        <input id="answer-codeword" type="text" placeholder="Data + CRC" class="w-full px-4 py-2.5 font-mono text-lg tracking-widest bg-slate-50 border rounded-lg">
+                    </div>
+                </div>
+                <button id="btn-verify" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold">✓ Check My Answer</button>
+                <div id="answer-result" class="hidden rounded-xl border p-5"></div>
+            </div>
+        </section>
+
+        <!-- SECTION 6 -->
+        <section id="theory-section" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">6</span> CRC Theory, Types & Exam Rules</h3>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div class="bg-cyan-50 border border-cyan-200 rounded-xl p-4"><h4 class="font-bold text-cyan-900">CRC-8</h4><p class="text-xs mt-1">Generator: x⁸ + x² + x + 1, represented by 0x07 after omitting the leading x⁸ coefficient.</p></div>
+                <div class="bg-purple-50 border border-purple-200 rounded-xl p-4"><h4 class="font-bold text-purple-900">CRC-16-CCITT</h4><p class="text-xs mt-1">Generator: x¹⁶ + x¹² + x⁵ + 1, represented by 0x1021.</p></div>
+                <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4"><h4 class="font-bold text-indigo-900">CRC-16-IBM</h4><p class="text-xs mt-1">Generator: x¹⁶ + x¹⁵ + x² + 1, represented by 0x8005.</p></div>
+                <div class="bg-orange-50 border border-orange-200 rounded-xl p-4"><h4 class="font-bold text-orange-900">CRC-32 IEEE Polynomial</h4><p class="text-xs mt-1">Generator polynomial: 0x04C11DB7, with the leading x³² coefficient understood. This simulator uses direct binary polynomial division for exam work.</p></div>
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4"><h4 class="font-bold text-emerald-900">CRC-12</h4><p class="text-xs mt-1">Generator: x¹² + x¹¹ + x³ + x² + x + 1. Useful when practicing different generator degrees and remainder lengths.</p></div>
+                <div class="md:col-span-2 bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900">
+                    <b>Important exam distinction:</b> Hamming uses physical bit positions numbered from the right, but CRC long division is performed on the displayed binary stream in the normal left-to-right order. Do <b>not</b> reverse the CRC dataword or remainder merely because Hamming uses RTL position numbering.
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 text-xs py-5 mt-8 text-center">CRC Interactive Engineering Workbench • Modulo-2 Polynomial Division • Built for exam practice</footer>
+
+<script>
+'use strict';
+
+const PRESETS = {
+    crc8: { name:'CRC-8', generator:'100000111' },
+    crc12: { name:'CRC-12', generator:'1100000001111' },
+    crc16ccitt: { name:'CRC-16-CCITT', generator:'10001000000100001' },
+    crc16ibm: { name:'CRC-16-IBM', generator:'11000000000000101' },
+    crc32: { name:'CRC-32 IEEE', generator:'100000100110000010001110110110111' }
+};
+let current = { data:'1101011011', generator:'10001000000100001', remainder:'', codeword:'' };
+
+function isBits(s){ return /^[01]+$/.test(s); }
+function normalizeBits(s){ return String(s||'').replace(/\s+/g,''); }
+function xorBits(a,b){ return a.split('').map((x,i)=>String(Number(x)^Number(b[i]))).join(''); }
+function showToast(msg, type='info'){
+    const el=document.createElement('div');
+    el.className=`pointer-events-auto px-4 py-2 rounded-lg shadow-lg text-xs font-bold ${type==='error'?'bg-rose-600 text-white':type==='ok'?'bg-emerald-600 text-white':'bg-slate-800 text-white'}`;
+    el.textContent=msg; document.getElementById('toast-container').appendChild(el); setTimeout(()=>el.remove(),2200);
+}
+function validateGenerator(g){ return isBits(g) && g.length>=2 && g[0]==='1' && g[g.length-1]==='1'; }
+
+// Polynomial long division over GF(2). Returns quotient, remainder and every meaningful XOR step.
+function divideCRC(dividend, generator){
+    const a=dividend.split('').map(Number), g=generator.split('').map(Number), m=g.length;
+    const work=a.slice(), steps=[];
+    let xorCount=0;
+    for(let i=0;i<=work.length-m;i++){
+        if(work[i]===1){
+            const before=work.join('');
+            for(let j=0;j<m;j++) work[i+j]^=g[j];
+            const after=work.join('');
+            steps.push({index:i,before,operation:generator,after});
+            xorCount++;
+        } else {
+            steps.push({index:i,before:work.join(''),operation:'0'.repeat(m),after:work.join('')});
+        }
+    }
+    const remainder=work.slice(- (m-1)).join('');
+    const quotient=[];
+    for(let i=0;i<=work.length-m;i++) quotient.push(steps[i] && steps[i].before[i]==='1' ? '1':'0');
+    return {remainder: remainder.padStart(m-1,'0'), work, steps, quotient:quotient.join(''), xorCount};
+}
+function calculate(data, generator){
+    const r=generator.length-1;
+    const appended=data+'0'.repeat(r);
+    const div=divideCRC(appended,generator);
+    const codeword=data+div.remainder;
+    return {...div,data, generator, degree:r, appended, codeword};
+}
+function renderAll(){
+    const data=normalizeBits(document.getElementById('data-input').value);
+    const gen=normalizeBits(document.getElementById('generator-input').value);
+    const dataErr=document.getElementById('data-error');
+    if(!isBits(data)){ dataErr.textContent='Enter only 0 and 1.'; dataErr.classList.remove('hidden'); return null; }
+    if(!validateGenerator(gen)){ dataErr.textContent='Generator must be binary, length ≥ 2, and start/end with 1.'; dataErr.classList.remove('hidden'); return null; }
+    dataErr.classList.add('hidden');
+    current=calculate(data,gen);
+    document.getElementById('stat-data').textContent=data.length;
+    document.getElementById('stat-degree').textContent=current.degree;
+    document.getElementById('stat-appended').textContent=current.appended.length;
+    document.getElementById('stat-crc').textContent=current.remainder;
+    document.getElementById('display-dividend').textContent=current.appended;
+    document.getElementById('display-generator').textContent=gen;
+    document.getElementById('display-remainder').textContent=current.remainder;
+    document.getElementById('equation').innerHTML=`Codeword = ${data} + ${current.remainder} = <b>${current.codeword}</b>`;
+    document.getElementById('parameter-status').textContent=`✓ ${gen.length}-bit generator, degree ${current.degree}, modulo-2 division complete`;
+    document.getElementById('frame-data').textContent=data;
+    document.getElementById('frame-crc').textContent=current.remainder;
+    document.getElementById('frame-codeword').textContent=current.codeword;
+    document.getElementById('received-input').value=current.codeword;
+    renderTiles(); renderDivision(current.steps,'division-trace');
+    checkReceived(false);
+    return current;
+}
+function renderTiles(){
+    const box=document.getElementById('codeword-tiles'); box.innerHTML='';
+    current.codeword.split('').forEach((bit,i)=>{
+        const isData=i<current.data.length;
+        const d=document.createElement('div');
+        d.className=`bit-tile w-9 h-12 rounded-lg border flex flex-col items-center justify-center ${isData?'bg-cyan-50 border-cyan-300 text-cyan-900':'bg-purple-50 border-purple-300 text-purple-900'}`;
+        d.innerHTML=`<span class="text-[9px] font-bold text-slate-400">${isData?'D':'C'}${isData?i+1:i-current.data.length+1}</span><span class="font-mono text-lg font-bold">${bit}</span>`;
+        box.appendChild(d);
+    });
+}
+function renderDivision(steps,id){
+    const box=document.getElementById(id); box.innerHTML='';
+    steps.forEach((s,k)=>{
+        const row=document.createElement('div'); row.className='division-row';
+        row.innerHTML=`<span class="text-cyan-300">Step ${k+1}</span>  index ${s.index}  <span class="text-slate-300">${s.before}</span>  XOR <span class="text-orange-300">${s.operation}</span>  → <span class="text-emerald-300">${s.after}</span>`;
+        box.appendChild(row);
+    });
+}
+function checkReceived(show=true){
+    const received=normalizeBits(document.getElementById('received-input').value);
+    const box=document.getElementById('receiver-result'), remEl=document.getElementById('receiver-remainder'), status=document.getElementById('receiver-status');
+    if(!isBits(received) || received.length<current.generator.length){
+        remEl.textContent='Invalid'; status.textContent='Received word must be binary and at least as long as the generator.'; status.className='text-sm font-bold mt-2 text-rose-700'; return false;
+    }
+    const result=divideCRC(received,current.generator);
+    remEl.textContent=result.remainder;
+    document.getElementById('receiver-trace').innerHTML=''; renderDivision(result.steps,'receiver-trace');
+    const valid=/^0+$/.test(result.remainder);
+    box.className=`rounded-xl border p-5 flex flex-col justify-center ${valid?'bg-emerald-50 border-emerald-300':'bg-rose-50 border-rose-300'}`;
+    status.textContent=valid?'✓ No detectable error: remainder = 0':'✗ Error detected: remainder ≠ 0';
+    status.className=`text-sm font-bold mt-2 ${valid?'text-emerald-700':'text-rose-700'}`;
+    if(show) showToast(valid?'CRC check passed':'CRC detected an error',valid?'ok':'error');
+    return valid;
+}
+function verifyAnswer(){
+    const userCRC=normalizeBits(document.getElementById('answer-crc').value);
+    const userCode=normalizeBits(document.getElementById('answer-codeword').value);
+    const result=document.getElementById('answer-result');
+    const crcOK=userCRC===current.remainder;
+    const codeOK=!userCode || userCode===current.codeword;
+    const ok=crcOK&&codeOK;
+    result.className=`rounded-xl border p-5 ${ok?'bg-emerald-50 border-emerald-300 text-emerald-900':'bg-rose-50 border-rose-300 text-rose-900'}`;
+    result.innerHTML=ok
+        ? `<div class="font-bold text-lg">✓ Answer Correct</div><div class="text-sm mt-1">CRC remainder = <b>${current.remainder}</b>${userCode?`<br>Codeword = <b>${current.codeword}</b>`:''}</div>`
+        : `<div class="font-bold text-lg">✗ Answer Does Not Match</div><div class="text-sm mt-1">Correct CRC remainder: <b>${current.remainder}</b><br>Correct codeword: <b>${current.codeword}</b><br>Your CRC: <b>${userCRC||'blank'}</b>${userCode?`<br>Your codeword: <b>${userCode}</b>`:''}</div>`;
+    result.classList.remove('hidden');
+}
+function flipOneBit(){
+    const a=normalizeBits(document.getElementById('received-input').value).split('');
+    if(!a.length) return;
+    const idx=Math.floor(Math.random()*a.length); a[idx]=a[idx]==='0'?'1':'0';
+    document.getElementById('received-input').value=a.join(''); checkReceived();
+}
+function loadExam(){
+    document.getElementById('data-input').value='1101011011';
+    document.getElementById('crc-preset').value='crc16ccitt';
+    document.getElementById('generator-input').value=PRESETS.crc16ccitt.generator;
+    renderAll(); showToast('Exam example loaded','ok');
+}
+function reset(){
+    document.getElementById('data-input').value='1101011011';
+    document.getElementById('crc-preset').value='crc16ccitt';
+    document.getElementById('generator-input').value=PRESETS.crc16ccitt.generator;
+    document.getElementById('answer-crc').value=''; document.getElementById('answer-codeword').value='';
+    renderAll(); document.getElementById('answer-result').classList.add('hidden');
+}
+
+document.getElementById('crc-preset').addEventListener('change',e=>{
+    if(e.target.value!=='custom') document.getElementById('generator-input').value=PRESETS[e.target.value].generator;
+    renderAll();
+});
+document.getElementById('generator-input').addEventListener('input',()=>renderAll());
+document.getElementById('data-input').addEventListener('input',()=>renderAll());
+document.getElementById('btn-calc').addEventListener('click',()=>renderAll());
+document.getElementById('btn-load-exam').addEventListener('click',loadExam);
+document.getElementById('btn-check-received').addEventListener('click',()=>checkReceived(true));
+document.getElementById('btn-inject-1').addEventListener('click',flipOneBit);
+document.getElementById('btn-reset-channel').addEventListener('click',()=>{document.getElementById('received-input').value=current.codeword;checkReceived(false);});
+document.getElementById('btn-verify').addEventListener('click',verifyAnswer);
+document.getElementById('btn-reset').addEventListener('click',reset);
+document.getElementById('btn-copy-codeword').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(current.codeword);showToast('Codeword copied','ok');}catch(e){showToast('Clipboard unavailable','error');}});
+
+renderAll();
+</script>
+</body>
+</html>
