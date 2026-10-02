@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hierarchical Network Domain Explorer & Practice Studio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .tree-line-v {
+            width: 2px;
+            background-color: #cbd5e1;
+            margin: 0 auto;
+        }
+        .tree-node-box {
+            transition: all 0.25s ease-in-out;
+        }
+        .tree-node-box:hover {
+            transform: translateY(-2px);
+        }
+        .badge-cd {
+            animation: pulse-badge 2s infinite alternate;
+        }
+        @keyframes pulse-badge {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.08); }
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 280px;
+            max-height: 320px;
+        }
+    </style>
+</head>
+<!-- Chosen Palette: Slate Warm Harmony (Background: #f8fafc / #f1f5f9, Cards: white, Primary: #2563eb, Hub Accent: #d97706, Router Accent: #7c3aed) -->
+<!-- Application Structure Plan: Structure includes Practice Studio (featuring Question 8 and Expert Nested Hub topologies with corrected domain highlighting), Golden Rules & Shortcut Cheatsheet, and Interactive Topology Builder. This structure allows users to test speed and visually grasp how Layer 1 Hub cascading merges collision domains into single shared segments. -->
+<!-- Visualization & Content Choices: 1. Hierarchical Tree Topologies -> Goal: Display multi-tiered network layout -> Method: Styled CSS flex tree -> Interaction: Highlighting Broadcast Subnets vs Collision Domain Links -> Justification: Replicates text-based diagram clarity with color-coded feedback; 2. Domain Summary -> Goal: Compare BD vs CD across topologies -> Method: Chart.js bar graph -> Justification: Clear quantitative breakdown of domain ratios. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col justify-between">
+
+    <!-- Header / Navigation -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white font-black text-xl px-3 py-1.5 rounded-lg shadow">
+                    L2/L3
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white">Hierarchical Domain Explorer</h1>
+                    <p class="text-xs text-slate-400">Master Broadcast & Collision Domains in Tree Topologies</p>
+                </div>
+            </div>
+
+            <nav class="flex flex-wrap gap-2 text-sm font-medium">
+                <button onclick="switchTab('practice')" id="nav-practice" class="px-4 py-2 rounded-md bg-blue-600 text-white shadow transition">
+                    🧩 Tree Practice Studio
+                </button>
+                <button onclick="switchTab('rules')" id="nav-rules" class="px-4 py-2 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+                    🎓 Golden Rules & Cheatsheet
+                </button>
+                <button onclick="switchTab('builder')" id="nav-builder" class="px-4 py-2 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+                    🛠️ Tree Topology Builder
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+
+        <!-- ================= SECTION 1: PRACTICE STUDIO ================= -->
+        <section id="tab-practice" class="space-y-8">
+            <!-- Intro Paragraph -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Hierarchical Tree Practice Studio</h2>
+                <p class="text-slate-600 leading-relaxed">
+                    Test your speed and mastery calculating Broadcast Domains (Layer 3 subnets) and Collision Domains (Layer 2/1 links & hub segments). Select a problem below, toggle the domain overlay modes, and check your calculations.
+                </p>
+            </div>
+
+            <!-- Problem Selector Bar & Score Summary -->
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Question Selector Sidebar -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Select Practice Problem</h3>
+                    <div class="space-y-2" id="question-selector">
+                        <!-- Dynamically populated buttons -->
+                    </div>
+
+                    <!-- Progress Stats Box -->
+                    <div class="mt-6 pt-4 border-t border-slate-100 space-y-3">
+                        <div class="flex justify-between text-xs text-slate-500 font-semibold">
+                            <span>QUIZ PROGRESS</span>
+                            <span id="quiz-progress-text">0 / 7 Completed</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div id="quiz-progress-bar" class="bg-blue-600 h-full w-0 transition-all duration-300"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Active Problem Display -->
+                <div class="lg:col-span-3 space-y-6">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <!-- Problem Header -->
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center pb-4 mb-4 border-b border-slate-100 gap-2">
+                            <div>
+                                <span id="problem-difficulty" class="text-xs font-bold px-2.5 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200">Expert Hub Logic</span>
+                                <h3 id="problem-title" class="text-xl font-bold text-slate-900 mt-1">Nested Hub Branch</h3>
+                            </div>
+
+                            <!-- Visual Overlay Toggles -->
+                            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
+                                <button onclick="setTreeHighlightMode('none')" id="mode-none" class="px-3 py-1.5 rounded-md bg-white text-slate-800 shadow-sm">Normal</button>
+                                <button onclick="setTreeHighlightMode('broadcast')" id="mode-broadcast" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">Broadcast Zones</button>
+                                <button onclick="setTreeHighlightMode('collision')" id="mode-collision" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">Collision Links</button>
+                            </div>
+                        </div>
+
+                        <!-- Tree Topology Visual Canvas -->
+                        <div class="bg-slate-900 text-slate-100 p-6 rounded-xl overflow-x-auto min-h-[340px] flex items-center justify-center relative shadow-inner" id="tree-canvas-container">
+                            <!-- Dynamic Tree Rendered Here -->
+                        </div>
+
+                        <!-- Interactive Answers Form -->
+                        <div class="mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <label class="block text-sm font-semibold text-slate-700">1. Total Broadcast Domains (Layer 3):</label>
+                                <div class="flex gap-3">
+                                    <input type="number" id="input-bd" min="0" placeholder="Enter count..." class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <label class="block text-sm font-semibold text-slate-700">2. Total Collision Domains (Layer 2/1):</label>
+                                <div class="flex gap-3">
+                                    <input type="number" id="input-cd" min="0" placeholder="Enter count..." class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="mt-6 flex flex-wrap gap-3">
+                            <button onclick="checkAnswer()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition">
+                                Submit Answer
+                            </button>
+                            <button onclick="toggleExplanation()" class="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition">
+                                💡 Show Step-by-Step Solution
+                            </button>
+                        </div>
+
+                        <!-- Solution & Explanation Panel -->
+                        <div id="solution-panel" class="hidden mt-6 p-5 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 space-y-4">
+                            <div class="flex items-center gap-2 text-emerald-700 font-bold text-lg">
+                                <span>✔ Detailed Solution & Calculation</span>
+                            </div>
+                            <div id="solution-text" class="space-y-3 text-sm leading-relaxed">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= SECTION 2: RULES & CHEATSHEET ================= -->
+        <section id="tab-rules" class="hidden space-y-8">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Golden Rules & Calculation Shortcuts</h2>
+                <p class="text-slate-600 leading-relaxed">
+                    Understanding network segmentation requires recognizing how devices process frames (Layer 2) and packets (Layer 3). Use these reference cards to solve any complex hierarchical network topology in seconds.
+                </p>
+            </div>
+
+            <!-- Device Function Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Hub Card -->
+                <div class="bg-white p-6 rounded-xl border-t-4 border-amber-500 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase tracking-wider px-2 py-1 bg-amber-50 text-amber-700 rounded">Layer 1 Physical</span>
+                        <span class="text-2xl">🔌</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">Hub / Multiport Repeater</h3>
+                    <ul class="text-sm text-slate-600 space-y-2 list-disc list-inside">
+                        <li><strong>Collision Domain:</strong> Shares <strong>1 single domain</strong> across ALL connected ports (even when nested/cascaded).</li>
+                        <li><strong>Broadcast Domain:</strong> Forwards broadcasts to all ports. Does NOT isolate subnets.</li>
+                        <li><em>Rule:</em> Cascading Hubs together still results in 1 single shared collision domain.</li>
+                    </ul>
+                </div>
+
+                <!-- Switch Card -->
+                <div class="bg-white p-6 rounded-xl border-t-4 border-blue-500 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase tracking-wider px-2 py-1 bg-blue-50 text-blue-700 rounded">Layer 2 Data Link</span>
+                        <span class="text-2xl">🔀</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">Switch / Bridge</h3>
+                    <ul class="text-sm text-slate-600 space-y-2 list-disc list-inside">
+                        <li><strong>Collision Domain:</strong> <strong>Every active port</strong> creates 1 isolated collision domain.</li>
+                        <li><strong>Broadcast Domain:</strong> Forwards broadcasts. All ports belong to 1 broadcast domain (without VLANs).</li>
+                        <li><em>Rule:</em> Switches isolate collisions, but pass broadcasts.</li>
+                    </ul>
+                </div>
+
+                <!-- Router Card -->
+                <div class="bg-white p-6 rounded-xl border-t-4 border-purple-500 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase tracking-wider px-2 py-1 bg-purple-50 text-purple-700 rounded">Layer 3 Network</span>
+                        <span class="text-2xl">🌐</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">Router</h3>
+                    <ul class="text-sm text-slate-600 space-y-2 list-disc list-inside">
+                        <li><strong>Collision Domain:</strong> Every active router interface forms 1 collision domain.</li>
+                        <li><strong>Broadcast Domain:</strong> <strong>Every active interface</strong> forms a separate broadcast domain (subnet).</li>
+                        <li><em>Rule:</em> Routers block broadcast frames completely.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Nested Hub Rule Highlight -->
+            <div class="bg-amber-900 text-amber-50 p-6 rounded-xl shadow-md space-y-3">
+                <h3 class="text-xl font-bold text-amber-300">⚠️ The Nested Hub Rule (Layer 1 Cascading)</h3>
+                <p class="text-sm text-amber-100 leading-relaxed">
+                    When a <strong>Hub (H1)</strong> is connected to another <strong>Hub (H2)</strong> under a Switch port, they do <strong>NOT</strong> create separate collision domains. Because hubs simply repeat electrical signals, the entire tree of interconnected hubs and their connected PCs form <strong>1 SINGLE shared Collision Domain</strong> off that switch port!
+                </p>
+            </div>
+
+            <!-- Analytical Summary Chart Container -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 class="text-lg font-bold text-slate-900 mb-2">Practice Topologies Domain Ratio Breakdown</h3>
+                <p class="text-xs text-slate-500 mb-4">Comparison of Broadcast vs. Collision Domains across all 7 practice problems</p>
+                <div class="chart-container">
+                    <canvas id="domainChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= SECTION 3: TOPOLOGY BUILDER ================= -->
+        <section id="tab-builder" class="hidden space-y-8">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Interactive Tree Topology Builder</h2>
+                <p class="text-slate-600 leading-relaxed">
+                    Configure your own hierarchical branch network below to dynamically generate tree diagrams, analyze packet isolation, and verify domain calculations in real time.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Configurator Controls -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
+                    <h3 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">Topology Configuration</h3>
+                    
+                    <!-- Left Branch Config -->
+                    <div class="space-y-3">
+                        <h4 class="text-sm font-bold text-blue-600 uppercase tracking-wider">Branch 1 (Left Interface)</h4>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Intermediary Device:</label>
+                            <select id="builder-b1-type" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                                <option value="switch">Switch (Layer 2)</option>
+                                <option value="hub">Hub (Layer 1)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Connected End PCs:</label>
+                            <input type="number" id="builder-b1-pcs" min="1" max="5" value="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Right Branch Config -->
+                    <div class="space-y-3 pt-3 border-t border-slate-100">
+                        <h4 class="text-sm font-bold text-emerald-600 uppercase tracking-wider">Branch 2 (Right Interface)</h4>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Intermediary Device:</label>
+                            <select id="builder-b2-type" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                                <option value="switch">Switch (Layer 2)</option>
+                                <option value="hub" selected>Hub (Layer 1)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Connected End PCs:</label>
+                            <input type="number" id="builder-b2-pcs" min="1" max="5" value="3" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <button onclick="buildCustomTopology()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow transition">
+                        ⚡ Generate & Calculate Domains
+                    </button>
+                </div>
+
+                <!-- Live Tree & Output Panel -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Tree Canvas -->
+                    <div class="bg-slate-900 p-6 rounded-xl text-slate-100 min-h-[300px] flex items-center justify-center shadow-inner" id="builder-canvas">
+                        <!-- Custom rendered tree -->
+                    </div>
+
+                    <!-- Domain Result Summary -->
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl text-center">
+                            <span class="text-xs font-bold text-blue-600 uppercase">Broadcast Domains</span>
+                            <div id="custom-bd-val" class="text-3xl font-black text-blue-900 mt-1">2</div>
+                            <span class="text-xs text-blue-700 mt-1 block">Layer 3 Subnets</span>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl text-center">
+                            <span class="text-xs font-bold text-amber-600 uppercase">Collision Domains</span>
+                            <div id="custom-cd-val" class="text-3xl font-black text-amber-900 mt-1">5</div>
+                            <span class="text-xs text-amber-700 mt-1 block">Isolated Links & Hub Zones</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>© 2026 Hierarchical Domain Masterclass — Interactive Computer Networks Educational Tool</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // ================= PRACTICE DATASET =================
+        const questionsData = [
+            {
+                id: 1,
+                title: "Nested Hub Branch",
+                difficulty: "Expert Hub Logic",
+                bd: 2,
+                cd: 5,
+                topology: {
+                    type: "router",
+                    name: "Router R1",
+                    children: [
+                        {
+                            type: "switch",
+                            name: "Switch S1",
+                            children: [
+                                {
+                                    type: "hub",
+                                    name: "Hub H1",
+                                    children: [
+                                        {
+                                            type: "hub",
+                                            name: "Hub H2",
+                                            children: [
+                                                { type: "pc", name: "PC 1" },
+                                                { type: "pc", name: "PC 2" }
+                                            ]
+                                        },
+                                        { type: "pc", name: "PC 3" }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            type: "switch",
+                            name: "Switch S2",
+                            children: [
+                                { type: "pc", name: "PC 4" },
+                                { type: "pc", name: "PC 5" }
+                            ]
+                        }
+                    ]
+                },
+                explanation: `
+                    <p><strong>Broadcast Domains (2):</strong> Router R1 has 2 active interfaces (Left Subnet and Right Subnet).</p>
+                    <p><strong>Collision Domains (5):</strong></p>
+                    <ul class="list-disc list-inside ml-2 space-y-1">
+                        <li><strong>Right Branch (Switched):</strong> R1 ↔ S2 (1), S2 ↔ PC4 (1), S2 ↔ PC5 (1) = <strong>3 Collision Domains</strong>.</li>
+                        <li><strong>Left Branch (Switched + Cascaded Hubs):</strong> R1 ↔ S1 (1). The port on Switch S1 connects to Hub H1, which connects to Hub H2, PC1, PC2, and PC3. Because hubs operate at Layer 1, <strong>Hub H1 and Hub H2 merge into 1 single shared collision domain</strong>.</li>
+                    </ul>
+                    <p class="text-emerald-700 font-bold mt-2">Total Collision Domains = 3 (Right) + 1 (R1-S1) + 1 (Cascaded Hub Segment) = 5</p>
+                `
+            },
+            {
+                id: 2,
+                title: "Question 8 Benchmark Topology",
+                difficulty: "Standard Exam",
+                bd: 2,
+                cd: 7,
+                topology: {
+                    type: "router",
+                    name: "Router R1",
+                    children: [
+                        {
+                            type: "switch",
+                            name: "Switch S1",
+                            children: [
+                                {
+                                    type: "switch",
+                                    name: "Switch S3",
+                                    children: [
+                                        { type: "pc", name: "PC 1" },
+                                        { type: "pc", name: "PC 2" }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            type: "switch",
+                            name: "Switch S2",
+                            children: [
+                                { type: "pc", name: "PC 3" },
+                                { type: "pc", name: "PC 4" }
+                            ]
+                        }
+                    ]
+                },
+                explanation: `
+                    <p><strong>Broadcast Domains (2):</strong> Router R1 has 2 active interfaces. Left side = Subnet 1; Right side = Subnet 2.</p>
+                    <p><strong>Collision Domains (7):</strong> Since NO hubs are present, every link is a collision domain:</p>
+                    <ol class="list-decimal list-inside ml-2 space-y-1">
+                        <li>R1 ↔ S1 link (1)</li>
+                        <li>S1 ↔ S3 link (1)</li>
+                        <li>S3 ↔ PC1 link (1)</li>
+                        <li>S3 ↔ PC2 link (1)</li>
+                        <li>R1 ↔ S2 link (1)</li>
+                        <li>S2 ↔ PC3 link (1)</li>
+                        <li>S2 ↔ PC4 link (1)</li>
+                    </ol>
+                    <p class="text-emerald-700 font-bold mt-2">Total Collision Domains = 1+1+1+1+1+1+1 = 7</p>
+                `
+            },
+            {
+                id: 3,
+                title: "Three-Branch Core Tree",
+                difficulty: "Intermediate",
+                bd: 3,
+                cd: 8,
+                topology: {
+                    type: "router",
+                    name: "Router R1",
+                    children: [
+                        {
+                            type: "switch",
+                            name: "Switch S1",
+                            children: [
+                                { type: "pc", name: "PC 1" },
+                                { type: "pc", name: "PC 2" }
+                            ]
+                        },
+                        {
+                            type: "switch",
+                            name: "Switch S2",
+                            children: [
+                                { type: "pc", name: "PC 3" }
+                            ]
+                        },
+                        {
+                            type: "switch",
+                            name: "Switch S3",
+                            children: [
+                                { type: "pc", name: "PC 4" },
+                                { type: "pc", name: "PC 5" }
+                            ]
+                        }
+                    ]
+                },
+                explanation: `
+                    <p><strong>Broadcast Domains (3):</strong> Router R1 has 3 active interfaces leading to 3 distinct subnets.</p>
+                    <p><strong>Collision Domains (8):</strong> Pure switch network (8 total links):</p>
+                    <ul class="list-disc list-inside ml-2">
+                        <li>Left Branch: R1-S1 (1), S1-PC1 (1), S1-PC2 (1) = 3</li>
+                        <li>Middle Branch: R1-S2 (1), S2-PC3 (1) = 2</li>
+                        <li>Right Branch: R1-S3 (1), S3-PC4 (1), S3-PC5 (1) = 3</li>
+                    </ul>
+                    <p class="text-emerald-700 font-bold mt-2">Total = 3 + 2 + 3 = 8 Collision Domains</p>
+                `
+            },
+            {
+                id: 4,
+                title: "Hybrid Hub Tree Topology",
+                difficulty: "Single Hub Branch",
+                bd: 2,
+                cd: 4,
+                topology: {
+                    type: "router",
+                    name: "Router R1",
+                    children: [
+                        {
+                            type: "switch",
+                            name: "Switch S1",
+                            children: [
+                                { type: "pc", name: "PC 1" },
+                                { type: "pc", name: "PC 2" }
+                            ]
+                        },
+                        {
+                            type: "hub",
+                            name: "Hub H1",
+                            children: [
+                                { type: "pc", name: "PC 3" },
+                                { type: "pc", name: "PC 4" }
+                            ]
+                        }
+                    ]
+                },
+                explanation: `
+                    <p><strong>Broadcast Domains (2):</strong> R1 interface 1 (Switch side) and interface 2 (Hub side).</p>
+                    <p><strong>Collision Domains (4):</strong></p>
+                    <ul class="list-disc list-inside ml-2">
+                        <li>Left (Switched): R1-S1 (1), S1-PC1 (1), S1-PC2 (1) = 3</li>
+                        <li>Right (Hub): Hub H1 does NOT segment collisions! The link R1-H1, H1-PC3, and H1-PC4 form <strong>1 single shared collision domain</strong>.</li>
+                    </ul>
+                    <p class="text-emerald-700 font-bold mt-2">Total = 3 (Switch links) + 1 (Hub domain) = 4 Collision Domains</p>
+                `
+            },
+            {
+                id: 5,
+                title: "Multi-Tier Cascaded Campus",
+                difficulty: "Hierarchical Switches",
+                bd: 2,
+                cd: 8,
+                topology: {
+                    type: "router",
+                    name: "Router R1",
+                    children: [
+                        {
+                            type: "switch",
+                            name: "Switch S1",
+                            children: [
+                                {
+                                    type: "switch",
+                                    name: "Switch S3",
+                                    children: [
+                                        { type: "pc", name: "PC 1" },
+                                        { type: "pc", name: "PC 2" }
+                                    ]
+                                },
+                                {
+                                    type: "switch",
+                                    name: "Switch S4",
+                                    children: [
+                                        { type: "pc", name: "PC 3" }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            type: "switch",
+                            name: "Switch S2",
+                            children: [
+                                { type: "pc", name: "PC 4" }
+                            ]
+                        }
+                    ]
+                },
+                explanation: `
+                    <p><strong>Broadcast Domains (2):</strong> Left switch tree (S1, S3, S4) forwards broadcasts throughout the entire left branch = 1 Broadcast Domain. Right switch (S2) = 1 Broadcast Domain.</p>
+                    <p><strong>Collision Domains (8):</strong> Count every link in the switch network:</p>
+                    <ol class="list-decimal list-inside ml-2">
+                        <li>R1-S1, 2. S1-S3, 3. S1-S4, 4. S3-PC1, 5. S3-PC2, 6. S4-PC3, 7. R1-S2, 8. S2-PC4.</li>
+                    </ol>
+                    <p class="text-emerald-700 font-bold mt-2">Total = 8 Collision Domains</p>
+                `
+            },
+            {
+                id: 6,
+                title: "Cascaded Hub Branch Tree",
+                difficulty: "Tricky Hub Links",
+                bd: 2,
+                cd: 5,
+                topology: {
+                    type: "router",
+                    name: "Router R1",
+                    children: [
+                        {
+                            type: "switch",
+                            name: "Switch S1",
+                            children: [
+                                {
+                                    type: "hub",
+                                    name: "Hub H1",
+                                    children: [
+                                        { type: "pc", name: "PC 1" },
+                                        { type: "pc", name: "PC 2" }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            type: "switch",
+                            name: "Switch S2",
+                            children: [
+                                { type: "pc", name: "PC 3" },
+                                { type: "pc", name: "PC 4" }
+                            ]
+                        }
+                    ]
+                },
+                explanation: `
+                    <p><strong>Broadcast Domains (2):</strong> Router R1 splits the network into 2 Layer 3 subnets.</p>
+                    <p><strong>Collision Domains (5):</strong></p>
+                    <ul class="list-disc list-inside ml-2">
+                        <li>Left Branch: R1-S1 (1), S1 port to Hub H1 link creates 1 collision domain. Hub H1 and PCs share that domain = 2 total on left.</li>
+                        <li>Right Branch: R1-S2 (1), S2-PC3 (1), S2-PC4 (1) = 3 total on right.</li>
+                    </ul>
+                    <p class="text-emerald-700 font-bold mt-2">Total = 2 + 3 = 5 Collision Domains</p>
+                `
+            },
+            {
+                id: 7,
+                title: "Dense Enterprise Branch",
+                difficulty: "Challenge Problem",
+                bd: 3,
+                cd: 10,
+                topology: {
+                    type: "router",
+                    name: "Router R1",
+                    children: [
+                        {
+                            type: "switch",
+                            name: "Switch S1",
+                            children: [
+                                { type: "pc", name: "PC 1" },
+                                { type: "pc", name: "PC 2" },
+                                { type: "pc", name: "PC 3" }
+                            ]
+                        },
+                        {
+                            type: "switch",
+                            name: "Switch S2",
+                            children: [
+                                { type: "pc", name: "PC 4" },
+                                { type: "pc", name: "PC 5" }
+                            ]
+                        },
+                        {
+                            type: "switch",
+                            name: "Switch S3",
+                            children: [
+                                { type: "pc", name: "PC 6" },
+                                { type: "pc", name: "PC 7" }
+                            ]
+                        }
+                    ]
+                },
+                explanation: `
+                    <p><strong>Broadcast Domains (3):</strong> 3 active Router R1 ports = 3 subnets.</p>
+                    <p><strong>Collision Domains (10):</strong> All links on switches are distinct:</p>
+                    <ul class="list-disc list-inside ml-2">
+                        <li>S1 branch: R1-S1 (1) + 3 PCs = 4</li>
+                        <li>S2 branch: R1-S2 (1) + 2 PCs = 3</li>
+                        <li>S3 branch: R1-S3 (1) + 2 PCs = 3</li>
+                    </ul>
+                    <p class="text-emerald-700 font-bold mt-2">Total = 4 + 3 + 3 = 10 Collision Domains</p>
+                `
+            }
+        ];
+
+        // State Management
+        let activeQuestionIndex = 0;
+        let activeHighlightMode = 'none'; // 'none' | 'broadcast' | 'collision'
+        let userProgress = {}; // { questionId: boolean }
+        let chartInstance = null;
+
+        // Initialize Application
+        window.addEventListener('DOMContentLoaded', () => {
+            renderQuestionSelector();
+            loadQuestion(0);
+            initChart();
+            buildCustomTopology();
+        });
+
+        // Tab Switcher Logic
+        function switchTab(tabName) {
+            ['practice', 'rules', 'builder'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`nav-${t}`).className = "px-4 py-2 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+            });
+
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabName}`).className = "px-4 py-2 rounded-md bg-blue-600 text-white shadow transition";
+
+            if (tabName === 'rules' && chartInstance) {
+                chartInstance.update();
+            }
+        }
+
+        // Render Practice Problem Selector Buttons
+        function renderQuestionSelector() {
+            const container = document.getElementById('question-selector');
+            container.innerHTML = '';
+            questionsData.forEach((q, idx) => {
+                const btn = document.createElement('button');
+                btn.onclick = () => loadQuestion(idx);
+                btn.className = `w-full text-left px-3.5 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-between border transition ${
+                    idx === activeQuestionIndex 
+                    ? 'bg-blue-50 border-blue-300 text-blue-800 shadow-sm' 
+                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`;
+
+                const statusIcon = userProgress[q.id] ? '✔' : '⚪';
+                const statusColor = userProgress[q.id] ? 'text-emerald-600 font-bold' : 'text-slate-400';
+
+                btn.innerHTML = `
+                    <span class="truncate">Q${q.id}: ${q.title}</span>
+                    <span class="${statusColor} text-xs ml-2">${statusIcon}</span>
+                `;
+                container.appendChild(btn);
+            });
+            updateProgressSummary();
+        }
+
+        // Load Specific Question
+        function loadQuestion(index) {
+            activeQuestionIndex = index;
+            const q = questionsData[index];
+
+            document.getElementById('problem-difficulty').innerText = `Q${q.id} • ${q.difficulty}`;
+            document.getElementById('problem-title').innerText = q.title;
+            document.getElementById('input-bd').value = '';
+            document.getElementById('input-cd').value = '';
+            document.getElementById('solution-panel').classList.add('hidden');
+            document.getElementById('solution-text').innerHTML = q.explanation;
+
+            activeHighlightMode = 'none';
+            updateHighlightModeButtons();
+            renderTree(q.topology, 'tree-canvas-container');
+            renderQuestionSelector();
+        }
+
+        // Set Domain Highlight Mode
+        function setTreeHighlightMode(mode) {
+            activeHighlightMode = mode;
+            updateHighlightModeButtons();
+            const q = questionsData[activeQuestionIndex];
+            renderTree(q.topology, 'tree-canvas-container');
+        }
+
+        function updateHighlightModeButtons() {
+            ['none', 'broadcast', 'collision'].forEach(m => {
+                const btn = document.getElementById(`mode-${m}`);
+                if (m === activeHighlightMode) {
+                    btn.className = "px-3 py-1.5 rounded-md bg-white text-slate-900 shadow-sm font-bold";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200";
+                }
+            });
+        }
+
+        // ================= RECURSIVE TREE HTML RENDERER =================
+        function renderTree(nodeData, containerId) {
+            const container = document.getElementById(containerId);
+            let collisionCounter = { count: 0 };
+            let broadcastCounter = { count: 0 };
+
+            let html = `<div class="w-full flex justify-center py-4">`;
+            html += generateNodeHTML(nodeData, null, collisionCounter, broadcastCounter, 0, false);
+            html += `</div>`;
+
+            container.innerHTML = html;
+        }
+
+        function generateNodeHTML(node, parentType, cdCounter, bdCounter, depth, parentIsInHubDomain) {
+            let bgClass = "bg-slate-800 text-white border-slate-700";
+            let badgeText = node.type.toUpperCase();
+            let icon = "💻";
+
+            if (node.type === "router") {
+                bgClass = "bg-purple-900 text-purple-100 border-purple-500 shadow-purple-900/50";
+                badgeText = "ROUTER (L3)";
+                icon = "🌐";
+            } else if (node.type === "switch") {
+                bgClass = "bg-blue-900 text-blue-100 border-blue-500 shadow-blue-900/50";
+                badgeText = "SWITCH (L2)";
+                icon = "🔀";
+            } else if (node.type === "hub") {
+                bgClass = "bg-amber-900 text-amber-100 border-amber-500 shadow-amber-900/50";
+                badgeText = "HUB (L1)";
+                icon = "🔌";
+            } else if (node.type === "pc") {
+                bgClass = "bg-emerald-950 text-emerald-100 border-emerald-600";
+                badgeText = "HOST";
+                icon = "🖥️";
+            }
+
+            let highlightStyle = "";
+            let linkBadgeHTML = "";
+
+            if (activeHighlightMode === 'broadcast') {
+                if (depth === 1) { // Router's direct children branches
+                    bdCounter.count++;
+                    const colors = [
+                        'bg-blue-500/10 border-blue-400/40',
+                        'bg-emerald-500/10 border-emerald-400/40',
+                        'bg-amber-500/10 border-amber-400/40'
+                    ];
+                    const colorClass = colors[(bdCounter.count - 1) % colors.length];
+                    highlightStyle = `p-3 rounded-2xl border-2 border-dashed ${colorClass}`;
+                }
+            } else if (activeHighlightMode === 'collision') {
+                if (parentType) {
+                    if (parentType === 'hub' || parentIsInHubDomain) {
+                        // Cascaded hub or PC attached to hub belongs to existing hub collision domain
+                        linkBadgeHTML = `<span class="inline-block bg-amber-600/80 text-white font-semibold text-[10px] px-2 py-0.5 rounded-full my-1">Shared Hub Segment (CD #${cdCounter.count})</span>`;
+                    } else {
+                        // Switch or Router interface link creates a new Collision Domain
+                        cdCounter.count++;
+                        linkBadgeHTML = `<span class="badge-cd inline-block bg-rose-600 text-white font-black text-[10px] px-1.5 py-0.5 rounded-full shadow-md my-1">CD #${cdCounter.count}</span>`;
+                    }
+                }
+            }
+
+            const currentIsHubDomain = parentIsInHubDomain || (node.type === 'hub');
+
+            let childrenHTML = "";
+            if (node.children && node.children.length > 0) {
+                childrenHTML += `<div class="flex justify-center gap-6 mt-4 relative">`;
+                node.children.forEach(child => {
+                    childrenHTML += generateNodeHTML(child, node.type, cdCounter, bdCounter, depth + 1, currentIsHubDomain);
+                });
+                childrenHTML += `</div>`;
+            }
+
+            return `
+                <div class="flex flex-col items-center text-center ${highlightStyle}">
+                    ${linkBadgeHTML}
+                    <div class="tree-node-box ${bgClass} border-2 px-3.5 py-2 rounded-xl shadow-md min-w-[100px] flex flex-col items-center">
+                        <span class="text-xs font-mono font-bold tracking-wider text-slate-300 opacity-80 mb-0.5">${badgeText}</span>
+                        <div class="flex items-center gap-1.5 font-bold text-sm">
+                            <span>${icon}</span>
+                            <span>${node.name}</span>
+                        </div>
+                    </div>
+                    ${node.children && node.children.length > 0 ? '<div class="tree-line-v h-4"></div>' : ''}
+                    ${childrenHTML}
+                </div>
+            `;
+        }
+
+        // Check Answer Logic
+        function checkAnswer() {
+            const q = questionsData[activeQuestionIndex];
+            const userBD = parseInt(document.getElementById('input-bd').value);
+            const userCD = parseInt(document.getElementById('input-cd').value);
+
+            if (isNaN(userBD) || isNaN(userCD)) {
+                alert("Please enter numerical values for both Broadcast and Collision domains.");
+                return;
+            }
+
+            const isCorrect = (userBD === q.bd && userCD === q.cd);
+
+            if (isCorrect) {
+                userProgress[q.id] = true;
+                alert(`🎉 Correct! Question ${q.id} passed!\nBroadcast Domains: ${q.bd}\nCollision Domains: ${q.cd}`);
+            } else {
+                alert(`❌ Not quite right.\nYour answer: BD=${userBD}, CD=${userCD}\nCorrect answer: BD=${q.bd}, CD=${q.cd}\n\nClick "Show Step-by-Step Solution" to review!`);
+            }
+
+            renderQuestionSelector();
+            document.getElementById('solution-panel').classList.remove('hidden');
+        }
+
+        function toggleExplanation() {
+            const panel = document.getElementById('solution-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        function updateProgressSummary() {
+            const completed = Object.keys(userProgress).length;
+            const total = questionsData.length;
+            document.getElementById('quiz-progress-text').innerText = `${completed} / ${total} Completed`;
+            const pct = (completed / total) * 100;
+            document.getElementById('quiz-progress-bar').style.width = `${pct}%`;
+        }
+
+        // ================= CUSTOM TOPOLOGY BUILDER =================
+        function buildCustomTopology() {
+            const b1Type = document.getElementById('builder-b1-type').value;
+            const b1Pcs = parseInt(document.getElementById('builder-b1-pcs').value) || 2;
+
+            const b2Type = document.getElementById('builder-b2-type').value;
+            const b2Pcs = parseInt(document.getElementById('builder-b2-pcs').value) || 2;
+
+            // Generate Tree Structure
+            const customTree = {
+                type: "router",
+                name: "Router R1",
+                children: [
+                    {
+                        type: b1Type,
+                        name: b1Type === 'switch' ? 'Switch S1' : 'Hub H1',
+                        children: Array.from({ length: b1Pcs }, (_, i) => ({ type: "pc", name: `PC A${i+1}` }))
+                    },
+                    {
+                        type: b2Type,
+                        name: b2Type === 'switch' ? 'Switch S2' : 'Hub H2',
+                        children: Array.from({ length: b2Pcs }, (_, i) => ({ type: "pc", name: `PC B${i+1}` }))
+                    }
+                ]
+            };
+
+            // Calculate Domains
+            const bd = 2; // 2 Router interfaces
+            let cd = 0;
+
+            if (b1Type === 'switch') {
+                cd += 1 + b1Pcs;
+            } else {
+                cd += 1;
+            }
+
+            if (b2Type === 'switch') {
+                cd += 1 + b2Pcs;
+            } else {
+                cd += 1;
+            }
+
+            renderTree(customTree, 'builder-canvas');
+            document.getElementById('custom-bd-val').innerText = bd;
+            document.getElementById('custom-cd-val').innerText = cd;
+        }
+
+        // Initialize Analytical Chart.js Summary
+        function initChart() {
+            const ctx = document.getElementById('domainChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: questionsData.map(q => `Q${q.id}`),
+                    datasets: [
+                        {
+                            label: 'Broadcast Domains (L3)',
+                            data: questionsData.map(q => q.bd),
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Collision Domains (L2/L1)',
+                            data: questionsData.map(q => q.cd),
+                            backgroundColor: '#f43f5e',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
