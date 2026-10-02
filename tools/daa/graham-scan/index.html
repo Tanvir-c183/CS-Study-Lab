@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-stone-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAA Unit IV Algorithm Laboratory — Divide & Conquer and Backtracking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        academic: {
+                            50: '#f4f6f9', 100: '#e4e9f0', 600: '#2563eb',
+                            700: '#1d4ed8', 800: '#1e3a8a', 900: '#0f172a'
+                        },
+                        sand: { 50: '#fdfbf7', 100: '#f7f4ed', 200: '#e8e2d5' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .chart-container { position: relative; width: 100%; max-width: 650px; margin: 0 auto; height: 320px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 360px; } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        canvas.custom-canvas { border: 1px solid #e2e8f0; background: #fff; border-radius: .5rem; box-shadow: inset 0 2px 4px rgba(0,0,0,.02); }
+    </style>
+</head>
+<body class="h-full font-sans text-stone-800 bg-stone-50 flex flex-col antialiased">
+<header class="bg-academic-900 text-white sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white font-bold text-lg px-2.5 py-1 rounded shadow-sm font-mono">DAA IV</div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-white">Design & Analysis of Algorithms: Unit IV Interactive Lab
+                        <span class="bg-blue-500/20 text-blue-300 text-[11px] px-2 py-0.5 rounded-full border border-blue-400/30 font-semibold uppercase">Interactive Platform</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Divide & Conquer • Master Theorem • Backtracking State-Space Pruning</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+                <button onclick="switchView('exam')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded transition shadow-sm">📝 Exam Sheet Generator</button>
+                <button onclick="switchView('verify')" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-3 py-1.5 rounded transition shadow-sm">🔍 Verify My Answer</button>
+            </div>
+        </div>
+    </div>
+    <nav class="bg-slate-800 text-slate-300 text-xs font-medium border-t border-slate-700/60 overflow-x-auto">
+        <div class="max-w-7xl mx-auto px-4 flex space-x-1 py-1.5 whitespace-nowrap" id="mainNav">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn px-3 py-1.5 rounded bg-slate-700 text-white font-bold">Dashboard</button>
+            <button onclick="switchTab('theory')" id="nav-theory" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Theory & Recurrence</button>
+            <button onclick="switchTab('solver')" id="nav-solver" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Algorithm Lab</button>
+            <button onclick="switchTab('benchmarks')" id="nav-benchmarks" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Complexity Analytics</button>
+            <button onclick="switchTab('matrix')" id="nav-matrix" class="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition">Comparison Matrix</button>
+        </div>
+    </nav>
+</header>
+
+<main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+<section id="view-dashboard" class="view-panel space-y-6">
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl shadow-lg border border-slate-800">
+        <div class="max-w-3xl space-y-3">
+            <span class="px-2.5 py-1 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-full text-xs font-semibold uppercase tracking-wider">Interactive Theoretical & Practical Suite</span>
+            <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">Algorithmic Paradigm Foundations: D&C and Backtracking</h2>
+            <p class="text-slate-300 text-xs md:text-sm leading-relaxed">Explore recurrence decomposition, geometric divide-and-conquer, and backtracking state-space pruning through deterministic step-by-step simulations.</p>
+            <div class="pt-2 flex flex-wrap gap-3">
+                <button onclick="switchTab('solver')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg transition shadow">Launch Algorithm Solvers →</button>
+                <button onclick="switchTab('theory')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-lg transition border border-slate-700">Explore Master Theorem Recurrences</button>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white p-4 rounded-xl border border-stone-200 text-xs leading-relaxed text-stone-600">
+        <strong class="text-stone-900 font-semibold">Curriculum Overview:</strong>
+        <span class="text-blue-700 font-medium">Divide and Conquer</span> recursively divides a problem into smaller subproblems and combines their solutions.
+        <span class="text-purple-700 font-medium">Backtracking</span> builds candidate solutions depth-first and prunes branches that violate feasibility or bounding conditions.
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <script>
+            const dashboardCards = [
+                ['Binary Search','D&C • Θ(log n)','Bisects a sorted search interval.','binarysearch'],
+                ['Merge Sort','D&C • Θ(n log n)','Recursively splits and linearly merges ordered halves.','mergesort'],
+                ['Quick Sort','D&C • Lomuto Partition','Partitions around the last element as pivot.','quicksort'],
+                ['Maximum Subarray','D&C • Crossing Sum','Compares left, right and crossing maxima.','maxsubarray'],
+                ['Closest Pair of Points','D&C • Θ(n log n)','Uses recursive halves and a δ-strip candidate scan.','closestpair'],
+                ['Convex Hull','D&C • QuickHull','Uses extreme points and recursive side partitioning.','convexhull'],
+                ['Convex Hull','D&C • Graham Scan','Sorts points by polar angle and builds the hull stack.','grahamscan'],
+                ['N-Queens','Backtracking','Places non-attacking queens row by row.','nqueens'],
+                ['Graph m-Coloring','Backtracking','Assigns colors while rejecting adjacent conflicts.','graphcoloring'],
+                ['Hamiltonian Cycle','Backtracking','Builds a simple cycle visiting every vertex once.','hamiltonian'],
+                ['Sum of Subsets','Backtracking','Enumerates target-sum subsets with valid pruning.','sumofsubsets']
+            ];
+            document.write(dashboardCards.map(c => `
+                <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div><div class="flex justify-between items-start mb-2"><h3 class="font-bold text-slate-900 text-sm">${c[0]}</h3><span class="bg-blue-100 text-blue-800 text-[10px] font-mono px-2 py-0.5 rounded">${c[1]}</span></div>
+                    <p class="text-xs text-stone-600 mb-3">${c[2]}</p></div>
+                    <button onclick="launchAlgorithm('${c[3]}')" class="w-full py-1.5 bg-slate-900 hover:bg-blue-600 text-white text-xs font-semibold rounded transition">Launch Interactive Visualizer →</button>
+                </div>`).join(''));
+        </script>
+    </div>
+</section>
+
+<section id="view-theory" class="view-panel space-y-6 hidden">
+    <div class="bg-white p-5 rounded-xl border border-stone-200 shadow-sm space-y-2">
+        <h2 class="text-lg font-bold text-slate-900">Divide & Conquer Recurrences & Backtracking Theoretical Foundations</h2>
+        <p class="text-xs text-stone-600 leading-relaxed">Use the calculator for the standard Master Theorem form T(n)=aT(n/b)+Θ(n^c log^k n), subject to the theorem's conditions.</p>
+    </div>
+    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm space-y-4">
+        <div class="border-b pb-3"><h3 class="text-base font-bold text-slate-900">Master Theorem Interactive Calculator</h3><p class="text-xs text-stone-500">For a≥1, b>1, c≥0 and k≥0.</p></div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+            <div><label class="block font-semibold mb-1">Subproblems (a)</label><input type="number" id="mt-a" value="2" min="1" step="1" class="w-full p-2 border rounded font-mono"></div>
+            <div><label class="block font-semibold mb-1">Scale Factor (b)</label><input type="number" id="mt-b" value="2" min="1.01" step="0.1" class="w-full p-2 border rounded font-mono"></div>
+            <div><label class="block font-semibold mb-1">Exponent (c)</label><input type="number" id="mt-c" value="1" min="0" step="0.1" class="w-full p-2 border rounded font-mono"></div>
+            <div><label class="block font-semibold mb-1">Log Exponent (k)</label><input type="number" id="mt-k" value="0" min="0" step="1" class="w-full p-2 border rounded font-mono"></div>
+        </div>
+        <button onclick="calculateMasterTheorem()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded transition">Evaluate Master Theorem Bounds</button>
+        <div id="mt-result-box" class="p-4 rounded-lg bg-slate-900 text-white font-mono text-xs space-y-1"></div>
+        <p class="text-[11px] text-stone-500">Case 3 is reported with the regularity condition: a·f(n/b) ≤ q·f(n) for some constant q&lt;1. The calculator flags this condition instead of silently assuming it.</p>
+    </div>
+    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+        <h3 class="text-base font-bold text-slate-900 mb-3">Master Theorem Case Formalizations</h3>
+        <div class="overflow-x-auto"><table class="w-full text-xs text-left border-collapse">
+            <thead><tr class="bg-slate-900 text-white"><th class="p-3">Case</th><th class="p-3">Condition</th><th class="p-3">Result</th></tr></thead>
+            <tbody class="divide-y text-stone-700">
+                <tr><td class="p-3 font-bold text-blue-700">Case 1</td><td class="p-3 font-mono">c &lt; log_b(a)</td><td class="p-3 font-mono">Θ(n^(log_b a))</td></tr>
+                <tr><td class="p-3 font-bold text-blue-700">Case 2</td><td class="p-3 font-mono">c = log_b(a)</td><td class="p-3 font-mono">Θ(n^c log^(k+1)n)</td></tr>
+                <tr><td class="p-3 font-bold text-blue-700">Case 3</td><td class="p-3 font-mono">c &gt; log_b(a), regularity required</td><td class="p-3 font-mono">Θ(n^c log^k n)</td></tr>
+            </tbody>
+        </table></div>
+    </div>
+    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm space-y-3 text-xs leading-relaxed text-stone-600">
+        <h3 class="text-base font-bold text-slate-900">Backtracking State-Space Framework</h3>
+        <div class="p-3 bg-stone-100 rounded-lg font-mono text-stone-800 text-[11px]">
+            <div>• Root state: ∅</div><div>• Depth k: partial vector (x₁,…,xₖ)</div>
+            <div>• Bounding predicate: B(x₁,…,xₖ)</div><div>• If B is false, prune the remaining subtree.</div>
+        </div>
+    </div>
+</section>
+
+<section id="view-solver" class="view-panel space-y-6 hidden">
+    <div class="bg-white p-4 rounded-xl border border-stone-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div><div class="flex items-center space-x-2"><h2 id="solverTitle" class="text-lg font-bold text-slate-900">Algorithm Solver Laboratory</h2><span id="paradigmBadge" class="px-2 py-0.5 text-xs font-bold rounded bg-blue-100 text-blue-800">Divide & Conquer</span></div>
+        <p id="solverSubtitle" class="text-xs text-stone-500">Configure parameters, execute and step through the algorithm.</p></div>
+        <div class="flex flex-wrap items-center gap-1.5 bg-stone-100 p-1.5 rounded-lg border border-stone-200 text-xs">
+            <button onclick="stepFirst()" class="px-2 py-1 bg-white rounded text-stone-700 font-bold border shadow-sm">⏮ Reset</button>
+            <button onclick="stepPrev()" class="px-2 py-1 bg-white rounded text-stone-700 font-bold border shadow-sm">◀ Prev</button>
+            <button onclick="togglePlay()" id="btnPlay" class="px-3 py-1 bg-blue-600 text-white rounded font-bold shadow">▶ Play</button>
+            <button onclick="stepNext()" class="px-2 py-1 bg-white rounded text-stone-700 font-bold border shadow-sm">Next ▶</button>
+            <button onclick="stepLast()" class="px-2 py-1 bg-white rounded text-stone-700 font-bold border shadow-sm">⏭ Final</button>
+            <div class="flex items-center space-x-1.5 px-2 border-l border-stone-300 ml-1"><span class="text-[11px] text-stone-500 font-semibold">Speed:</span><input type="range" id="speedSlider" min="100" max="1500" value="600" step="100" class="w-16 accent-blue-600" onchange="updateAnimationSpeed(this.value)"></div>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 space-y-4">
+            <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm space-y-2">
+                <label class="block font-bold text-xs uppercase tracking-wider text-stone-700">Select Algorithm Module:</label>
+                <select id="algoModuleSelect" onchange="switchSolverModule(this.value)" class="w-full p-2 border rounded font-mono text-xs bg-stone-50">
+                    <option value="binarysearch">1. Binary Search (D&C)</option><option value="mergesort">2. Merge Sort (D&C)</option><option value="quicksort">3. Quick Sort (Lomuto D&C)</option><option value="maxsubarray">4. Maximum Subarray (D&C)</option><option value="closestpair">5. Closest Pair of Points (D&C)</option><option value="convexhull">6. Convex Hull (QuickHull D&C)</option><option value="grahamscan">7. Convex Hull (Graham Scan)</option><option value="nqueens">8. N-Queens (Backtracking)</option><option value="graphcoloring">9. Graph m-Coloring (Backtracking)</option><option value="hamiltonian">10. Hamiltonian Cycle (Backtracking)</option><option value="sumofsubsets">11. Sum of Subsets (Backtracking)</option>
+                </select>
+            </div>
+            <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm space-y-3">
+                <h3 class="font-bold text-xs uppercase tracking-wider text-stone-700 border-b pb-2">1. Input Configuration</h3>
+                <div id="dynamicInputArea" class="space-y-3 text-xs"></div>
+                <button onclick="recalculateCurrentAlgorithm()" class="w-full py-2 bg-slate-900 hover:bg-blue-600 text-white font-bold text-xs rounded-lg shadow">🚀 Initialize & Execute Algorithm</button>
+            </div>
+            <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm space-y-2 text-xs">
+                <h3 class="font-bold text-slate-900 border-b pb-1.5">2. Recurrence & Theoretical Bounds</h3><div id="mathRecurrenceBox" class="p-2.5 bg-blue-50 border border-blue-200 rounded font-mono text-blue-900 text-[11px] leading-relaxed"></div>
+            </div>
+            <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm space-y-2 text-xs">
+                <div class="flex justify-between items-center border-b pb-1.5"><h3 class="font-bold text-blue-700">3. Step Execution Trace</h3><span id="stepBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-stone-100 font-bold">Step 0 / 0</span></div>
+                <h4 id="stepPhaseTitle" class="font-bold text-slate-900 text-xs">Ready</h4><p id="stepDescription" class="text-stone-600 text-[11px] leading-relaxed">Click initialize to start.</p>
+            </div>
+        </div>
+        <div class="lg:col-span-7 space-y-4">
+            <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm space-y-2">
+                <div class="flex justify-between items-center border-b pb-1.5 text-xs"><h3 class="font-bold text-slate-900">Interactive Visual Canvas</h3><span id="canvasMetricOverlay" class="font-mono text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">State: Ready</span></div>
+                <div class="w-full flex justify-center bg-stone-50 rounded-lg p-1"><canvas id="solverCanvas" width="600" height="360" class="custom-canvas w-full"></canvas></div>
+            </div>
+            <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm space-y-2">
+                <h3 class="font-bold text-xs uppercase tracking-wider text-stone-700 border-b pb-1.5">Execution State Matrix</h3>
+                <div class="overflow-x-auto max-h-56 border rounded"><table id="solverTraceTable" class="w-full text-xs text-left border-collapse"></table></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="view-benchmarks" class="view-panel space-y-6 hidden">
+    <div class="bg-white p-5 rounded-xl border border-stone-200 shadow-sm"><h2 class="text-lg font-bold text-slate-900">Paradigm Complexity Benchmarks & Asymptotic Growth Visualizer</h2><p class="text-xs text-stone-600 mt-2">These are normalized theoretical growth curves, not measured runtime benchmarks.</p></div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white p-4 rounded-xl border border-stone-200 shadow-sm space-y-3"><h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 border-b pb-1.5">Time Complexity Growth</h3><div class="chart-container"><canvas id="timeComplexityChart"></canvas></div></div>
+        <div class="bg-white p-4 rounded-xl border border-stone-200 shadow-sm space-y-3"><h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 border-b pb-1.5">Representative Space Complexity</h3><div class="chart-container"><canvas id="spaceComplexityChart"></canvas></div></div>
+    </div>
+</section>
+
+<section id="view-matrix" class="view-panel space-y-6 hidden">
+    <div class="bg-white p-5 rounded-xl border border-stone-200 shadow-sm"><h2 class="text-lg font-bold text-slate-900">Unit IV Algorithmic Paradigm Comparison Matrix</h2><p class="text-xs text-stone-600 mt-2">Search and filter the eleven implemented algorithms.</p></div>
+    <div class="bg-white p-4 rounded-xl border border-stone-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+        <div class="flex items-center space-x-2 w-full md:w-1/2"><span class="font-semibold">Search:</span><input type="text" id="matrixSearchInput" oninput="filterMatrixTable()" placeholder="Algorithm, complexity, strategy..." class="w-full p-2 border rounded font-mono bg-stone-50"></div>
+        <div class="flex items-center space-x-2"><span class="font-semibold">Paradigm:</span><select id="matrixParadigmFilter" onchange="filterMatrixTable()" class="p-2 border rounded font-mono bg-stone-50"><option value="ALL">All</option><option value="D&C">Divide & Conquer</option><option value="Backtracking">Backtracking</option></select></div>
+    </div>
+    <div class="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs text-left border-collapse"><thead><tr class="bg-slate-900 text-white"><th class="p-3">Algorithm</th><th class="p-3">Paradigm</th><th class="p-3">Average</th><th class="p-3">Worst</th><th class="p-3">Auxiliary Space</th><th class="p-3">Core Strategy</th></tr></thead><tbody id="matrixTableBody" class="divide-y text-stone-700"></tbody></table></div></div>
+</section>
+
+<section id="view-exam" class="view-panel space-y-6 hidden">
+    <div class="bg-white p-5 rounded-xl border border-stone-200 shadow-sm"><h2 class="text-lg font-bold text-slate-900">Automated Exam Solution Sheet Generator</h2><p class="text-xs text-stone-600 mt-2">Generates a clean text report from the current solver state.</p></div>
+    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm space-y-4"><div class="flex justify-between items-center border-b pb-3"><h3 class="text-base font-bold">Generated Examination Report</h3><button onclick="copyExamSheet()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded font-semibold">📋 Copy</button></div><div id="examOutputSheet" class="bg-slate-900 text-slate-100 p-6 rounded-lg font-mono text-xs whitespace-pre-wrap leading-relaxed overflow-x-auto"></div></div>
+</section>
+
+<section id="view-verify" class="view-panel space-y-6 hidden">
+    <div class="bg-white p-5 rounded-xl border border-stone-200 shadow-sm"><h2 class="text-lg font-bold text-slate-900">Student Answer Verification Engine</h2><p class="text-xs text-stone-600 mt-2">Verification now uses the same current inputs as the solver rather than hard-coded answers.</p></div>
+    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div><label class="block font-semibold mb-1">Select Module:</label><select id="verifyModuleSelect" onchange="configureVerification()" class="w-full p-2 border rounded font-mono bg-stone-50"><option value="binarysearch">Binary Search (Target Index)</option><option value="maxsubarray">Maximum Subarray Sum</option><option value="nqueens">N-Queens (First Solution Vector)</option><option value="sumofsubsets">Sum of Subsets (Solution Count)</option></select></div>
+            <div><label class="block font-semibold mb-1">Your Answer:</label><input type="text" id="verifyUserVal" placeholder="e.g. 5, 6, [2,4,1,3], or 1" class="w-full p-2 border rounded font-mono"></div>
+        </div>
+        <button onclick="runVerificationDiagnostic()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded">Run Differential Diagnostic</button>
+        <div id="verifyDiagnosticResult" class="p-4 rounded border text-xs font-mono hidden"></div>
+    </div>
+</section>
+</main>
+
+<footer class="bg-slate-900 text-slate-400 text-xs py-5 border-t border-slate-800 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 text-center space-y-1.5">
+        <p><strong>DAA Unit IV Algorithm Interactive Laboratory</strong> — Corrected Single-Page Educational Suite</p>
+        <p class="text-slate-500 text-[11px]">Binary Search, Merge Sort, Quick Sort, Maximum Subarray, Closest Pair, Convex Hull (QuickHull & Graham Scan), N-Queens, Graph Coloring, Hamiltonian Cycle, and Sum of Subsets.</p>
+    </div>
+</footer>
+
+<script>
+let activeTab='dashboard', stepFrames=[], currentFrameIdx=0, playInterval=null, animSpeed=600, timeChart=null, spaceChart=null;
+
+const matrixData=[
+{name:"Binary Search",paradigm:"D&C",avgTime:"Θ(log n)",worstTime:"Θ(log n)",space:"O(1) iterative",strategy:"Midpoint interval bisection"},
+{name:"Merge Sort",paradigm:"D&C",avgTime:"Θ(n log n)",worstTime:"Θ(n log n)",space:"Θ(n)",strategy:"Recursive split + linear merge"},
+{name:"Quick Sort",paradigm:"D&C",avgTime:"Θ(n log n)",worstTime:"Θ(n²)",space:"O(log n) avg / O(n) worst",strategy:"Lomuto pivot partitioning"},
+{name:"Maximum Subarray",paradigm:"D&C",avgTime:"Θ(n log n)",worstTime:"Θ(n log n)",space:"O(log n)",strategy:"Left/right/crossing maxima"},
+{name:"Closest Pair",paradigm:"D&C",avgTime:"Θ(n log n)",worstTime:"Θ(n log n)",space:"O(n)",strategy:"Recursive halves + δ strip"},
+{name:"Convex Hull (QuickHull)",paradigm:"D&C",avgTime:"O(n log n)",worstTime:"O(n²)",space:"O(n)",strategy:"Extreme endpoints + recursive side partition"},
+{name:"Convex Hull (Graham Scan)",paradigm:"D&C",avgTime:"O(n log n)",worstTime:"O(n log n)",space:"O(n)",strategy:"Polar-angle sort + orientation-based stack"},
+{name:"N-Queens",paradigm:"Backtracking",avgTime:"O(N!)",worstTime:"O(N!)",space:"O(N)",strategy:"Column/diagonal feasibility pruning"},
+{name:"Graph m-Coloring",paradigm:"Backtracking",avgTime:"O(m^V)",worstTime:"O(m^V)",space:"O(V)",strategy:"Adjacent-color feasibility pruning"},
+{name:"Hamiltonian Cycle",paradigm:"Backtracking",avgTime:"O(V!)",worstTime:"O(V!)",space:"O(V)",strategy:"Adjacency + uniqueness + closure"},
+{name:"Sum of Subsets",paradigm:"Backtracking",avgTime:"O(2^n)",worstTime:"O(2^n)",space:"O(n)",strategy:"Remaining-sum bounding"}
+];
+
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function setHidden(id,hidden){const e=document.getElementById(id);if(e)e.classList.toggle('hidden',hidden);}
+function switchTab(tabId){
+    activeTab=tabId;
+    document.querySelectorAll('.view-panel').forEach(p=>p.classList.add('hidden'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.className="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition text-slate-300");
+    const btn=document.getElementById(`nav-${tabId}`); if(btn)btn.className="nav-btn px-3 py-1.5 rounded bg-slate-700 text-white font-bold";
+    const view=document.getElementById(`view-${tabId}`); if(view)view.classList.remove('hidden');
+    if(tabId==='theory')calculateMasterTheorem();
+    if(tabId==='solver'){configureSolverModule(document.getElementById('algoModuleSelect').value);recalculateCurrentAlgorithm();}
+    if(tabId==='benchmarks')initBenchmarkCharts();
+    if(tabId==='matrix')renderMatrixTable();
+}
+function switchView(viewId){
+    document.querySelectorAll('.view-panel').forEach(p=>p.classList.add('hidden'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.className="nav-btn px-3 py-1.5 rounded hover:bg-slate-700 hover:text-white transition text-slate-300");
+    const view=document.getElementById(`view-${viewId}`); if(view)view.classList.remove('hidden');
+    if(viewId==='exam')generateExamSheet();
+}
+function launchAlgorithm(key){switchTab('solver');document.getElementById('algoModuleSelect').value=key;configureSolverModule(key);recalculateCurrentAlgorithm();}
+function switchSolverModule(key){configureSolverModule(key);recalculateCurrentAlgorithm();}
+
+function calculateMasterTheorem(){
+    const a=Number(document.getElementById('mt-a').value),b=Number(document.getElementById('mt-b').value),c=Number(document.getElementById('mt-c').value),k=Number(document.getElementById('mt-k').value);
+    const box=document.getElementById('mt-result-box');
+    if(!Number.isFinite(a)||!Number.isFinite(b)||!Number.isFinite(c)||!Number.isFinite(k)||a<1||b<=1||c<0||k<0){box.innerHTML='<div class="text-rose-300 font-bold">Invalid input. Require a ≥ 1, b &gt; 1, c ≥ 0 and k ≥ 0.</div>';return;}
+    const p=Math.log(a)/Math.log(b); let result,caseName;
+    if(Math.abs(c-p)<1e-9){caseName='Case 2';result=`Θ(n^${fmt(p)} log^${k+1} n)`;}
+    else if(c<p){caseName='Case 1';result=`Θ(n^${fmt(p)})`;}
+    else{caseName='Case 3 (regularity condition must hold)';result=`Θ(n^${c} log^${k} n)`;}
+    box.innerHTML=`<div><strong>log_b(a):</strong> ${p.toFixed(6)}</div><div><strong>Case:</strong> ${caseName}</div><div class="text-emerald-400 font-bold text-sm">T(n) = ${result}</div>`;
+}
+function fmt(x){return Number.isInteger(x)?String(x):x.toFixed(2);}
+
+function configureSolverModule(algo){
+    stopPlay(); const title=document.getElementById('solverTitle'),sub=document.getElementById('solverSubtitle'),badge=document.getElementById('paradigmBadge'),input=document.getElementById('dynamicInputArea'),math=document.getElementById('mathRecurrenceBox');
+    const dc=['binarysearch','mergesort','quicksort','maxsubarray','closestpair','convexhull','grahamscan'].includes(algo);
+    badge.innerText=dc?'Divide & Conquer':'Backtracking'; badge.className=dc?'px-2 py-0.5 text-xs font-bold rounded bg-blue-100 text-blue-800':'px-2 py-0.5 text-xs font-bold rounded bg-purple-100 text-purple-800';
+    const configs={
+        binarysearch:{t:'Binary Search Solver',s:'Bisects a sorted array around its midpoint.',h:`<div><label class="block font-semibold mb-1">Sorted Array Elements:</label><input id="bs-arr" value="12, 19, 24, 33, 47, 55, 68, 91" class="w-full p-1.5 border rounded font-mono"></div><div><label class="block font-semibold mb-1">Search Target K:</label><input id="bs-key" type="number" value="55" class="w-full p-1.5 border rounded font-mono"></div>`,m:`<div><strong>Recurrence:</strong> T(n)=T(n/2)+Θ(1)</div><div><strong>Time:</strong> Θ(log n) | <strong>Space:</strong> O(1) iterative</div>`},
+        mergesort:{t:'Merge Sort Visualizer',s:'Recursive bisection and linear merging.',h:`<div><label class="block font-semibold mb-1">Array to Sort:</label><input id="ms-arr" value="38, 27, 43, 3, 9, 82, 10" class="w-full p-1.5 border rounded font-mono"></div>`,m:`<div><strong>Recurrence:</strong> T(n)=2T(n/2)+Θ(n)</div><div><strong>Time:</strong> Θ(n log n) | <strong>Space:</strong> Θ(n)</div>`},
+        quicksort:{t:'Quick Sort (Lomuto Partitioning)',s:'In-place Lomuto partition with last element as pivot.',h:`<div><label class="block font-semibold mb-1">Array to Sort:</label><input id="qs-arr" value="2, 8, 7, 1, 3, 5, 6, 4" class="w-full p-1.5 border rounded font-mono"></div>`,m:`<div><strong>Recurrence:</strong> T(n)=T(k)+T(n-k-1)+Θ(n)</div><div><strong>Average:</strong> Θ(n log n) | <strong>Worst:</strong> Θ(n²) | <strong>Stack worst:</strong> O(n)</div>`},
+        maxsubarray:{t:'Maximum Subarray Problem',s:'Compares left, right and midpoint-crossing maxima.',h:`<div><label class="block font-semibold mb-1">Array with Mixed Integers:</label><input id="max-arr" value="-2, 1, -3, 4, -1, 2, 1, -5, 4" class="w-full p-1.5 border rounded font-mono"></div>`,m:`<div><strong>Recurrence:</strong> T(n)=2T(n/2)+Θ(n)</div><div><strong>Time:</strong> Θ(n log n) | <strong>Space:</strong> O(log n)</div>`},
+        closestpair:{t:'Closest Pair of Points',s:'True divide-and-conquer closest-pair algorithm with δ-strip checking.',h:`<div><label class="block font-semibold mb-1">2D Points (x,y pairs):</label><input id="cp-pts" value="2,3; 12,30; 40,50; 5,1; 12,10; 3,4" class="w-full p-1.5 border rounded font-mono"></div>`,m:`<div><strong>Recurrence:</strong> T(n)=2T(n/2)+O(n)</div><div><strong>Time:</strong> Θ(n log n) | <strong>Space:</strong> O(n) for maintained sorted views</div>`},
+        convexhull:{t:'Convex Hull (QuickHull / D&C)',s:'QuickHull recursively partitions points by oriented distance.',h:`<div><label class="block font-semibold mb-1">Planar Points (x,y pairs):</label><input id="ch-pts" value="0,3; 2,2; 1,1; 2,1; 3,0; 0,0; 3,3" class="w-full p-1.5 border rounded font-mono"></div>`,m:`<div><strong>Method:</strong> QuickHull</div><div><strong>Average:</strong> O(n log n) | <strong>Worst:</strong> O(n²)</div>`},
+        grahamscan:{t:'Convex Hull (Graham Scan)',s:'Sorts points around the lowest pivot and constructs the hull with a stack.',h:`<div><label class="block font-semibold mb-1">Planar Points (x,y pairs):</label><input id="gs-pts" value="0,3; 2,2; 1,1; 2,1; 3,0; 0,0; 3,3" class="w-full p-1.5 border rounded font-mono"></div>`,m:`<div><strong>Method:</strong> Graham Scan</div><div><strong>Average:</strong> O(n log n) | <strong>Worst:</strong> O(n log n) | <strong>Space:</strong> O(n)</div>`},
+        nqueens:{t:'N-Queens Problem',s:'Backtracking with column and diagonal feasibility checks.',h:`<div><label class="block font-semibold mb-1">Board Dimension N:</label><select id="nq-size" class="w-full p-1.5 border rounded font-mono"><option value="4" selected>4 Queens</option><option value="5">5 Queens</option><option value="6">6 Queens</option><option value="8">8 Queens</option></select></div>`,m:`<div><strong>Bounding:</strong> no same column or diagonal</div><div><strong>Time:</strong> O(N!) upper bound | <strong>Space:</strong> O(N)</div>`},
+        graphcoloring:{t:'Graph m-Coloring Problem',s:'Backtracking graph coloring with adjacency conflict pruning.',h:`<div><label class="block font-semibold mb-1">Vertices (V) & Colors (m):</label><div class="flex gap-2"><input id="gc-v" type="number" min="1" value="4" class="w-1/2 p-1.5 border rounded font-mono"><input id="gc-m" type="number" min="1" value="3" class="w-1/2 p-1.5 border rounded font-mono"></div></div><div><label class="block font-semibold mb-1">Undirected Edges:</label><input id="gc-edges" value="0-1, 1-2, 2-3, 3-0, 0-2" class="w-full p-1.5 border rounded font-mono"></div>`,m:`<div><strong>Bound:</strong> adjacent vertices must have different colors</div><div><strong>Worst:</strong> O(m^V) | <strong>Space:</strong> O(V)</div>`},
+        hamiltonian:{t:'Hamiltonian Cycle Solver',s:'Backtracking simple-cycle search with closure check.',h:`<div><label class="block font-semibold mb-1">Vertex Count V:</label><input id="hc-v" type="number" min="1" value="5" class="w-full p-1.5 border rounded font-mono"></div><div><label class="block font-semibold mb-1">Undirected Edges:</label><input id="hc-edges" value="0-1, 1-2, 2-3, 3-4, 4-0, 0-2, 2-4" class="w-full p-1.5 border rounded font-mono"></div>`,m:`<div><strong>Bound:</strong> edge exists + vertex unused + final edge closes cycle</div><div><strong>Worst:</strong> O(V!) | <strong>Space:</strong> O(V)</div>`},
+        sumofsubsets:{t:'Sum of Subsets Problem',s:'Backtracking target-sum search using remaining-sum bounds.',h:`<div><label class="block font-semibold mb-1">Positive Weights W:</label><input id="ss-w" value="3, 5, 6, 7" class="w-full p-1.5 border rounded font-mono"></div><div><label class="block font-semibold mb-1">Target M:</label><input id="ss-m" type="number" value="15" class="w-full p-1.5 border rounded font-mono"></div>`,m:`<div><strong>Bound:</strong> current sum ≤ M and current sum + remaining sum ≥ M</div><div><strong>Worst:</strong> O(2^n) | <strong>Space:</strong> O(n)</div>`}
+    };
+    const c=configs[algo]; title.innerText=c.t; sub.innerText=c.s; input.innerHTML=c.h; math.innerHTML=c.m;
+}
+
+function numList(id){const vals=document.getElementById(id).value.split(',').map(x=>Number(x.trim())); if(vals.some(x=>!Number.isFinite(x)))throw new Error('All array entries must be valid numbers.'); return vals;}
+function parsePoints(id){const raw=document.getElementById(id).value.split(';').map(s=>s.trim()).filter(Boolean);const pts=raw.map((s,i)=>{const p=s.split(',').map(x=>Number(x.trim()));if(p.length!==2||!Number.isFinite(p[0])||!Number.isFinite(p[1]))throw new Error(`Invalid point at position ${i+1}.`);return{x:p[0],y:p[1],id:i};});if(pts.length<2)throw new Error('At least two points are required.');return pts;}
+function parseEdges(id,V){const out=[];const seen=new Set();for(const token of document.getElementById(id).value.split(',').map(s=>s.trim()).filter(Boolean)){const p=token.split('-').map(Number);if(p.length!==2||!Number.isInteger(p[0])||!Number.isInteger(p[1])||p[0]<0||p[1]<0||p[0]>=V||p[1]>=V||p[0]===p[1])continue;const [a,b]=p[0]<p[1]?[p[0],p[1]]:[p[1],p[0]];const key=`${a}-${b}`;if(!seen.has(key)){seen.add(key);out.push([a,b]);}}return out;}
+
+function recalculateCurrentAlgorithm(){
+    stopPlay();stepFrames=[];currentFrameIdx=0;
+    try{
+        const a=document.getElementById('algoModuleSelect').value;
+        ({binarysearch:solveBinarySearch,mergesort:solveMergeSort,quicksort:solveQuickSort,maxsubarray:solveMaxSubarray,closestpair:solveClosestPair,convexhull:solveConvexHull,grahamscan:solveGrahamScan,nqueens:solveNQueens,graphcoloring:solveGraphColoring,hamiltonian:solveHamiltonianCycle,sumofsubsets:solveSumOfSubsets}[a])();
+        updatePlaybackUI();
+    }catch(e){
+        stepFrames=[{phase:'Input Error',description:e.message,metric:'Invalid Input'}];currentFrameIdx=0;updatePlaybackUI();
+    }
+}
+
+function solveBinarySearch(){
+    const arr=numList('bs-arr').sort((a,b)=>a-b),K=Number(document.getElementById('bs-key').value);if(!Number.isFinite(K))throw new Error('Target must be numeric.');
+    let low=0,high=arr.length-1;
+    stepFrames.push({phase:'Initialization',description:`Sorted array: [${arr.join(', ')}]. Search range [0,${high}], target ${K}.`,arr:[...arr],low,high,mid:-1,found:false,metric:`Target = ${K}`});
+    while(low<=high){const mid=Math.floor(low+(high-low)/2);
+        if(arr[mid]===K){stepFrames.push({phase:'Target Located',description:`arr[${mid}]=${K}.`,arr:[...arr],low,high,mid,found:true,metric:`Found at index ${mid}`});return;}
+        if(arr[mid]<K){stepFrames.push({phase:'Bisect Right',description:`${arr[mid]} < ${K}; discard indices ${low}..${mid}.`,arr:[...arr],low,high,mid,found:false,metric:`low → ${mid+1}`});low=mid+1;}
+        else{stepFrames.push({phase:'Bisect Left',description:`${arr[mid]} > ${K}; discard indices ${mid}..${high}.`,arr:[...arr],low,high,mid,found:false,metric:`high → ${mid-1}`});high=mid-1;}
+    }
+    stepFrames.push({phase:'Search Exhausted',description:`Target ${K} is not present.`,arr:[...arr],low,high,mid:-1,found:false,metric:'Not Found'});
+}
+
+function solveMergeSort(){
+    const arr=numList('ms-arr');if(arr.length===0)throw new Error('Array cannot be empty.');
+    stepFrames.push({phase:'Initial Array',description:`Loaded ${arr.length} elements.`,arr:[...arr],range:[0,arr.length-1],metric:'Unsorted'});
+    function mergeSort(l,r){if(l>=r)return;const m=Math.floor((l+r)/2);stepFrames.push({phase:`Divide [${l}..${r}]`,description:`Split into [${l}..${m}] and [${m+1}..${r}].`,arr:[...arr],range:[l,r],mid:m,metric:`mid=${m}`});mergeSort(l,m);mergeSort(m+1,r);const tmp=[];let i=l,j=m+1;while(i<=m&&j<=r)tmp.push(arr[i]<=arr[j]?arr[i++]:arr[j++]);while(i<=m)tmp.push(arr[i++]);while(j<=r)tmp.push(arr[j++]);for(let k=0;k<tmp.length;k++)arr[l+k]=tmp[k];stepFrames.push({phase:`Merged [${l}..${r}]`,description:`Merged sorted values [${tmp.join(', ')}].`,arr:[...arr],range:[l,r],mid:m,metric:`Merged ${l}..${r}`});}
+    mergeSort(0,arr.length-1);stepFrames.push({phase:'Sorted State',description:`Final sorted array: [${arr.join(', ')}].`,arr:[...arr],range:[0,arr.length-1],metric:'Fully Sorted'});
+}
+
+function solveQuickSort(){
+    const arr=numList('qs-arr');if(arr.length===0)throw new Error('Array cannot be empty.');
+    stepFrames.push({phase:'Initial Array',description:`Loaded ${arr.length} elements.`,arr:[...arr],p:0,r:arr.length-1,pivotIdx:-1,metric:'Unsorted'});
+    function qs(p,r){if(p>=r)return;const pivot=arr[r];let i=p-1;stepFrames.push({phase:`Partition [${p}..${r}]`,description:`Lomuto pivot is arr[${r}]=${pivot}.`,arr:[...arr],p,r,pivotIdx:r,metric:`Pivot=${pivot}`});
+        for(let j=p;j<r;j++)if(arr[j]<=pivot){i++;[arr[i],arr[j]]=[arr[j],arr[i]];}
+        [arr[i+1],arr[r]]=[arr[r],arr[i+1]];const q=i+1;
+        stepFrames.push({phase:`Pivot Placed at ${q}`,description:`Elements ≤ pivot are left of ${q}; larger elements are right.`,arr:[...arr],p,r,pivotIdx:q,metric:`Pivot index=${q}`});qs(p,q-1);qs(q+1,r);}
+    qs(0,arr.length-1);stepFrames.push({phase:'Sorted State',description:`Final sorted array: [${arr.join(', ')}].`,arr:[...arr],p:0,r:arr.length-1,pivotIdx:-1,metric:'Fully Sorted'});
+}
+
+function solveMaxSubarray(){
+    const arr=numList('max-arr');if(arr.length===0)throw new Error('Array cannot be empty.');
+    stepFrames.push({phase:'Initial Array',description:`Evaluating ${arr.length} integers by divide and conquer.`,arr:[...arr],bestRange:[0,0],maxSum:arr[0],metric:'Start'});
+    function cross(l,m,r){let sum=0,left=-Infinity,li=m;for(let i=m;i>=l;i--){sum+=arr[i];if(sum>left){left=sum;li=i;}}sum=0;let right=-Infinity,ri=m+1;for(let j=m+1;j<=r;j++){sum+=arr[j];if(sum>right){right=sum;ri=j;}}return{low:li,high:ri,sum:left+right};}
+    function rec(l,r){if(l===r)return{low:l,high:r,sum:arr[l]};const m=Math.floor((l+r)/2),L=rec(l,m),R=rec(m+1,r),C=cross(l,m,r);let best=L;if(R.sum>best.sum)best=R;if(C.sum>best.sum)best=C;stepFrames.push({phase:`Evaluate [${l}..${r}]`,description:`Left=${L.sum}, Right=${R.sum}, Crossing=${C.sum}; choose ${best.sum}.`,arr:[...arr],bestRange:[best.low,best.high],maxSum:best.sum,metric:`Max=${best.sum}`});return best;}
+    const res=rec(0,arr.length-1);stepFrames.push({phase:'Optimal Max Subarray Found',description:`Indices [${res.low}..${res.high}] => [${arr.slice(res.low,res.high+1).join(', ')}], sum=${res.sum}.`,arr:[...arr],bestRange:[res.low,res.high],maxSum:res.sum,metric:`Global Max=${res.sum}`});
+}
+
+function solveClosestPair(){
+    const pts=parsePoints('cp-pts').sort((a,b)=>a.x-b.x||a.y-b.y);const byX=[...pts],byY=[...pts].sort((a,b)=>a.y-b.y||a.x-b.x);
+    const d2=(a,b)=>(a.x-b.x)**2+(a.y-b.y)**2;const fmtD=d=>Math.sqrt(d).toFixed(4);
+    stepFrames.push({phase:'Presort Points',description:`Points sorted by x; recursive y-order is maintained.`,pts:[...pts],pair:null,delta:Infinity,metric:'Presorted'});
+    function brute(P){let best={d:Infinity,pair:null};for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){const d=d2(P[i],P[j]);if(d<best.d)best={d,pair:[P[i],P[j]]};}return best;}
+    function rec(X,Y,depth){
+        if(X.length<=3){const b=brute(X);stepFrames.push({phase:`Base Case n=${X.length}`,description:`Direct comparison in small set; δ=${fmtD(b.d)}.`,pts:[...byX],pair:b.pair,delta:b.d,metric:`δ=${fmtD(b.d)}`});return b;}
+        const mid=Math.floor(X.length/2),midX=X[mid].x,LX=X.slice(0,mid),RX=X.slice(mid),leftIds=new Set(LX.map(p=>p.id)),LY=[],RY=[];
+        for(const p of Y)(leftIds.has(p.id)?LY:RY).push(p);
+        stepFrames.push({phase:`Divide n=${X.length}`,description:`Split at x=${midX}: left=${LX.length}, right=${RX.length}.`,pts:[...byX],splitX:midX,pair:null,delta:Infinity,metric:`Split x=${midX}`});
+        const L=rec(LX,LY,depth+1),R=rec(RX,RY,depth+1);let best=L.d<=R.d?L:R,delta=Math.sqrt(best.d),strip=Y.filter(p=>Math.abs(p.x-midX)<delta);
+        let stripBest=best;for(let i=0;i<strip.length;i++)for(let j=i+1;j<Math.min(i+8,strip.length);j++){const d=d2(strip[i],strip[j]);if(d<stripBest.d)stripBest={d,pair:[strip[i],strip[j]]};}
+        stepFrames.push({phase:`Combine n=${X.length}`,description:`δ=min(${fmtD(L.d)}, ${fmtD(R.d)})=${fmtD(best.d)}; strip has ${strip.length} candidates; checked at most 7 following y-neighbors per point.`,pts:[...byX],splitX:midX,strip:strip.map(p=>p.id),pair:stripBest.pair,delta:stripBest.d,metric:`δ=${fmtD(stripBest.d)}`});
+        return stripBest;
+    }
+    const res=rec(byX,byY,0);stepFrames.push({phase:'Closest Pair Finalized',description:`Closest pair: (${res.pair[0].x},${res.pair[0].y}) and (${res.pair[1].x},${res.pair[1].y}), distance=${fmtD(res.d)}.`,pts:[...byX],pair:res.pair,delta:res.d,metric:`Final δ=${fmtD(res.d)}`});
+}
+
+function solveConvexHull(){
+    const pts=parsePoints('ch-pts');if(pts.length<3)throw new Error('QuickHull requires at least three points.');
+    const leftMost=pts.reduce((a,b)=>a.x<b.x||a.x===b.x&&a.y<b.y?a:b),rightMost=pts.reduce((a,b)=>a.x>b.x||a.x===b.x&&a.y>b.y?a:b);
+    const cross=(a,b,p)=>(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x);
+    const uniqueHull=[];stepFrames.push({phase:'Select Extreme Points',description:`Leftmost=(${leftMost.x},${leftMost.y}), rightmost=(${rightMost.x},${rightMost.y}).`,pts:[...pts],hull:[],metric:'Extreme endpoints'});
+    function side(a,b,p){return Math.sign(cross(a,b,p));}
+    function quickHull(a,b,set,sideSign){
+        if(!set.length){uniqueHull.push(a);return;}
+        let far=set[0],max=Math.abs(cross(a,b,far));for(const p of set){const d=Math.abs(cross(a,b,p));if(d>max){max=d;far=p;}}
+        const s1=[],s2=[];for(const p of set){if(p.id===far.id)continue;if(side(a,far,p)===sideSign)s1.push(p);if(side(far,b,p)===sideSign)s2.push(p);}
+        stepFrames.push({phase:'Choose Farthest Point',description:`For segment (${a.x},${a.y})→(${b.x},${b.y}), farthest point is (${far.x},${far.y}).`,pts:[...pts],hull:[...uniqueHull,far],segment:[a,b],farPoint:far,metric:`Farthest (${far.x},${far.y})`});
+        quickHull(a,far,s1,sideSign);quickHull(far,b,s2,sideSign);
+    }
+    const upper=pts.filter(p=>side(leftMost,rightMost,p)>0),lower=pts.filter(p=>side(leftMost,rightMost,p)<0);
+    quickHull(leftMost,rightMost,upper,1);quickHull(rightMost,leftMost,lower,1);uniqueHull.push(rightMost);
+    const map=new Map();for(const p of uniqueHull)map.set(p.id,p);const hull=[...map.values()];
+    if(hull.length<3)throw new Error('All points are collinear; no polygonal hull with three vertices exists.');
+    const cx=hull.reduce((s,p)=>s+p.x,0)/hull.length,cy=hull.reduce((s,p)=>s+p.y,0)/hull.length;hull.sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
+    const start=hull.reduce((idx,p,i)=>p.x<hull[idx].x||p.x===hull[idx].x&&p.y<hull[idx].y?i:idx,0);const ordered=hull.slice(start).concat(hull.slice(0,start));
+    stepFrames.push({phase:'Convex Hull Complete',description:`QuickHull returned ${ordered.length} boundary vertices.`,pts:[...pts],hull:[...ordered,ordered[0]],metric:`Hull size=${ordered.length}`});
+}
+
+function solveGrahamScan(){
+    const pts=parsePoints('gs-pts');
+    if(pts.length<3)throw new Error('Graham Scan requires at least three points.');
+    const cross=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+    const dist2=(a,b)=>(a.x-b.x)**2+(a.y-b.y)**2;
+    const pivot=pts.reduce((best,p)=>p.y<best.y||p.y===best.y&&p.x<best.x?p:best,pts[0]);
+    const others=pts.filter(p=>p.id!==pivot.id).sort((a,b)=>{
+        const cr=cross(pivot,a,b);
+        if(cr!==0)return cr>0?-1:1;
+        return dist2(pivot,a)-dist2(pivot,b);
+    });
+    const ordered=[];
+    for(const p of others){
+        if(ordered.length&&cross(pivot,ordered[ordered.length-1],p)===0){
+            if(dist2(pivot,p)>dist2(pivot,ordered[ordered.length-1]))ordered[ordered.length-1]=p;
+        }else ordered.push(p);
+    }
+    stepFrames.push({phase:'Select Pivot',description:`Lowest point selected as pivot: (${pivot.x},${pivot.y}).`,pts:[...pts],hull:[pivot],pivot,metric:`Pivot=(${pivot.x},${pivot.y})`});
+    stepFrames.push({phase:'Polar-Angle Sort',description:`Remaining points sorted by polar angle around the pivot; collinear ties retain the farthest point.`,pts:[...pts],hull:[pivot],pivot,sorted:ordered.map(p=>p.id),metric:`Sorted ${ordered.length} points`});
+    if(ordered.length<2)throw new Error('At least three non-collinear points are required for a polygonal hull.');
+    const stack=[pivot,ordered[0],ordered[1]];
+    stepFrames.push({phase:'Initialize Hull Stack',description:'Push pivot and the first two sorted points onto the hull stack.',pts:[...pts],hull:[...stack,pivot],pivot,metric:`Stack size=${stack.length}`});
+    for(let i=2;i<ordered.length;i++){
+        const p=ordered[i];
+        while(stack.length>=2&&cross(stack[stack.length-2],stack[stack.length-1],p)<=0){
+            const removed=stack.pop();
+            stepFrames.push({phase:'Pop / Backtrack',description:`(${removed.x},${removed.y}) causes a clockwise or collinear turn with (${p.x},${p.y}); pop it from the hull stack.`,pts:[...pts],hull:[...stack,stack[0]],pivot,active:p,popped:removed,metric:`Pop (${removed.x},${removed.y})`});
+        }
+        stack.push(p);
+        stepFrames.push({phase:'Push Point',description:`(${p.x},${p.y}) makes a counter-clockwise turn; push it onto the hull stack.`,pts:[...pts],hull:[...stack,stack[0]],pivot,active:p,metric:`Push (${p.x},${p.y})`});
+    }
+    if(stack.length<3)throw new Error('All points are collinear; no polygonal hull with three vertices exists.');
+    stepFrames.push({phase:'Convex Hull Complete',description:`Graham Scan returned ${stack.length} boundary vertices.`,pts:[...pts],hull:[...stack,stack[0]],pivot,metric:`Hull size=${stack.length}`});
+}
+
+function solveNQueens(){
+    const N=Number(document.getElementById('nq-size').value);if(!Number.isInteger(N)||N<1||N>10)throw new Error('Choose N from 1 to 10.');
+    const board=Array(N).fill(-1);stepFrames.push({phase:'Board Initialized',description:`Empty ${N}×${N} board.`,board:[...board],N,metric:'0 placements'});
+    function safe(r,c){for(let i=0;i<r;i++)if(board[i]===c||Math.abs(board[i]-c)===Math.abs(i-r))return false;return true;}
+    function rec(r){if(r===N){stepFrames.push({phase:'Solution Found!',description:`Valid first solution vector: [${board.map(v=>v+1).join(', ')}].`,board:[...board],N,metric:'Valid Solution'});return true;}for(let c=0;c<N;c++)if(safe(r,c)){board[r]=c;stepFrames.push({phase:`Place Queen (${r+1},${c+1})`,description:`Column and diagonal checks passed.`,board:[...board],N,metric:`Row ${r+1} placed`});if(rec(r+1))return true;board[r]=-1;stepFrames.push({phase:`Backtrack Row ${r+1}`,description:`No valid completion from column ${c+1}; remove queen.`,board:[...board],N,metric:'Backtracking'});}return false;}
+    if(!rec(0))stepFrames.push({phase:'No Solution',description:`No N-Queens solution exists for N=${N}.`,board:[...board],N,metric:'No solution'});
+}
+
+function solveGraphColoring(){
+    const V=Number(document.getElementById('gc-v').value),m=Number(document.getElementById('gc-m').value);if(!Number.isInteger(V)||V<1||V>12||!Number.isInteger(m)||m<1||m>V)throw new Error('Use 1≤m≤V and V≤12.');
+    const edges=parseEdges('gc-edges',V),adj=Array.from({length:V},()=>Array(V).fill(0));edges.forEach(([u,v])=>{adj[u][v]=adj[v][u]=1;});const colors=Array(V).fill(0);
+    stepFrames.push({phase:'Graph Initialized',description:`${V} vertices, ${edges.length} undirected edges, ${m} colors.`,V,m,edges,colors:[...colors],metric:'0 colored'});
+    function safe(v,c){for(let u=0;u<V;u++)if(adj[v][u]&&colors[u]===c)return false;return true;}
+    function rec(v){if(v===V){stepFrames.push({phase:'Valid m-Coloring Found!',description:`Color vector [${colors.join(', ')}] is valid.`,V,m,edges,colors:[...colors],metric:'Coloring Valid'});return true;}for(let c=1;c<=m;c++)if(safe(v,c)){colors[v]=c;stepFrames.push({phase:`Assign Color ${c} to Vertex ${v}`,description:`No already-colored neighbor conflicts with color ${c}.`,V,m,edges,colors:[...colors],currentVertex:v,metric:`V${v}=C${c}`});if(rec(v+1))return true;colors[v]=0;stepFrames.push({phase:`Backtrack Vertex ${v}`,description:`Color ${c} cannot lead to a complete coloring.`,V,m,edges,colors:[...colors],currentVertex:v,metric:'Backtracking'});}return false;}
+    if(!rec(0))stepFrames.push({phase:'No Coloring',description:`No valid coloring exists with ${m} colors.`,V,m,edges,colors:[...colors],metric:'No solution'});
+}
+
+function solveHamiltonianCycle(){
+    const V=Number(document.getElementById('hc-v').value);if(!Number.isInteger(V)||V<1||V>11)throw new Error('Use 1≤V≤11.');
+    const edges=parseEdges('hc-edges',V),adj=Array.from({length:V},()=>Array(V).fill(0));edges.forEach(([u,v])=>{adj[u][v]=adj[v][u]=1;});const path=Array(V).fill(-1);path[0]=0;
+    stepFrames.push({phase:'Initialization',description:'Start at vertex 0.',V,edges,path:[...path],metric:'Path: 0'});
+    function safe(v,pos){if(adj[path[pos-1]][v]===0)return false;for(let i=0;i<pos;i++)if(path[i]===v)return false;return true;}
+    function rec(pos){if(pos===V){if(adj[path[V-1]][0]){stepFrames.push({phase:'Hamiltonian Cycle Found!',description:`Cycle: ${path.join(' → ')} → 0`,V,edges,path:[...path,0],metric:'Cycle Complete'});return true;}return false;}for(let v=1;v<V;v++)if(safe(v,pos)){path[pos]=v;stepFrames.push({phase:`Extend Path to ${v}`,description:`Edge ${path[pos-1]}-${v} exists and vertex ${v} is unused.`,V,edges,path:[...path],metric:`Length ${pos+1}`});if(rec(pos+1))return true;path[pos]=-1;stepFrames.push({phase:`Backtrack from ${v}`,description:`Path through ${v} cannot be completed.`,V,edges,path:[...path],metric:'Backtracking'});}return false;}
+    if(V===1){if(adj[0][0])stepFrames.push({phase:'Hamiltonian Cycle Found!',description:'Self-loop cycle at vertex 0.',V,edges,path:[0,0],metric:'Cycle Complete'});else stepFrames.push({phase:'No Cycle',description:'A single vertex needs a self-loop under this definition.',V,edges,path:[0],metric:'No solution'});}
+    else if(!rec(1))stepFrames.push({phase:'No Hamiltonian Cycle',description:'No Hamiltonian cycle exists for the supplied graph.',V,edges,path:[...path],metric:'No solution'});
+}
+
+function solveSumOfSubsets(){
+    const w=numList('ss-w');const M=Number(document.getElementById('ss-m').value);if(w.length===0)throw new Error('Weight set cannot be empty.');if(w.some(v=>v<=0))throw new Error('All subset weights must be positive.');if(!Number.isFinite(M)||M<0)throw new Error('Target must be non-negative.');
+    w.sort((a,b)=>a-b);const n=w.length,prefix=[0];for(const v of w)prefix.push(prefix[prefix.length-1]+v);const x=Array(n).fill(0),solutions=[];
+    stepFrames.push({phase:'Initialization',description:`Sorted W=[${w.join(', ')}], target M=${M}.`,w,M,x:[...x],k:0,s:0,metric:'Sum=0'});
+    function rec(k,s){if(k===n){if(s===M){solutions.push([...x]);stepFrames.push({phase:'Subset Match Found!',description:`Selection [${x.join(', ')}] gives target ${M}.`,w,M,x:[...x],k,s,metric:`Match=${M}`});}return;}
+        const remaining=prefix[n]-prefix[k];
+        if(s+w[k]<=M){x[k]=1;stepFrames.push({phase:`Include w[${k}]=${w[k]}`,description:`New sum=${s+w[k]}; remaining after this choice=${remaining-w[k]}.`,w,M,x:[...x],k,s:s+w[k],metric:`Include; sum=${s+w[k]}`});rec(k+1,s+w[k]);}
+        x[k]=0;
+        if(s+remaining>=M){stepFrames.push({phase:`Exclude w[${k}]=${w[k]}`,description:`Exclude branch remains promising: maximum reachable sum=${s+remaining}.`,w,M,x:[...x],k,s,metric:`Exclude; sum=${s}`});rec(k+1,s);}
+    }
+    rec(0,0);x.fill(0);stepFrames.push({phase:'Search Finished',description:`Found ${solutions.length} subset(s) whose sum is ${M}.`,w,M,x:[...x],solutions:solutions.map(a=>[...a]),metric:`${solutions.length} Solutions`});
+}
+
+function updatePlaybackUI(){if(!stepFrames.length)return;const f=stepFrames[currentFrameIdx];document.getElementById('stepBadge').innerText=`Step ${currentFrameIdx+1} / ${stepFrames.length}`;document.getElementById('stepPhaseTitle').innerText=f.phase||'State';document.getElementById('stepDescription').innerText=f.description||'';document.getElementById('canvasMetricOverlay').innerText=f.metric||'Processing';drawCanvasFrame(f);renderTraceTable();}
+function stepNext(){if(currentFrameIdx<stepFrames.length-1){currentFrameIdx++;updatePlaybackUI();}else stopPlay();}
+function stepPrev(){if(currentFrameIdx>0){currentFrameIdx--;updatePlaybackUI();}}
+function stepFirst(){if(stepFrames.length){currentFrameIdx=0;updatePlaybackUI();}}
+function stepLast(){if(stepFrames.length){currentFrameIdx=stepFrames.length-1;updatePlaybackUI();}}
+function togglePlay(){if(playInterval)stopPlay();else{document.getElementById('btnPlay').innerText='⏸ Pause';playInterval=setInterval(()=>{if(currentFrameIdx<stepFrames.length-1)stepNext();else stopPlay();},animSpeed);}}
+function stopPlay(){if(playInterval){clearInterval(playInterval);playInterval=null;}const b=document.getElementById('btnPlay');if(b)b.innerText='▶ Play';}
+function updateAnimationSpeed(v){animSpeed=1600-Number(v);if(playInterval){stopPlay();togglePlay();}}
+
+function drawCanvasFrame(f){
+    const canvas=document.getElementById('solverCanvas'),ctx=canvas.getContext('2d'),mod=document.getElementById('algoModuleSelect').value;ctx.clearRect(0,0,canvas.width,canvas.height);ctx.textAlign='center';ctx.textBaseline='middle';
+    const text=(s,x,y,size=13)=>{ctx.fillStyle='#334155';ctx.font=`${size}px sans-serif`;ctx.fillText(s,x,y);};
+    if(['binarysearch','mergesort','quicksort','maxsubarray'].includes(mod)){
+        const a=f.arr||[];if(!a.length){text('No array data',300,180);return;}const cw=Math.min(52,(canvas.width-40)/a.length),sx=(canvas.width-cw*a.length)/2,sy=125;
+        a.forEach((v,i)=>{let fill='#f8fafc';if(mod==='binarysearch')fill=i===f.mid?(f.found?'#86efac':'#fef08a'):(i>=f.low&&i<=f.high?'#dbeafe':'#f1f5f9');if(mod==='maxsubarray'&&f.bestRange&&i>=f.bestRange[0]&&i<=f.bestRange[1])fill='#86efac';if(mod==='quicksort'&&i===f.pivotIdx)fill='#fef08a';ctx.fillStyle=fill;ctx.fillRect(sx+i*cw,sy,cw-4,45);ctx.strokeStyle='#cbd5e1';ctx.strokeRect(sx+i*cw,sy,cw-4,45);ctx.fillStyle='#0f172a';ctx.font='bold 13px monospace';ctx.fillText(v,sx+i*cw+(cw-4)/2,sy+22);ctx.fillStyle='#64748b';ctx.font='10px sans-serif';ctx.fillText(`[${i}]`,sx+i*cw+(cw-4)/2,sy+60);});
+        return;
+    }
+    if(mod==='nqueens'){const N=f.N,size=Math.min(280,canvas.height-50),cell=size/N,sx=(canvas.width-size)/2,sy=(canvas.height-size)/2;for(let r=0;r<N;r++)for(let c=0;c<N;c++){ctx.fillStyle=(r+c)%2===0?'#f1f5f9':'#cbd5e1';ctx.fillRect(sx+c*cell,sy+r*cell,cell,cell);if(f.board[r]===c){ctx.fillStyle='#2563eb';ctx.beginPath();ctx.arc(sx+(c+.5)*cell,sy+(r+.5)*cell,cell*.3,0,2*Math.PI);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.fillText('Q',sx+(c+.5)*cell,sy+(r+.5)*cell);}}return;}
+    if(mod==='closestpair'||mod==='convexhull'||mod==='grahamscan'){drawPointScene(ctx,canvas,f,mod);return;}
+    if(mod==='graphcoloring'){drawGraphScene(ctx,canvas,f,false);return;}
+    if(mod==='hamiltonian'){drawGraphScene(ctx,canvas,f,true);return;}
+    if(mod==='sumofsubsets'){drawSubsetScene(ctx,canvas,f);return;}
+    text(f.phase||'State',300,160);text(f.metric||'',300,195,12);
+}
+function drawPointScene(ctx,canvas,f,mod){
+    const pts=f.pts||[];if(!pts.length){ctx.fillStyle='#64748b';ctx.font='13px sans-serif';ctx.fillText('No point data',300,180);return;}
+    const minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x)),minY=Math.min(...pts.map(p=>p.y)),maxY=Math.max(...pts.map(p=>p.y));const dx=maxX-minX||1,dy=maxY-minY||1;
+    const sx=x=>50+(x-minX)/dx*(canvas.width-100),sy=y=>canvas.height-45-(y-minY)/dy*(canvas.height-90);
+    if(mod==='closestpair'&&Number.isFinite(f.delta)&&f.splitX!==undefined){ctx.setLineDash([6,4]);ctx.strokeStyle='#94a3b8';ctx.beginPath();ctx.moveTo(sx(f.splitX),20);ctx.lineTo(sx(f.splitX),canvas.height-20);ctx.stroke();ctx.setLineDash([]);if(f.strip){ctx.fillStyle='#dbeafe';f.strip.forEach(id=>{const p=pts.find(q=>q.id===id);if(p)ctx.beginPath(),ctx.arc(sx(p.x),sy(p.y),12,0,2*Math.PI),ctx.fill();});}}
+    if(mod==='convexhull'&&f.segment){ctx.strokeStyle='#2563eb';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sx(f.segment[0].x),sy(f.segment[0].y));ctx.lineTo(sx(f.segment[1].x),sy(f.segment[1].y));ctx.stroke();}
+    if(mod==='grahamscan'&&f.pivot){ctx.fillStyle='#f59e0b';ctx.beginPath();ctx.arc(sx(f.pivot.x),sy(f.pivot.y),9,0,2*Math.PI);ctx.fill();ctx.fillStyle='#92400e';ctx.font='bold 11px sans-serif';ctx.fillText('PIVOT',sx(f.pivot.x),sy(f.pivot.y)-15);}
+    if(f.hull&&f.hull.length>1){ctx.strokeStyle='#10b981';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(sx(f.hull[0].x),sy(f.hull[0].y));f.hull.slice(1).forEach(p=>ctx.lineTo(sx(p.x),sy(p.y)));ctx.stroke();}
+    if(f.pair){ctx.strokeStyle='#ef4444';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(sx(f.pair[0].x),sy(f.pair[0].y));ctx.lineTo(sx(f.pair[1].x),sy(f.pair[1].y));ctx.stroke();}
+    pts.forEach(p=>{ctx.fillStyle='#1e293b';ctx.beginPath();ctx.arc(sx(p.x),sy(p.y),5,0,2*Math.PI);ctx.fill();ctx.fillStyle='#64748b';ctx.font='10px monospace';ctx.textAlign='left';ctx.fillText(`(${p.x},${p.y})`,sx(p.x)+7,sy(p.y)-5);});ctx.textAlign='center';
+}
+function drawGraphScene(ctx,canvas,f,ham){
+    const V=f.V||0;if(!V){return;}const pos=[];const cx=canvas.width/2,cy=canvas.height/2+5,R=Math.min(125,canvas.height/2-45);for(let i=0;i<V;i++){const ang=-Math.PI/2+2*Math.PI*i/V;pos.push([cx+R*Math.cos(ang),cy+R*Math.sin(ang)]);}
+    (f.edges||[]).forEach(([u,v])=>{ctx.strokeStyle='#cbd5e1';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(...pos[u]);ctx.lineTo(...pos[v]);ctx.stroke();});
+    if(ham&&f.path){ctx.strokeStyle='#ef4444';ctx.lineWidth=3;for(let i=0;i<f.path.length-1;i++){const u=f.path[i],v=f.path[i+1];if(u>=0&&v>=0){ctx.beginPath();ctx.moveTo(...pos[u]);ctx.lineTo(...pos[v]);ctx.stroke();}}}
+    const colors=['#e2e8f0','#60a5fa','#f59e0b','#a78bfa','#34d399','#f472b6','#22d3ee'];(f.colors||Array(V).fill(0)).forEach((c,i)=>{ctx.fillStyle=colors[c%colors.length];ctx.beginPath();ctx.arc(pos[i][0],pos[i][1],18,0,2*Math.PI);ctx.fill();ctx.strokeStyle='#475569';ctx.stroke();ctx.fillStyle='#0f172a';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(ham&&f.path?String(i):`V${i}`,pos[i][0],pos[i][1]);});
+}
+function drawSubsetScene(ctx,canvas,f){
+    const w=f.w||[],x=f.x||[],n=w.length;if(!n)return;const gap=Math.min(85,(canvas.width-80)/n),sx=(canvas.width-gap*(n-1))/2, y=155;
+    w.forEach((v,i)=>{ctx.fillStyle=x[i]?'#86efac':'#f8fafc';ctx.fillRect(sx+i*gap-25,y-25,50,50);ctx.strokeStyle='#cbd5e1';ctx.strokeRect(sx+i*gap-25,y-25,50,50);ctx.fillStyle='#0f172a';ctx.font='bold 12px monospace';ctx.fillText(v,sx+i*gap,y);ctx.fillStyle='#64748b';ctx.font='10px sans-serif';ctx.fillText(`x${i+1}=${x[i]||0}`,sx+i*gap,y+45);});ctx.fillStyle='#334155';ctx.font='13px sans-serif';ctx.fillText(`Target M = ${f.M}    Current Sum = ${f.s??0}`,canvas.width/2,70);
+}
+
+function renderTraceTable(){
+    const table=document.getElementById('solverTraceTable');let html='<thead><tr class="bg-stone-100 font-semibold"><th class="p-2 border">Step</th><th class="p-2 border">Phase</th><th class="p-2 border">Evaluation Detail</th><th class="p-2 border">Metric</th></tr></thead><tbody>';
+    stepFrames.slice(0,currentFrameIdx+1).forEach((f,i)=>html+=`<tr class="border-b ${i===currentFrameIdx?'bg-blue-50 font-bold':''}"><td class="p-2 border font-mono">${i+1}</td><td class="p-2 border">${esc(f.phase)}</td><td class="p-2 border text-stone-600">${esc(f.description)}</td><td class="p-2 border font-mono text-blue-700">${esc(f.metric||'OK')}</td></tr>`);
+    table.innerHTML=html+'</tbody>';
+}
+
+function initBenchmarkCharts(){
+    if(timeChart)timeChart.destroy();if(spaceChart)spaceChart.destroy();const n=[10,20,30,40,50,60,70,80,90,100];
+    timeChart=new Chart(document.getElementById('timeComplexityChart').getContext('2d'),{type:'line',data:{labels:n,datasets:[
+        {label:'Binary Search Θ(log n)',data:n.map(x=>Math.log2(x)),fill:false},
+        {label:'Merge Sort Θ(n log n)',data:n.map(x=>x*Math.log2(x)),fill:false},
+        {label:'Quick Sort Worst Θ(n²)',data:n.map(x=>x*x),fill:false}
+    ]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});
+    const labels=['Binary Search','Merge Sort','Quick Sort avg stack','Quick Sort worst stack','Closest Pair','Convex Hull (QuickHull)','Convex Hull (Graham Scan)','N-Queens','Graph Coloring','Hamiltonian','Sum of Subsets'];
+    const values=[1,100,Math.log2(100),100,100,100,100,8,10,10,10];
+    spaceChart=new Chart(document.getElementById('spaceComplexityChart').getContext('2d'),{type:'bar',data:{labels,datasets:[{label:'Representative asymptotic scale',data:values}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+}
+function renderMatrixTable(){filterMatrixTable();}
+function filterMatrixTable(){
+    const q=document.getElementById('matrixSearchInput').value.toLowerCase(),p=document.getElementById('matrixParadigmFilter').value;
+    const rows=matrixData.filter(x=>(p==='ALL'||x.paradigm===p)&&`${x.name} ${x.avgTime} ${x.worstTime} ${x.space} ${x.strategy}`.toLowerCase().includes(q));
+    document.getElementById('matrixTableBody').innerHTML=rows.map(x=>`<tr class="hover:bg-stone-50"><td class="p-3 font-bold">${esc(x.name)}</td><td class="p-3 font-mono">${esc(x.paradigm)}</td><td class="p-3 font-mono">${esc(x.avgTime)}</td><td class="p-3 font-mono">${esc(x.worstTime)}</td><td class="p-3 font-mono">${esc(x.space)}</td><td class="p-3 text-stone-600">${esc(x.strategy)}</td></tr>`).join('');
+}
+
+function generateExamSheet(){
+    const mod=document.getElementById('algoModuleSelect').value;const f=stepFrames[stepFrames.length-1];document.getElementById('examOutputSheet').innerText=
+`UNIVERSITY EXAMINATION LABORATORY REPORT — DAA UNIT IV
+=====================================================================
+MODULE: ${mod.toUpperCase()}
+
+1. INPUT / PROBLEM FORMULATION
+The current interactive input configuration was executed by the same solver engine used for the step trace.
+
+2. ALGORITHM / MATHEMATICAL FORMULATION
+See the module-specific recurrence or bounding condition shown in the Algorithm Lab.
+
+3. DYNAMIC STEP EXECUTION TRACE
+${stepFrames.map((x,i)=>`[Step ${i+1}] ${x.phase}: ${x.description}`).join('\n')}
+
+4. FINAL RESULT
+${f?f.metric:'N/A'}
+${f?f.description:''}
+
+5. COMPLEXITY
+Refer to the module-specific theoretical bounds shown in the lab and comparison matrix.`;
+}
+async function copyExamSheet(){try{await navigator.clipboard.writeText(document.getElementById('examOutputSheet').innerText);alert('Examination solution sheet copied to clipboard!');}catch(e){alert('Clipboard access is unavailable. Select and copy the report manually.');}}
+
+function configureVerification(){
+    const mod=document.getElementById('verifyModuleSelect').value;
+    document.getElementById('verifyUserVal').placeholder={binarysearch:'e.g. 5 or -1',maxsubarray:'e.g. 6',nqueens:'e.g. [2,4,1,3]',sumofsubsets:'e.g. 1'}[mod];
+}
+function parseUserVector(s){const cleaned=s.trim().replace(/^\[/,'').replace(/\]$/,'');if(!cleaned)return[];return cleaned.split(',').map(Number);}
+function runVerificationDiagnostic(){
+    const mod=document.getElementById('verifyModuleSelect').value,val=document.getElementById('verifyUserVal').value.trim(),res=document.getElementById('verifyDiagnosticResult');let expected,detail='';
+    try{
+        if(mod==='binarysearch'){const a=numList('bs-arr').sort((x,y)=>x-y),K=Number(document.getElementById('bs-key').value);expected=a.indexOf(K);detail=`Target ${K} first-occurrence index in the sorted array = ${expected}.`;}
+        else if(mod==='maxsubarray'){const a=numList('max-arr');let best=-Infinity,sum=-Infinity;for(const z of a){sum=Math.max(z,sum+z);best=Math.max(best,sum);}expected=best;detail=`Maximum subarray sum = ${expected}.`;}
+        else if(mod==='nqueens'){const N=Number(document.getElementById('nq-size').value),b=Array(N).fill(-1);function safe(r,c){for(let i=0;i<r;i++)if(b[i]===c||Math.abs(b[i]-c)===Math.abs(i-r))return false;return true;}function q(r){if(r===N)return true;for(let c=0;c<N;c++)if(safe(r,c)){b[r]=c;if(q(r+1))return true;b[r]=-1;}return false;}if(!q(0))throw new Error('No solution for this N.');expected=b.map(x=>x+1);detail=`First solution vector = [${expected.join(', ')}].`;}
+        else{const w=numList('ss-w'),M=Number(document.getElementById('ss-m').value);let count=0;function go(i,s){if(i===w.length){if(s===M)count++;return;}go(i+1,s);if(s+w[i]<=M)go(i+1,s+w[i]);}go(0,0);expected=count;detail=`Number of subsets summing to ${M} = ${count}.`;}
+        const user=mod==='nqueens'?parseUserVector(val):Number(val.replace(/\s+/g,''));const ok=mod==='nqueens'?Array.isArray(user)&&user.length===expected.length&&user.every((v,i)=>v===expected[i]):user===expected;
+        res.className=ok?'p-3 rounded border bg-emerald-100 text-emerald-900 border-emerald-300':'p-3 rounded border bg-rose-100 text-rose-900 border-rose-300';res.innerText=(ok?'✓ VERIFIED MATCH: ':'✗ DIFFERENCE DETECTED: ')+detail+` Your entry: "${val}"`;res.classList.remove('hidden');
+    }catch(e){res.className='p-3 rounded border bg-rose-100 text-rose-900 border-rose-300';res.innerText='✗ Verification error: '+e.message;res.classList.remove('hidden');}
+}
+
+window.addEventListener('load',()=>{switchTab('dashboard');renderMatrixTable();configureSolverModule('binarysearch');});
+</script>
+</body>
+</html>
