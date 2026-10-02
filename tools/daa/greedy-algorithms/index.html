@@ -1,0 +1,2729 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DAA Greedy Algorithm Solver | Interactive Visualizer & Laboratory</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN for statistics & comparisons -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar for dynamic tables */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
+    .chart-container {
+      position: relative;
+      width: 100%;
+      max-width: 650px;
+      margin-left: auto;
+      margin-right: auto;
+      height: 300px;
+      max-height: 380px;
+    }
+    @media (min-width: 768px) {
+      .chart-container { height: 350px; }
+    }
+
+    /* Light, exam-friendly algorithm diagrams */
+    #algoCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+    }
+  </style>
+</head>
+<body class="h-full font-sans text-slate-800 bg-slate-50 flex flex-col">
+
+  <!-- Chosen Palette: Technical Slate & Engineering Indigo (Slate-900 header, Slate-50 background, Indigo/Blue primary, Emerald finalized, Amber candidate, Rose rejected) -->
+  <!-- Application Structure Plan: Designed as a professional algorithm laboratory dashboard with tabbed views (Dashboard, Dijkstra, Prim, Kruskal, Huffman, Knapsack, Algorithm Comparison, Theory/Notes). Provides multiple input interfaces (Matrix, Edge List, Visual Canvas Editor), real-time step playback controls, dynamic trace tables, automated answer verification, and exam-ready report generation. -->
+  <!-- Visualization & Content Choices: Uses HTML5 Canvas for graph/tree rendering and Chart.js for data comparisons. Absolutely zero SVG and zero Mermaid JS used. Dynamic state frames drive synchronized animations, execution trace tables, and live pedagogical explanations. -->
+  <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+  <!-- TOP HEADER / NAVBAR -->
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-xl text-white shadow">
+            DAA
+          </div>
+          <div>
+            <h1 class="font-bold text-lg leading-tight">DAA Greedy Algorithm Solver</h1>
+            <p class="text-xs text-slate-400">Interactive Graph • Tree • Optimization • Step Visualizer</p>
+          </div>
+        </div>
+        
+        <!-- Navigation Bar -->
+        <nav class="hidden md:flex space-x-1 text-sm font-medium" id="mainNav">
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-3 py-2 rounded-md bg-slate-800 text-white font-semibold">Dashboard</button>
+          <button onclick="switchTab('dijkstra')" id="nav-dijkstra" class="px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800 hover:text-white">Dijkstra</button>
+          <button onclick="switchTab('prim')" id="nav-prim" class="px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800 hover:text-white">Prim's MST</button>
+          <button onclick="switchTab('kruskal')" id="nav-kruskal" class="px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800 hover:text-white">Kruskal's MST</button>
+          <button onclick="switchTab('huffman')" id="nav-huffman" class="px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800 hover:text-white">Huffman</button>
+          <button onclick="switchTab('knapsack')" id="nav-knapsack" class="px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800 hover:text-white">Knapsack</button>
+          <button onclick="switchTab('comparison')" id="nav-comparison" class="px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800 hover:text-white">Compare</button>
+          <button onclick="switchTab('theory')" id="nav-theory" class="px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800 hover:text-white">Theory & Notes</button>
+        </nav>
+
+        <div class="flex items-center space-x-2">
+          <button onclick="loadExampleData()" class="text-xs bg-slate-800 hover:bg-slate-700 text-blue-300 px-3 py-1.5 rounded border border-slate-700 transition">
+            ⚡ Load Example
+          </button>
+          <button onclick="exportExamReport()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded font-medium shadow transition">
+            📄 Exam Report
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Mobile Submenu Nav -->
+    <div class="md:hidden flex overflow-x-auto py-2 px-4 space-x-2 bg-slate-800 border-t border-slate-700 text-xs">
+      <button onclick="switchTab('dashboard')" class="px-2 py-1 bg-slate-700 text-white rounded shrink-0">Dashboard</button>
+      <button onclick="switchTab('dijkstra')" class="px-2 py-1 text-slate-300 rounded shrink-0">Dijkstra</button>
+      <button onclick="switchTab('prim')" class="px-2 py-1 text-slate-300 rounded shrink-0">Prim</button>
+      <button onclick="switchTab('kruskal')" class="px-2 py-1 text-slate-300 rounded shrink-0">Kruskal</button>
+      <button onclick="switchTab('huffman')" class="px-2 py-1 text-slate-300 rounded shrink-0">Huffman</button>
+      <button onclick="switchTab('knapsack')" class="px-2 py-1 text-slate-300 rounded shrink-0">Knapsack</button>
+      <button onclick="switchTab('comparison')" class="px-2 py-1 text-slate-300 rounded shrink-0">Compare</button>
+      <button onclick="switchTab('theory')" class="px-2 py-1 text-slate-300 rounded shrink-0">Theory</button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- GLOBAL NOTIFICATION BANNER -->
+    <div id="alertBanner" class="hidden rounded-lg p-4 border text-sm flex justify-between items-center transition-all shadow-sm">
+      <div class="flex items-center space-x-3">
+        <span id="alertIcon" class="text-lg">⚠️</span>
+        <div>
+          <h4 id="alertTitle" class="font-bold">Notice</h4>
+          <p id="alertMessage" class="text-xs md:text-sm">Notification detail...</p>
+        </div>
+      </div>
+      <button onclick="dismissAlert()" class="text-slate-400 hover:text-slate-600 font-bold px-2 text-base">&times;</button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: DASHBOARD                           -->
+    <!-- ========================================== -->
+    <section id="tab-dashboard" class="space-y-6">
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 md:p-8 rounded-2xl shadow-xl border border-slate-800">
+        <div class="max-w-3xl space-y-3">
+          <span class="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-full text-xs font-semibold tracking-wide uppercase">
+            Engineering Laboratory Suite
+          </span>
+          <h2 class="text-2xl md:text-4xl font-extrabold tracking-tight text-white">
+            Design & Analysis of Algorithms Laboratory
+          </h2>
+          <p class="text-slate-300 text-sm md:text-base leading-relaxed">
+            Welcome to the DAA Interactive Greedy Algorithm Solver. This platform provides real-time state visualizations, dynamic relaxation matrices, step-by-step mathematical traces, automated answer verification, and exam solution exporters for core computer science optimization algorithms.
+          </p>
+          <div class="pt-2 flex flex-wrap gap-3">
+            <button onclick="switchTab('dijkstra')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg shadow-md transition">
+              Launch Dijkstra Solver
+            </button>
+            <button onclick="switchTab('theory')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-semibold rounded-lg transition">
+              Explore Greedy Paradigm Theory
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALGORITHM CARDS GRID -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Card 1 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 bg-blue-50 text-blue-600 rounded-lg text-lg font-bold">🛣️</span>
+              <span class="text-xs font-semibold px-2 py-1 bg-emerald-100 text-emerald-800 rounded">Greedy Valid</span>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Dijkstra's Shortest Path</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-4">
+              Computes single-source shortest paths on non-negatively weighted directed or undirected graphs using greedy tentative distance extraction.
+            </p>
+            <div class="text-xs text-slate-600 space-y-1 border-t pt-3">
+              <p><strong>Input:</strong> Weighted Graph $G(V,E)$, Source $S$</p>
+              <p><strong>Time Complexity:</strong> $O((|V| + |E|) \log |V|)$</p>
+            </div>
+          </div>
+          <button onclick="switchTab('dijkstra')" class="mt-5 w-full py-2 bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition">
+            Open Solver →
+          </button>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-lg font-bold">🌳</span>
+              <span class="text-xs font-semibold px-2 py-1 bg-emerald-100 text-emerald-800 rounded">Greedy Valid</span>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Prim's Minimum Spanning Tree</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-4">
+              Grows a continuous minimum spanning tree from an initial root vertex by repeatedly selecting the minimum-weight cut-crossing edge.
+            </p>
+            <div class="text-xs text-slate-600 space-y-1 border-t pt-3">
+              <p><strong>Input:</strong> Undirected Weighted Graph $G(V,E)$</p>
+              <p><strong>Time Complexity:</strong> $O(|E| \log |V|)$</p>
+            </div>
+          </div>
+          <button onclick="switchTab('prim')" class="mt-5 w-full py-2 bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition">
+            Open Solver →
+          </button>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 bg-purple-50 text-purple-600 rounded-lg text-lg font-bold">🔗</span>
+              <span class="text-xs font-semibold px-2 py-1 bg-emerald-100 text-emerald-800 rounded">Greedy Valid</span>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Kruskal's Minimum Spanning Tree</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-4">
+              Constructs an MST by processing globally sorted edges and preventing cycles using Disjoint Set Union (DSU) with Path Compression.
+            </p>
+            <div class="text-xs text-slate-600 space-y-1 border-t pt-3">
+              <p><strong>Input:</strong> Undirected Weighted Graph $G(V,E)$</p>
+              <p><strong>Time Complexity:</strong> $O(|E| \log |E|)$</p>
+            </div>
+          </div>
+          <button onclick="switchTab('kruskal')" class="mt-5 w-full py-2 bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition">
+            Open Solver →
+          </button>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 bg-amber-50 text-amber-600 rounded-lg text-lg font-bold">📦</span>
+              <span class="text-xs font-semibold px-2 py-1 bg-emerald-100 text-emerald-800 rounded">Greedy Valid</span>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Huffman Prefix Coding</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-4">
+              Generates optimal, prefix-free variable-length binary encoding trees based on character frequency min-heap merges.
+            </p>
+            <div class="text-xs text-slate-600 space-y-1 border-t pt-3">
+              <p><strong>Input:</strong> Character Frequencies $\{f(c)\}$</p>
+              <p><strong>Time Complexity:</strong> $O(|C| \log |C|)$</p>
+            </div>
+          </div>
+          <button onclick="switchTab('huffman')" class="mt-5 w-full py-2 bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition">
+            Open Solver →
+          </button>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-lg font-bold">🎒</span>
+              <span class="text-xs font-semibold px-2 py-1 bg-amber-100 text-amber-800 rounded">Fractional Only</span>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Knapsack Optimization</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-4">
+              Solves continuous Fractional Knapsack using greedy profit-density ratios ($p_i / w_i$) and compares against 0/1 Knapsack DP constraints.
+            </p>
+            <div class="text-xs text-slate-600 space-y-1 border-t pt-3">
+              <p><strong>Input:</strong> Item Profits, Weights, Capacity $W$</p>
+              <p><strong>Time Complexity:</strong> $O(n \log n)$</p>
+            </div>
+          </div>
+          <button onclick="switchTab('knapsack')" class="mt-5 w-full py-2 bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition">
+            Open Solver →
+          </button>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="bg-slate-900 text-white rounded-xl p-6 shadow-md flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 bg-slate-800 text-blue-400 rounded-lg text-lg font-bold">📊</span>
+              <span class="text-xs font-semibold px-2 py-1 bg-slate-800 text-slate-300 rounded">Comparative Analysis</span>
+            </div>
+            <h3 class="text-lg font-bold text-white">Algorithm Comparison</h3>
+            <p class="text-xs text-slate-400 mt-1 mb-4">
+              Execute Prim vs. Kruskal side-by-side on identical graph topologies or analyze Greedy Fractional vs. Discrete 0/1 Knapsack choices.
+            </p>
+          </div>
+          <button onclick="switchTab('comparison')" class="mt-5 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition">
+            Compare Algorithms →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SHARED / MAIN INTERACTIVE SOLVER VIEW      -->
+    <!-- (Active for Dijkstra, Prim, Kruskal, Huffman, Knapsack) -->
+    <!-- ========================================== -->
+    <section id="tab-solver" class="hidden space-y-6">
+      
+      <!-- Top Solver Header & Controls -->
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <h2 id="solverTitle" class="text-xl font-bold text-slate-900">Algorithm Solver</h2>
+            <span id="greedyBadge" class="px-2 py-0.5 text-xs font-bold rounded bg-emerald-100 text-emerald-800">
+              Greedy Optimal
+            </span>
+          </div>
+          <p id="solverSubtitle" class="text-xs text-slate-500">Configure parameters and run step-by-step state simulation.</p>
+        </div>
+
+        <!-- Step Playback Control Bar -->
+        <div class="flex flex-wrap items-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-200">
+          <button onclick="solveCurrentProblem()" id="btnSolve" title="Solve the current problem" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-xs shadow transition">
+            🧠 Solve
+          </button>
+          <span id="solveStatus" class="px-2 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-800">Ready to Solve</span>
+          <button onclick="stepFirst()" id="btnReset" title="Reset to Start" class="p-2 bg-white hover:bg-slate-200 rounded text-slate-700 font-bold text-xs border shadow-sm" disabled>⏮ Reset</button>
+          <button onclick="stepPrev()" id="btnPrev" title="Previous Step" class="p-2 bg-white hover:bg-slate-200 rounded text-slate-700 font-bold text-xs border shadow-sm" disabled>◀ Prev</button>
+          <button onclick="togglePlay()" id="btnPlay" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs shadow" disabled>▶ Play</button>
+          <button onclick="stepNext()" id="btnNext" title="Next Step" class="p-2 bg-white hover:bg-slate-200 rounded text-slate-700 font-bold text-xs border shadow-sm" disabled>Next ▶</button>
+          <button onclick="stepLast()" id="btnLast" title="Jump to Final State" class="p-2 bg-white hover:bg-slate-200 rounded text-slate-700 font-bold text-xs border shadow-sm" disabled>⏭ Final</button>
+
+          <!-- Speed Slider -->
+          <div class="flex items-center space-x-2 px-2 border-l border-slate-300 ml-1">
+            <span class="text-xs text-slate-500 font-semibold">Speed:</span>
+            <input type="range" id="speedSlider" min="100" max="1500" value="600" step="100" class="w-20 accent-blue-600">
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN SPLIT VIEW LAYOUT: Left Inputs / Right Canvas & Output -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- LEFT COLUMN: Input Controllers & Data Ingestion (5 cols) -->
+        <div class="lg:col-span-5 space-y-6">
+          
+          <!-- GRAPH INPUT METHODS CARD (For Dijkstra, Prim, Kruskal) -->
+          <div id="graphInputContainer" class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b pb-3">
+              <h3 class="font-bold text-sm text-slate-900 flex items-center space-x-2">
+                <span>🕸️</span> <span>Graph Input Configuration</span>
+              </h3>
+              <!-- Directed / Undirected Toggle -->
+              <div class="flex items-center space-x-2 bg-slate-100 p-1 rounded-lg text-xs">
+                <button id="typeUndirected" onclick="setGraphType(false)" class="px-2 py-1 rounded font-semibold bg-white text-slate-800 shadow-sm">Undirected</button>
+                <button id="typeDirected" onclick="setGraphType(true)" class="px-2 py-1 rounded font-semibold text-slate-500">Directed</button>
+              </div>
+            </div>
+
+            <!-- Warning for Directed Graph on Prim/Kruskal -->
+            <div id="directedWarning" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 space-y-1">
+              <p class="font-bold">⚠️ Algorithm Boundary Warning</p>
+              <p>Prim's and Kruskal's MST algorithms require an <strong>undirected connected graph</strong> in standard form. Directed edge processing may cause cycle detection failures or unreachable vertices.</p>
+            </div>
+
+            <!-- Input Tabs Selector -->
+            <div class="flex border-b text-xs font-semibold">
+              <button id="tabInputMatrix" onclick="switchInputMethod('matrix')" class="px-3 py-2 border-b-2 border-blue-600 text-blue-600">Method A: Matrix</button>
+              <button id="tabInputList" onclick="switchInputMethod('list')" class="px-3 py-2 text-slate-500 hover:text-slate-800">Method B: Edge List</button>
+              <button id="tabInputCanvas" onclick="switchInputMethod('canvas')" class="px-3 py-2 text-slate-500 hover:text-slate-800">Method C: Visual Editor</button>
+            </div>
+
+            <!-- Method A: Matrix Interface -->
+            <div id="viewInputMatrix" class="space-y-3">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-500">Adjacency Matrix ($N \times N$, use 'inf' or ∞ for no edge):</span>
+                <div class="space-x-1">
+                  <button onclick="addMatrixVertex()" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded font-bold text-slate-700">+ Vertex</button>
+                  <button onclick="removeMatrixVertex()" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded font-bold text-slate-700">- Vertex</button>
+                </div>
+              </div>
+              <div class="overflow-x-auto max-h-56 p-1 border rounded bg-slate-50">
+                <table id="matrixTable" class="w-full text-xs text-center border-collapse">
+                  <!-- Generated Dynamically -->
+                </table>
+              </div>
+            </div>
+
+            <!-- Method B: Edge List Interface -->
+            <div id="viewInputList" class="hidden space-y-3">
+              <p class="text-xs text-slate-500">Enter edges in structured format (Source, Target, Weight):</p>
+              <div class="flex space-x-2 text-xs">
+                <input id="inputEdgeSrc" placeholder="Src (A)" class="w-1/4 p-2 border rounded">
+                <input id="inputEdgeDst" placeholder="Dst (B)" class="w-1/4 p-2 border rounded">
+                <input id="inputEdgeW" type="number" placeholder="Weight (4)" class="w-1/4 p-2 border rounded">
+                <button onclick="addEdgeFromInputs()" class="w-1/4 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold">Add Edge</button>
+              </div>
+              <div class="max-h-40 overflow-y-auto border rounded bg-slate-50 p-2 text-xs space-y-1" id="edgeListDisplay">
+                <!-- Edge items list -->
+              </div>
+            </div>
+
+            <!-- Method C: Visual Canvas Editor Instructions -->
+            <div id="viewInputCanvas" class="hidden space-y-2 text-xs text-slate-600">
+              <p class="font-semibold text-slate-800">Interactive Visual Canvas Mode:</p>
+              <ul class="list-disc pl-4 space-y-1 text-slate-500">
+                <li><strong>Click empty space:</strong> Create a new vertex node.</li>
+                <li><strong>Click node then click node:</strong> Connect with a weighted edge.</li>
+                <li><strong>Drag node:</strong> Reposition vertex in spatial layout.</li>
+                <li><strong>Right click node/edge:</strong> Delete element.</li>
+              </ul>
+              <button onclick="clearGraphCanvas()" class="w-full py-1.5 bg-rose-50 text-rose-600 border border-rose-200 rounded font-semibold text-xs hover:bg-rose-100">
+                Clear Visual Canvas
+              </button>
+            </div>
+
+            <!-- Source & Target Vertex Selector (Dijkstra/Prim specific) -->
+            <div class="grid grid-cols-2 gap-3 border-t pt-3 text-xs">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Source Vertex ($S$):</label>
+                <select id="selectSource" onchange="updateSolverState()" class="w-full p-2 border rounded bg-white font-medium">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+              <div id="targetSelectBox">
+                <label class="block font-semibold text-slate-700 mb-1">Target Vertex (Optional):</label>
+                <select id="selectTarget" onchange="updateSolverState()" class="w-full p-2 border rounded bg-white font-medium">
+                  <option value="ALL">All Destinations</option>
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+            </div>
+
+            <button onclick="solveCurrentProblem()" class="w-full py-2.5 bg-slate-900 hover:bg-blue-600 text-white font-bold text-xs rounded-lg shadow transition">
+              🚀 Solve & Synchronize Algorithm State
+            </button>
+          </div>
+
+          <!-- HUFFMAN SPECIFIC INPUT CARD -->
+          <div id="huffmanInputContainer" class="hidden bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <h3 class="font-bold text-sm text-slate-900 flex items-center space-x-2">
+              <span>🔠</span> <span>Character Frequency Distribution</span>
+            </h3>
+            <p class="text-xs text-slate-500">Define symbols and corresponding frequencies for prefix tree generation:</p>
+
+            <div class="space-y-2" id="huffmanRows">
+              <!-- Dynamically generated frequency inputs -->
+            </div>
+
+            <div class="flex space-x-2">
+              <button onclick="addHuffmanRow()" class="w-1/2 py-1.5 bg-slate-100 hover:bg-slate-200 rounded font-bold text-xs text-slate-700">+ Add Symbol</button>
+              <button onclick="solveCurrentProblem()" class="w-1/2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs shadow">Build & Solve Huffman Tree</button>
+            </div>
+          </div>
+
+          <!-- KNAPSACK SPECIFIC INPUT CARD -->
+          <div id="knapsackInputContainer" class="hidden bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <h3 class="font-bold text-sm text-slate-900 flex items-center space-x-2">
+              <span>🎒</span> <span>Knapsack Items & Capacity</span>
+            </h3>
+            
+            <div class="text-xs">
+              <label class="block font-semibold text-slate-700 mb-1">Total Knapsack Capacity ($W$):</label>
+              <input type="number" id="knapsackCapacity" value="50" min="0" class="w-full p-2 border rounded font-bold text-slate-900" onchange="knapsackData.capacity = parseFloat(this.value); recalculateAlgorithm()">
+            </div>
+
+            <div class="space-y-2">
+              <span class="text-xs font-semibold text-slate-600">Item Inventory (Profit $p_i$, Weight $w_i$):</span>
+              <div id="knapsackRows" class="space-y-2">
+                <!-- Dynamically generated item rows -->
+              </div>
+            </div>
+
+            <div class="flex space-x-2">
+              <button onclick="addKnapsackRow()" class="w-1/2 py-1.5 bg-slate-100 hover:bg-slate-200 rounded font-bold text-xs text-slate-700">+ Add Item</button>
+              <button onclick="solveCurrentProblem()" class="w-1/2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs shadow">Calculate & Solve Knapsack</button>
+            </div>
+          </div>
+
+          <!-- LIVE PEDAGOGICAL STEP EXPLANATION PANEL -->
+          <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-3">
+            <div class="flex justify-between items-center border-b pb-2">
+              <h3 class="font-bold text-xs uppercase tracking-wider text-blue-600 flex items-center space-x-1">
+                <span>💡</span> <span>Step Explanation Panel</span>
+              </h3>
+              <span id="stepProgressBadge" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 font-bold text-slate-700">
+                Step 0 / 0
+              </span>
+            </div>
+
+            <div>
+              <h4 id="explanationPhase" class="font-bold text-sm text-slate-900">Initialization Phase</h4>
+              <p id="explanationText" class="text-xs text-slate-600 mt-1 leading-relaxed">
+                Algorithm loaded into step generator. Click ▶ Play or Next ▶ to begin stepping through choices.
+              </p>
+            </div>
+
+            <div class="bg-blue-50/70 p-3 rounded-lg border border-blue-100 text-xs text-blue-900 space-y-1">
+              <p class="font-semibold text-blue-900">Greedy Choice Rationale:</p>
+              <p id="explanationRationale" class="text-slate-600 italic">
+                Awaiting algorithmic step execution...
+              </p>
+            </div>
+          </div>
+
+          <!-- COMPLEXITY CARD -->
+          <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-2 text-xs">
+            <h3 class="font-bold text-slate-900 flex items-center space-x-1">
+              <span>⏱️</span> <span>Theoretical Complexity Bounds</span>
+            </h3>
+            <div id="complexityDisplay" class="space-y-1 text-slate-600">
+              <!-- Dynamically populated complexity -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Interactive Canvas & Step Tables (7 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <!-- VISUALIZATION CANVAS CARD -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
+            <div class="flex items-center justify-between border-b pb-2">
+              <h3 class="font-bold text-sm text-slate-900 flex items-center space-x-2">
+                <span>🎨</span> <span>Interactive Canvas Visualizer</span>
+              </h3>
+              <div class="flex items-center space-x-3 text-xs">
+                <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-slate-400"></span><span class="text-slate-500">Default</span></span>
+                <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span><span class="text-slate-500">Processing</span></span>
+                <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-slate-500">Final / Optimal Path</span></span>
+                <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-rose-500"></span><span class="text-slate-500">Rejected</span></span>
+              </div>
+            </div>
+
+            <!-- Primary Canvas Container -->
+            <div class="relative w-full bg-white rounded-xl overflow-hidden shadow-inner border border-slate-300" style="height: 380px;">
+              <canvas id="algoCanvas" class="w-full h-full cursor-crosshair"></canvas>
+              
+              <!-- Floating Visual Overlay Badges -->
+              <div id="canvasOverlay" class="absolute top-3 left-3 bg-white/95 text-slate-800 text-xs px-3 py-1.5 rounded-lg border border-slate-300 shadow font-mono">
+                Cost / Result: <span id="overlayMetric" class="text-emerald-600 font-bold">0</span>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- FINAL ANSWER / OPTIMAL PATH -->
+          <div id="finalAnswerPanel" class="bg-white rounded-xl border border-emerald-200 p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between border-b border-emerald-100 pb-2">
+              <h3 class="font-bold text-sm text-slate-900 flex items-center space-x-2">
+                <span>🏁</span> <span>Final Answer / Optimal Path</span>
+              </h3>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Final Result</span>
+            </div>
+            <div id="finalAnswerContent" class="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-slate-800">
+              Run the algorithm to display the final path, selected edges, or final solution here.
+            </div>
+          </div>
+
+          <!-- DYNAMIC EXECUTION TRACE TABLE -->
+          <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between border-b pb-2">
+              <h3 class="font-bold text-sm text-slate-900 flex items-center space-x-2">
+                <span>📋</span> <span>Execution Trace Matrix / Step Table</span>
+              </h3>
+              <span class="text-xs text-slate-400">Updates dynamically per step</span>
+            </div>
+
+            <div class="overflow-x-auto max-h-64 border rounded">
+              <table id="traceTable" class="w-full text-xs text-left border-collapse">
+                <!-- Dynamically rendered trace table -->
+              </table>
+            </div>
+          </div>
+
+          <!-- VERIFICATION MODE SECTION -->
+          <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b pb-2">
+              <h3 class="font-bold text-sm text-slate-900 flex items-center space-x-2">
+                <span>✅</span> <span>Student Answer Verification Engine</span>
+              </h3>
+              <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-semibold">Self-Assessment</span>
+            </div>
+
+            <p class="text-xs text-slate-500">
+              Calculate the solution manually on paper, enter your results below, and let the system verify your step-by-step calculations against the ground-truth algorithm engine.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Your Calculated Total Weight / Cost / Profit:</label>
+                <input type="number" id="verifyUserCost" placeholder="e.g. 8" class="w-full p-2 border rounded font-bold">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Your Selected Edges / Sequence:</label>
+                <input type="text" id="verifyUserEdges" placeholder="e.g. A-C, C-B, B-D" class="w-full p-2 border rounded font-mono">
+              </div>
+            </div>
+
+            <button onclick="runAnswerVerification()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow transition">
+              🔍 Verify My Manual Solution
+            </button>
+
+            <!-- Verification Feedback Display -->
+            <div id="verificationResult" class="hidden p-4 rounded-lg border text-xs space-y-2">
+              <!-- Dynamically populated feedback -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: ALGORITHM COMPARISON                -->
+    <!-- ========================================== -->
+    <section id="tab-comparison" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Comparative Algorithmic Benchmarking</h2>
+          <p class="text-xs text-slate-500">Run parallel greedy optimizations and analyze performance, structure, and validity trade-offs.</p>
+        </div>
+
+        <!-- Prim vs Kruskal Side-by-Side Comparison -->
+        <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+          <h3 class="font-bold text-slate-900 text-base">Module 1: Prim's vs. Kruskal's MST Benchmark</h3>
+          <p class="text-xs text-slate-600">Executes both Minimum Spanning Tree algorithms on the active graph topology simultaneously.</p>
+          
+          <button onclick="runPrimVsKruskalComparison()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow">
+            ⚡ Run Side-by-Side Comparison
+          </button>
+
+          <div id="comparisonResultsBox" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
+            <div class="bg-white p-4 rounded-lg border space-y-2">
+              <h4 class="font-bold text-sm text-blue-700">Prim's Algorithm (Vertex-Centric)</h4>
+              <p><strong>Selected Edges:</strong> <span id="comparePrimEdges" class="font-mono">--</span></p>
+              <p><strong>Total MST Weight:</strong> <span id="comparePrimCost" class="font-bold text-slate-900">0</span></p>
+              <p><strong>Strategy:</strong> Grows a single continuous tree using cut-crossing minimum edge choices.</p>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg border space-y-2">
+              <h4 class="font-bold text-sm text-purple-700">Kruskal's Algorithm (Edge-Centric)</h4>
+              <p><strong>Selected Edges:</strong> <span id="compareKruskalEdges" class="font-mono">--</span></p>
+              <p><strong>Total MST Weight:</strong> <span id="compareKruskalCost" class="font-bold text-slate-900">0</span></p>
+              <p><strong>Strategy:</strong> Sorts all edges globally and uses DSU cycle detection across a forest.</p>
+            </div>
+          </div>
+
+          <div id="compareVerificationSuccess" class="hidden p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 font-semibold">
+            ✓ Verification Success: Both algorithms generated Minimum Spanning Trees with an identical total minimum cost.
+          </div>
+        </div>
+
+        <!-- Fractional Knapsack vs 0/1 Knapsack DP Contrast -->
+        <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+          <h3 class="font-bold text-slate-900 text-base">Module 2: Fractional (Greedy) vs. 0/1 Discrete Knapsack (DP)</h3>
+          <p class="text-xs text-slate-600">Demonstrates why the Greedy Choice Property holds for continuous items but fails for discrete 0/1 integer constraints.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div class="chart-container">
+                <canvas id="knapsackComparisonChart"></canvas>
+              </div>
+            </div>
+
+            <div class="space-y-3 text-xs text-slate-600">
+              <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900">
+                <p class="font-bold">⚠️ Theoretical Contrast:</p>
+                <p class="mt-1">
+                  Greedy selection by profit/weight ratio $p_i / w_i$ is <strong>guaranteed optimal for Fractional Knapsack</strong>. However, for 0/1 Knapsack, greedy heuristics can lead to suboptimal capacity usage. Dynamic Programming ($O(n W)$) is required for 0/1 optimality.
+                </p>
+              </div>
+
+              <div id="knapsackContrastDetails" class="bg-white p-3 border rounded-lg space-y-1 font-mono">
+                <!-- Dynamically populated contrast -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: THEORY & NOTES                      -->
+    <!-- ========================================== -->
+    <section id="tab-theory" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Greedy Strategy Principles & DAA Curriculum Notes</h2>
+          <p class="text-xs text-slate-500">Core theoretical foundations, greedy choice proofs, and algorithm complexity boundaries.</p>
+        </div>
+
+        <!-- Complexity Matrix Table -->
+        <div class="space-y-3">
+          <h3 class="font-bold text-sm text-slate-900">1. Algorithm Complexity & Paradigm Matrix</h3>
+          <div class="overflow-x-auto border rounded-xl">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead class="bg-slate-900 text-white font-semibold">
+                <tr>
+                  <th class="p-3">Algorithm</th>
+                  <th class="p-3">Adjacency Matrix</th>
+                  <th class="p-3">Heap / DSU Optimized</th>
+                  <th class="p-3">Greedy Choice Property</th>
+                  <th class="p-3">Validity Boundaries</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y text-slate-700">
+                <tr class="hover:bg-slate-50">
+                  <td class="p-3 font-bold text-slate-900">Dijkstra</td>
+                  <td class="p-3">$O(|V|^2)$</td>
+                  <td class="p-3">$O((|V| + |E|) \log |V|)$</td>
+                  <td class="p-3">Extract unvisited vertex with minimum tentative distance $d[u]$</td>
+                  <td class="p-3 font-semibold text-rose-600">Requires non-negative edge weights $w(e) \ge 0$</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="p-3 font-bold text-slate-900">Prim's MST</td>
+                  <td class="p-3">$O(|V|^2)$</td>
+                  <td class="p-3">$O(|E| \log |V|)$</td>
+                  <td class="p-3">Select minimum-weight edge crossing cut $(V_T, V \setminus V_T)$</td>
+                  <td class="p-3 font-semibold text-amber-600">Requires undirected connected graph</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="p-3 font-bold text-slate-900">Kruskal's MST</td>
+                  <td class="p-3">$O(|E| \log |E|)$</td>
+                  <td class="p-3">$O(|E| \log |E|)$</td>
+                  <td class="p-3">Select globally smallest edge that does not introduce a cycle</td>
+                  <td class="p-3 font-semibold text-amber-600">Requires undirected graph</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="p-3 font-bold text-slate-900">Huffman Coding</td>
+                  <td class="p-3">$O(|C|^2)$</td>
+                  <td class="p-3">$O(|C| \log |C|)$</td>
+                  <td class="p-3">Merge two min-frequency queue nodes into parent combined frequency</td>
+                  <td class="p-3">Frequencies must be strictly positive ($f(c) > 0$)</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="p-3 font-bold text-slate-900">Fractional Knapsack</td>
+                  <td class="p-3">$O(n \log n)$</td>
+                  <td class="p-3">$O(n \log n)$</td>
+                  <td class="p-3">Pick items in descending order of value density $p_i / w_i$</td>
+                  <td class="p-3 font-semibold text-emerald-600">Items must be continuously divisible</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Theoretical Proof Notes -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          <div class="p-4 bg-slate-50 rounded-xl border space-y-2 text-xs">
+            <h4 class="font-bold text-slate-900 text-sm">Optimal Substructure & Greedy Choice</h4>
+            <p class="text-slate-600 leading-relaxed">
+              A problem exhibits <strong>optimal substructure</strong> if an optimal solution to the problem contains optimal solutions to subproblems. The <strong>greedy choice property</strong> guarantees that a locally optimal choice leads to a globally optimal solution without backtracking.
+            </p>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-xl border space-y-2 text-xs">
+            <h4 class="font-bold text-slate-900 text-sm">Cut Property in Spanning Trees</h4>
+            <p class="text-slate-600 leading-relaxed">
+              For any cut $(S, V \setminus S)$ of a graph $G$, if an edge $e$ crossing the cut has strictly smaller weight than any other crossing edge, then $e$ must belong to every Minimum Spanning Tree of $G$.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- EXAM-READY REPORT MODAL -->
+    <div id="examReportModal" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-300">
+        <div class="p-4 border-b flex justify-between items-center bg-slate-900 text-white rounded-t-2xl">
+          <h3 class="font-bold text-base flex items-center space-x-2">
+            <span>📄</span> <span>Generated Exam-Ready Solution Export</span>
+          </h3>
+          <button onclick="closeExamModal()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
+        </div>
+
+        <div class="p-6 overflow-y-auto font-mono text-xs text-slate-800 bg-slate-50 space-y-4" id="examReportContent">
+          <!-- Dynamically generated exam content -->
+        </div>
+
+        <div class="p-4 border-t bg-white flex justify-end space-x-3 rounded-b-2xl">
+          <button onclick="copyExamReport()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded font-bold text-xs">📋 Copy Text</button>
+          <button onclick="closeExamModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs">Close</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="border-t border-slate-200 bg-white py-4 mt-6">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 text-center">
+      <p class="text-xs text-slate-500">DAA Greedy Algorithm Solver</p>
+      <p class="text-sm font-bold text-slate-700 mt-1">Created by Tanvir Ahmed</p>
+    </div>
+  </footer>
+  <!-- JAVASCRIPT SOLVER & RENDERING ENGINE -->
+  <script>
+    // =========================================================================
+    // GLOBAL APPLICATION STATE ENGINE
+    // =========================================================================
+    let currentTab = 'dashboard';
+    let currentAlgorithm = 'dijkstra'; // dijkstra, prim, kruskal, huffman, knapsack
+    let isDirected = false;
+
+    // Graph Data Structures
+    let graphData = {
+      vertices: ['A', 'B', 'C', 'D', 'E'],
+      edges: [
+        { src: 'A', dst: 'B', weight: 4 },
+        { src: 'A', dst: 'C', weight: 2 },
+        { src: 'B', dst: 'C', weight: 1 },
+        { src: 'B', dst: 'D', weight: 5 },
+        { src: 'C', dst: 'D', weight: 8 },
+        { src: 'C', dst: 'E', weight: 10 },
+        { src: 'D', dst: 'E', weight: 2 }
+      ],
+      nodesPos: {
+        'A': { x: 80, y: 190 },
+        'B': { x: 220, y: 90 },
+        'C': { x: 220, y: 290 },
+        'D': { x: 380, y: 90 },
+        'E': { x: 480, y: 190 }
+      }
+    };
+
+    // Huffman Inputs
+    let huffmanData = [
+      { char: 'A', freq: 5 },
+      { char: 'B', freq: 9 },
+      { char: 'C', freq: 12 },
+      { char: 'D', freq: 13 },
+      { char: 'E', freq: 16 },
+      { char: 'F', freq: 45 }
+    ];
+
+    // Knapsack Inputs
+    let knapsackData = {
+      capacity: 50,
+      items: [
+        { id: 'A', profit: 60, weight: 10 },
+        { id: 'B', profit: 100, weight: 20 },
+        { id: 'C', profit: 120, weight: 30 }
+      ]
+    };
+
+    // Playback Controller State
+    let stepFrames = [];
+    let currentFrameIdx = 0;
+    let playInterval = null;
+    let animSpeed = 600;
+    let solverSolved = false; // Inputs must be explicitly solved before playback/final answers are shown.
+
+    // Interactive Visual Canvas State
+    let canvas, ctx;
+    let selectedCanvasNode = null;
+    let draggingNode = null;
+
+    // Chart.js Instances
+    let knapsackChartInstance = null;
+
+    // =========================================================================
+    // INITIALIZATION & TAB SWITCHING
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      canvas = document.getElementById('algoCanvas');
+      ctx = canvas.getContext('2d');
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      setupCanvasInteractions();
+      const speed = document.getElementById('speedSlider');
+      if (speed) speed.addEventListener('input', () => updateAnimationSpeed(speed.value));
+      renderMatrixInput();
+      renderEdgeListInput();
+      renderHuffmanInputs();
+      renderKnapsackInputs();
+      updateSourceTargetSelectors();
+      recalculateAlgorithm();
+    });
+
+    function resizeCanvas() {
+      if (!canvas || !canvas.parentElement) return;
+
+      // The solver canvas lives inside a hidden tab at page load, so its
+      // clientWidth can initially be 0. Always measure it after the tab is
+      // visible, then redraw the current algorithm frame.
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const width = Math.max(320, Math.floor(rect.width));
+      const height = Math.max(280, Math.floor(rect.height));
+
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+
+      drawCurrentFrame();
+      updateFinalAnswerPanel();
+    }
+
+    function switchTab(tabId) {
+      currentTab = tabId;
+      
+      // Update Navbar Styles
+      const navButtons = document.querySelectorAll('#mainNav button');
+      navButtons.forEach(btn => {
+        btn.className = "px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800 hover:text-white";
+      });
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      if (activeNav) activeNav.className = "px-3 py-2 rounded-md bg-slate-800 text-white font-semibold";
+
+      // Hide all section views
+      document.getElementById('tab-dashboard').classList.add('hidden');
+      document.getElementById('tab-solver').classList.add('hidden');
+      document.getElementById('tab-comparison').classList.add('hidden');
+      document.getElementById('tab-theory').classList.add('hidden');
+
+      if (tabId === 'dashboard') {
+        document.getElementById('tab-dashboard').classList.remove('hidden');
+      } else if (tabId === 'comparison') {
+        document.getElementById('tab-comparison').classList.remove('hidden');
+        renderKnapsackComparisonChart();
+      } else if (tabId === 'theory') {
+        document.getElementById('tab-theory').classList.remove('hidden');
+      } else {
+        // Algorithm Solvers (dijkstra, prim, kruskal, huffman, knapsack)
+        currentAlgorithm = tabId;
+        document.getElementById('tab-solver').classList.remove('hidden');
+        configureSolverUI();
+        recalculateAlgorithm();
+
+        // The canvas was hidden before this point, so it may have been
+        // initialized with width 0. Resize only after the solver is visible.
+        requestAnimationFrame(() => {
+          resizeCanvas();
+          requestAnimationFrame(resizeCanvas);
+        });
+      }
+    }
+
+    
+function configureVerificationUI() {
+  const label = document.querySelector('#verifyUserEdges')?.previousElementSibling;
+  const input = document.getElementById('verifyUserEdges');
+  if (!label || !input) return;
+  if (currentAlgorithm === 'dijkstra') {
+    label.textContent = 'Your Shortest Path:';
+    input.placeholder = 'e.g. A-B-C-D';
+  } else if (currentAlgorithm === 'prim' || currentAlgorithm === 'kruskal') {
+    label.textContent = 'Your Selected MST Edges (comma separated):';
+    input.placeholder = 'e.g. A-C, B-C, D-E';
+  } else if (currentAlgorithm === 'huffman') {
+    label.textContent = 'Your Huffman Codes (symbol:code):';
+    input.placeholder = 'e.g. A:110, B:111, C:00';
+  } else {
+    label.textContent = 'Your Item Fractions (item:fraction):';
+    input.placeholder = 'e.g. A:1, B:1, C:0.6667';
+  }
+}
+
+    function configureSolverUI() {
+      const title = document.getElementById('solverTitle');
+      const subtitle = document.getElementById('solverSubtitle');
+      const badge = document.getElementById('greedyBadge');
+
+      const graphBox = document.getElementById('graphInputContainer');
+      const huffmanBox = document.getElementById('huffmanInputContainer');
+      const knapsackBox = document.getElementById('knapsackInputContainer');
+      const targetBox = document.getElementById('targetSelectBox');
+
+      graphBox.classList.add('hidden');
+      huffmanBox.classList.add('hidden');
+      knapsackBox.classList.add('hidden');
+      targetBox.classList.add('hidden');
+      configureVerificationUI();
+      document.getElementById('directedWarning').classList.add('hidden');
+
+      if (currentAlgorithm === 'dijkstra') {
+        title.innerText = "Dijkstra's Shortest Path Algorithm";
+        subtitle.innerText = "Computes single-source shortest path trajectories with non-negative edge relaxation.";
+        badge.innerText = "Greedy Optimal";
+        badge.className = "px-2 py-0.5 text-xs font-bold rounded bg-emerald-100 text-emerald-800";
+        graphBox.classList.remove('hidden');
+        targetBox.classList.remove('hidden');
+      } else if (currentAlgorithm === 'prim') {
+        title.innerText = "Prim's Minimum Spanning Tree Algorithm";
+        subtitle.innerText = "Grows a continuous MST by extracting minimum-weight cut-crossing boundary edges.";
+        badge.innerText = "Greedy Optimal";
+        badge.className = "px-2 py-0.5 text-xs font-bold rounded bg-emerald-100 text-emerald-800";
+        graphBox.classList.remove('hidden');
+        if (isDirected) document.getElementById('directedWarning').classList.remove('hidden');
+      } else if (currentAlgorithm === 'kruskal') {
+        title.innerText = "Kruskal's Minimum Spanning Tree Algorithm";
+        subtitle.innerText = "Builds an MST forest using globally sorted edges and Disjoint Set Union cycle detection.";
+        badge.innerText = "Greedy Optimal";
+        badge.className = "px-2 py-0.5 text-xs font-bold rounded bg-emerald-100 text-emerald-800";
+        graphBox.classList.remove('hidden');
+        if (isDirected) document.getElementById('directedWarning').classList.remove('hidden');
+      } else if (currentAlgorithm === 'huffman') {
+        title.innerText = "Huffman Optimal Prefix Coding";
+        subtitle.innerText = "Builds a variable-length binary encoding tree using min-priority frequency merging.";
+        badge.innerText = "Greedy Optimal";
+        badge.className = "px-2 py-0.5 text-xs font-bold rounded bg-emerald-100 text-emerald-800";
+        huffmanBox.classList.remove('hidden');
+      } else if (currentAlgorithm === 'knapsack') {
+        title.innerText = "Fractional Knapsack (Greedy Paradigm)";
+        subtitle.innerText = "Maximizes profit using value density ratios (p/w) for continuously divisible items.";
+        badge.innerText = "Fractional Only (0/1 Requires DP)";
+        badge.className = "px-2 py-0.5 text-xs font-bold rounded bg-amber-100 text-amber-800";
+        knapsackBox.classList.remove('hidden');
+      }
+    }
+
+    function setGraphType(directed) {
+      isDirected = directed;
+      document.getElementById('typeUndirected').className = !directed ? "px-2 py-1 rounded font-semibold bg-white text-slate-800 shadow-sm" : "px-2 py-1 rounded font-semibold text-slate-500";
+      document.getElementById('typeDirected').className = directed ? "px-2 py-1 rounded font-semibold bg-white text-slate-800 shadow-sm" : "px-2 py-1 rounded font-semibold text-slate-500";
+      
+      if ((currentAlgorithm === 'prim' || currentAlgorithm === 'kruskal') && isDirected) {
+        document.getElementById('directedWarning').classList.remove('hidden');
+      } else {
+        document.getElementById('directedWarning').classList.add('hidden');
+      }
+      recalculateAlgorithm();
+    }
+
+    function switchInputMethod(method) {
+      document.getElementById('viewInputMatrix').classList.add('hidden');
+      document.getElementById('viewInputList').classList.add('hidden');
+      document.getElementById('viewInputCanvas').classList.add('hidden');
+
+      document.getElementById('tabInputMatrix').className = "px-3 py-2 text-slate-500 hover:text-slate-800";
+      document.getElementById('tabInputList').className = "px-3 py-2 text-slate-500 hover:text-slate-800";
+      document.getElementById('tabInputCanvas').className = "px-3 py-2 text-slate-500 hover:text-slate-800";
+
+      if (method === 'matrix') {
+        document.getElementById('viewInputMatrix').classList.remove('hidden');
+        document.getElementById('tabInputMatrix').className = "px-3 py-2 border-b-2 border-blue-600 text-blue-600 font-bold";
+      } else if (method === 'list') {
+        document.getElementById('viewInputList').classList.remove('hidden');
+        document.getElementById('tabInputList').className = "px-3 py-2 border-b-2 border-blue-600 text-blue-600 font-bold";
+      } else {
+        document.getElementById('viewInputCanvas').classList.remove('hidden');
+        document.getElementById('tabInputCanvas').className = "px-3 py-2 border-b-2 border-blue-600 text-blue-600 font-bold";
+      }
+    }
+
+
+    // =========================================================================
+    // FINAL ANSWER / OPTIMAL PATH DISPLAY
+    // =========================================================================
+    function updateFinalAnswerPanel() {
+      const box = document.getElementById('finalAnswerContent');
+      if (!box) return;
+
+      if (!solverSolved) {
+        box.innerHTML = `
+          <div class="font-bold text-slate-700 mb-1">Ready for Solving</div>
+          <div class="text-slate-500 leading-relaxed">Enter or modify the problem data, then click <strong>🧠 Solve</strong>. The final answer and step-by-step simulation will appear after solving.</div>
+        `;
+        return;
+      }
+
+      const finalFrame = stepFrames.length ? stepFrames[stepFrames.length - 1] : null;
+      const finalMetric = finalFrame && Number.isFinite(finalFrame.totalCost)
+        ? finalFrame.totalCost.toFixed(2)
+        : '—';
+
+      let title = 'Final Result';
+      let detail = '';
+
+      if (currentAlgorithm === 'dijkstra') {
+        title = "Dijkstra — Shortest Path";
+        const target = document.getElementById('selectTarget')?.value || 'ALL';
+        const source = document.getElementById('selectSource')?.value || graphData.vertices[0];
+        if (target !== 'ALL') {
+          const path = [];
+          const seen = new Set();
+          let cur = target;
+          while (cur && !seen.has(cur)) {
+            seen.add(cur);
+            path.unshift(cur);
+            if (cur === source) break;
+            cur = finalFrame?.prev?.[cur] || null;
+          }
+          const pathText = path[0] === source ? path.join(' → ') : 'Unreachable';
+          detail = `Optimal path ${source} → ${target}: <strong>${pathText}</strong>. Final shortest-path cost = <strong>${finalMetric}</strong>.`;
+        } else {
+          detail = `All reachable shortest paths finalized. The green highlighted routes show the shortest-path tree.`;
+        }
+      } else if (currentAlgorithm === 'prim') {
+        title = "Prim — Minimum Spanning Tree";
+        const edges = (finalFrame?.mstEdges || []).map(e => `${e.src} — ${e.dst}`).join(', ');
+        detail = `Selected MST edges: <strong>${edges || 'None'}</strong>. Final total weight = <strong>${finalMetric}</strong>.`;
+      } else if (currentAlgorithm === 'kruskal') {
+        title = "Kruskal — Minimum Spanning Tree";
+        const edges = (finalFrame?.mstEdges || []).map(e => `${e.src} — ${e.dst}`).join(', ');
+        detail = `Accepted MST edges: <strong>${edges || 'None'}</strong>. Final total weight = <strong>${finalMetric}</strong>.`;
+      } else if (currentAlgorithm === 'huffman') {
+        title = "Huffman — Optimal Prefix Code";
+        const codes = finalFrame?.codes || {};
+        const codeText = Object.entries(codes).map(([k,v]) => `${k}:${v}`).join(', ');
+        detail = `Final weighted merge cost = <strong>${finalMetric}</strong>. Codes: <strong>${codeText || '—'}</strong>.`;
+      } else if (currentAlgorithm === 'knapsack') {
+        title = "Fractional Knapsack — Final Selection";
+        const allocations = finalFrame?.allocations || [];
+        const allocText = allocations.map(a => `${a.id}:${(Number(a.fraction)*100).toFixed(2)}%`).join(', ');
+        detail = `Selected fractions: <strong>${allocText || 'None'}</strong>. Maximum profit = <strong>${finalMetric}</strong>.`;
+      }
+
+      box.innerHTML = `
+        <div class="font-bold text-emerald-800 mb-1">${title}</div>
+        <div class="text-slate-700 leading-relaxed">${detail}</div>
+      `;
+    }
+
+    // =========================================================================
+    // GRAPH & INPUT INGESTION HANDLERS
+    // =========================================================================
+    function renderMatrixInput() {
+      const table = document.getElementById('matrixTable');
+      const v = graphData.vertices;
+      let html = '<tr class="bg-slate-200 text-slate-700 font-bold"><th class="p-1 border"></th>';
+      v.forEach(vert => { html += `<th class="p-1 border">${vert}</th>`; });
+      html += '</tr>';
+
+      v.forEach((rowV, i) => {
+        html += `<tr><th class="p-1 border bg-slate-200 font-bold">${rowV}</th>`;
+        v.forEach((colV, j) => {
+          if (i === j) {
+            html += `<td class="p-1 border bg-slate-100 text-slate-400">0</td>`;
+          } else {
+            const edge = graphData.edges.find(e => 
+              (e.src === rowV && e.dst === colV) || (!isDirected && e.src === colV && e.dst === rowV)
+            );
+            const val = edge ? edge.weight : '∞';
+            html += `<td class="p-0 border"><input value="${val}" onchange="updateMatrixCell('${rowV}', '${colV}', this.value)" class="w-10 text-center py-1 bg-white hover:bg-blue-50 focus:bg-blue-100 outline-none"></td>`;
+          }
+        });
+        html += '</tr>';
+      });
+      table.innerHTML = html;
+    }
+
+    function updateMatrixCell(src, dst, val) {
+      const w = parseInt(val);
+      graphData.edges = graphData.edges.filter(e => !(e.src === src && e.dst === dst) && !(!isDirected && e.src === dst && e.dst === src));
+      if (!isNaN(w) && Number.isFinite(w)) {
+        graphData.edges.push({ src, dst, weight: w });
+      }
+      renderEdgeListInput();
+      recalculateAlgorithm();
+    }
+
+    function addMatrixVertex() {
+      const charCode = 65 + graphData.vertices.length;
+      if (charCode > 90) return;
+      const label = String.fromCharCode(charCode);
+      graphData.vertices.push(label);
+      
+      // Assign default position in layout ring
+      const angle = (graphData.vertices.length - 1) * (2 * Math.PI / 6);
+      graphData.nodesPos[label] = {
+        x: Math.round(280 + 160 * Math.cos(angle)),
+        y: Math.round(190 + 120 * Math.sin(angle))
+      };
+
+      renderMatrixInput();
+      renderEdgeListInput();
+      updateSourceTargetSelectors();
+      recalculateAlgorithm();
+    }
+
+    function removeMatrixVertex() {
+      if (graphData.vertices.length <= 2) return;
+      const removed = graphData.vertices.pop();
+      delete graphData.nodesPos[removed];
+      graphData.edges = graphData.edges.filter(e => e.src !== removed && e.dst !== removed);
+      renderMatrixInput();
+      renderEdgeListInput();
+      updateSourceTargetSelectors();
+      recalculateAlgorithm();
+    }
+
+    function renderEdgeListInput() {
+      const container = document.getElementById('edgeListDisplay');
+      if (graphData.edges.length === 0) {
+        container.innerHTML = `<p class="text-slate-400 italic">No edges defined.</p>`;
+        return;
+      }
+      let html = '';
+      graphData.edges.forEach((e, idx) => {
+        const arrow = isDirected ? '→' : '—';
+        html += `
+          <div class="flex justify-between items-center bg-white p-1.5 rounded border">
+            <span class="font-mono font-bold text-slate-800">${e.src} ${arrow} ${e.dst} : ${e.weight}</span>
+            <button onclick="deleteEdgeByIndex(${idx})" class="text-rose-500 font-bold hover:text-rose-700 px-1">&times;</button>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function addEdgeFromInputs() {
+      const src = document.getElementById('inputEdgeSrc').value.trim().toUpperCase();
+      const dst = document.getElementById('inputEdgeDst').value.trim().toUpperCase();
+      const w = parseInt(document.getElementById('inputEdgeW').value);
+
+      if (!graphData.vertices.includes(src) || !graphData.vertices.includes(dst) || isNaN(w)) {
+        showAlert('Invalid Edge Parameters', 'Please ensure vertices exist and weight is numeric.');
+        return;
+      }
+
+      graphData.edges = graphData.edges.filter(e => !(e.src === src && e.dst === dst));
+      graphData.edges.push({ src, dst, weight: w });
+      renderMatrixInput();
+      renderEdgeListInput();
+      recalculateAlgorithm();
+    }
+
+    function deleteEdgeByIndex(idx) {
+      graphData.edges.splice(idx, 1);
+      renderMatrixInput();
+      renderEdgeListInput();
+      recalculateAlgorithm();
+    }
+
+    function updateSourceTargetSelectors() {
+      const srcSelect = document.getElementById('selectSource');
+      const dstSelect = document.getElementById('selectTarget');
+      const currSrc = srcSelect.value || graphData.vertices[0];
+      const currDst = dstSelect.value || 'ALL';
+
+      srcSelect.innerHTML = graphData.vertices.map(v => `<option value="${v}">${v}</option>`).join('');
+      dstSelect.innerHTML = `<option value="ALL">All Destinations</option>` + graphData.vertices.map(v => `<option value="${v}">${v}</option>`).join('');
+
+      srcSelect.value = graphData.vertices.includes(currSrc) ? currSrc : graphData.vertices[0];
+      dstSelect.value = currDst;
+    }
+
+    // =========================================================================
+    // HUFFMAN & KNAPSACK INPUT HANDLERS
+    // =========================================================================
+    function renderHuffmanInputs() {
+      const box = document.getElementById('huffmanRows');
+      let html = '';
+      huffmanData.forEach((d, idx) => {
+        html += `
+          <div class="flex space-x-2 text-xs">
+            <input value="${d.char}" onchange="huffmanData[${idx}].char = this.value.trim().toUpperCase(); recalculateAlgorithm();" class="w-1/2 p-1.5 border rounded font-bold uppercase text-center">
+            <input type="number" value="${d.freq}" min="1" onchange="huffmanData[${idx}].freq = parseFloat(this.value); recalculateAlgorithm();" class="w-1/2 p-1.5 border rounded font-bold text-center">
+            <button onclick="huffmanData.splice(${idx},1); renderHuffmanInputs(); recalculateAlgorithm();" class="text-rose-500 font-bold px-2">&times;</button>
+          </div>
+        `;
+      });
+      box.innerHTML = html;
+    }
+
+    function addHuffmanRow() {
+      const charCode = 65 + huffmanData.length;
+      huffmanData.push({ char: String.fromCharCode(charCode), freq: 10 });
+      renderHuffmanInputs();
+      recalculateAlgorithm();
+    }
+
+    function renderKnapsackInputs() {
+      const box = document.getElementById('knapsackRows');
+      let html = '';
+      knapsackData.items.forEach((item, idx) => {
+        html += `
+          <div class="flex space-x-2 text-xs items-center">
+            <span class="font-bold text-slate-700 w-6">${item.id}:</span>
+            <input type="number" placeholder="Profit" value="${item.profit}" onchange="knapsackData.items[${idx}].profit = parseFloat(this.value); recalculateAlgorithm();" class="w-1/3 p-1.5 border rounded text-center">
+            <input type="number" placeholder="Weight" value="${item.weight}" min="0.000001" onchange="knapsackData.items[${idx}].weight = parseFloat(this.value); recalculateAlgorithm();" class="w-1/3 p-1.5 border rounded text-center">
+            <button onclick="knapsackData.items.splice(${idx},1); renderKnapsackInputs(); recalculateAlgorithm();" class="text-rose-500 font-bold px-2">&times;</button>
+          </div>
+        `;
+      });
+      box.innerHTML = html;
+    }
+
+    function addKnapsackRow() {
+      const charCode = 65 + knapsackData.items.length;
+      knapsackData.items.push({ id: String.fromCharCode(charCode), profit: 50, weight: 15 });
+      renderKnapsackInputs();
+      recalculateAlgorithm();
+    }
+
+    // =========================================================================
+    // INTERACTIVE CANVAS EDITING ENGINE
+    // =========================================================================
+    function setupCanvasInteractions() {
+      if (!canvas) return;
+
+      canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Check if node clicked
+        const clickedVert = graphData.vertices.find(v => {
+          const pos = graphData.nodesPos[v];
+          if (!pos) return false;
+          const dist = Math.hypot(pos.x - mouseX, pos.y - mouseY);
+          return dist <= 22;
+        });
+
+        if (clickedVert) {
+          if (selectedCanvasNode && selectedCanvasNode !== clickedVert) {
+            // Connect nodes
+            const wStr = prompt(`Enter edge weight between ${selectedCanvasNode} and ${clickedVert}:`, "5");
+            const w = parseInt(wStr);
+            if (!isNaN(w) && Number.isFinite(w)) {
+              graphData.edges = graphData.edges.filter(e =>
+                !(e.src === selectedCanvasNode && e.dst === clickedVert) &&
+                !(!isDirected && e.src === clickedVert && e.dst === selectedCanvasNode)
+              );
+              graphData.edges.push({ src: selectedCanvasNode, dst: clickedVert, weight: w });
+              renderMatrixInput();
+              renderEdgeListInput();
+              recalculateAlgorithm();
+            }
+            selectedCanvasNode = null;
+          } else {
+            selectedCanvasNode = clickedVert;
+            draggingNode = clickedVert;
+          }
+        } else {
+          // Clicked empty space -> create new node if in visual editor tab
+          const activeEditorTab = document.getElementById('viewInputCanvas');
+          if (activeEditorTab && !activeEditorTab.classList.contains('hidden')) {
+            const charCode = 65 + graphData.vertices.length;
+            if (charCode <= 90) {
+              const label = String.fromCharCode(charCode);
+              graphData.vertices.push(label);
+              graphData.nodesPos[label] = { x: Math.round(mouseX), y: Math.round(mouseY) };
+              renderMatrixInput();
+              renderEdgeListInput();
+              updateSourceTargetSelectors();
+              recalculateAlgorithm();
+            }
+          }
+          selectedCanvasNode = null;
+        }
+        drawCurrentFrame();
+      });
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (draggingNode) {
+          const rect = canvas.getBoundingClientRect();
+          graphData.nodesPos[draggingNode].x = Math.round(e.clientX - rect.left);
+          graphData.nodesPos[draggingNode].y = Math.round(e.clientY - rect.top);
+          drawCurrentFrame();
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        draggingNode = null;
+      });
+
+      canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Delete a node and all incident edges.
+        const clickedVert = graphData.vertices.find(v => {
+          const pos = graphData.nodesPos[v];
+          return pos && Math.hypot(pos.x - mouseX, pos.y - mouseY) <= 22;
+        });
+
+        if (clickedVert && graphData.vertices.length > 2) {
+          graphData.vertices = graphData.vertices.filter(v => v !== clickedVert);
+          delete graphData.nodesPos[clickedVert];
+          graphData.edges = graphData.edges.filter(e => e.src !== clickedVert && e.dst !== clickedVert);
+          if (selectedCanvasNode === clickedVert) selectedCanvasNode = null;
+          renderMatrixInput();
+          renderEdgeListInput();
+          updateSourceTargetSelectors();
+          recalculateAlgorithm();
+          return;
+        }
+
+        // Otherwise delete the nearest edge to the right-click location.
+        let bestIndex = -1;
+        let bestDistance = 10;
+        graphData.edges.forEach((edge, index) => {
+          const a = graphData.nodesPos[edge.src];
+          const b = graphData.nodesPos[edge.dst];
+          if (!a || !b) return;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const len2 = dx * dx + dy * dy || 1;
+          const t = Math.max(0, Math.min(1, ((mouseX - a.x) * dx + (mouseY - a.y) * dy) / len2));
+          const px = a.x + t * dx;
+          const py = a.y + t * dy;
+          const distance = Math.hypot(mouseX - px, mouseY - py);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestIndex = index;
+          }
+        });
+
+        if (bestIndex >= 0) {
+          graphData.edges.splice(bestIndex, 1);
+          renderMatrixInput();
+          renderEdgeListInput();
+          recalculateAlgorithm();
+        }
+      });
+    }
+
+    function clearGraphCanvas() {
+      graphData.vertices = ['A', 'B'];
+      graphData.edges = [];
+      graphData.nodesPos = {
+        'A': { x: 150, y: 190 },
+        'B': { x: 350, y: 190 }
+      };
+      renderMatrixInput();
+      renderEdgeListInput();
+      updateSourceTargetSelectors();
+      recalculateAlgorithm();
+    }
+
+    // =========================================================================
+    // ALGORITHM CORE SOLVER ENGINES & STEP GENERATORS
+    // =========================================================================
+    function solveCurrentProblem() {
+      stopPlay();
+      // Rebuild from the latest inputs, then unlock the synchronized playback controls.
+      recalculateAlgorithm();
+      solverSolved = true;
+      currentFrameIdx = 0;
+      updatePlaybackUI();
+      updateFinalAnswerPanel();
+      requestAnimationFrame(resizeCanvas);
+    }
+
+    function recalculateAlgorithm() {
+      stopPlay();
+      stepFrames = [];
+
+      if (currentAlgorithm === 'dijkstra') {
+        const hasNeg = graphData.edges.some(e => !Number.isFinite(e.weight) || e.weight < 0);
+        if (hasNeg) {
+          showAlert('Invalid Dijkstra Input', 'Dijkstra requires finite, non-negative edge weights. Correct the graph before running it.');
+          stepFrames.push({
+            phase: 'Invalid Input',
+            description: 'Dijkstra was not executed because at least one edge has a negative or non-finite weight.',
+            rationale: 'Dijkstra is correct only for graphs with non-negative edge weights.',
+            highlights: { nodes: {}, edges: {} },
+            dist: Object.fromEntries(graphData.vertices.map(v => [v, Infinity])),
+            prev: Object.fromEntries(graphData.vertices.map(v => [v, null])),
+            visited: new Set(),
+            extracted: null,
+            totalCost: NaN,
+            invalid: true
+          });
+        } else {
+          generateDijkstraSteps();
+        }
+      } else if (currentAlgorithm === 'prim' || currentAlgorithm === 'kruskal') {
+        if (isDirected) {
+          showAlert('Invalid MST Input', `${currentAlgorithm === 'prim' ? "Prim's" : "Kruskal's"} MST requires an undirected graph. Switch to Undirected mode.`);
+          stepFrames.push({
+            phase: 'Invalid Input',
+            description: 'MST algorithms were not executed because the graph is directed.',
+            rationale: 'A standard minimum spanning tree is defined for an undirected weighted graph.',
+            highlights: { nodes: {}, edges: {} },
+            mstEdges: [],
+            totalCost: NaN,
+            invalid: true
+          });
+        } else if (currentAlgorithm === 'prim') {
+          generatePrimSteps();
+        } else {
+          generateKruskalSteps();
+        }
+      } else if (currentAlgorithm === 'huffman') {
+        generateHuffmanSteps();
+      } else if (currentAlgorithm === 'knapsack') {
+        generateKnapsackSteps();
+      }
+
+      currentFrameIdx = 0;
+      solverSolved = false;
+      updatePlaybackUI();
+
+      // Keep the diagram synchronized with every input change.
+      requestAnimationFrame(resizeCanvas);
+      renderComplexityInfo();
+      updateFinalAnswerPanel();
+    }
+
+    // -------------------------------------------------------------------------
+    // 1. DIJKSTRA STEP GENERATOR
+    // -------------------------------------------------------------------------
+    function generateDijkstraSteps() {
+      const src = document.getElementById('selectSource').value || graphData.vertices[0];
+      const dist = {};
+      const prev = {};
+      const visited = new Set();
+
+      graphData.vertices.forEach(v => {
+        dist[v] = Infinity;
+        prev[v] = null;
+      });
+      dist[src] = 0;
+
+      // Frame 0: Initialization
+      stepFrames.push({
+        phase: 'Initialization',
+        description: `Set source vertex ${src} distance to 0, and all other vertices to ∞.`,
+        rationale: 'Dijkstra initializes tentative distances before greedy relaxation.',
+        highlights: { nodes: { [src]: 'processing' }, edges: {} },
+        dist: { ...dist },
+        prev: { ...prev },
+        visited: new Set(visited),
+        extracted: null,
+        totalCost: 0
+      });
+
+      while (visited.size < graphData.vertices.length) {
+        // Extract unvisited node with minimum tentative distance
+        let u = null;
+        let minD = Infinity;
+        graphData.vertices.forEach(v => {
+          if (!visited.has(v) && dist[v] < minD) {
+            minD = dist[v];
+            u = v;
+          }
+        });
+
+        if (u === null || dist[u] === Infinity) break;
+
+        visited.add(u);
+
+        const nodeStates = {};
+        graphData.vertices.forEach(v => {
+          if (visited.has(v)) nodeStates[v] = 'finalized';
+          else if (dist[v] < Infinity) nodeStates[v] = 'candidate';
+          else nodeStates[v] = 'unvisited';
+        });
+        nodeStates[u] = 'processing';
+
+        stepFrames.push({
+          phase: `Extract Minimum Vertex (${u})`,
+          description: `Selected unvisited vertex ${u} with minimum tentative distance d[${u}] = ${dist[u]}.`,
+          rationale: `Greedy Choice: Permanently finalize ${u} as no non-negative edge relaxation can produce a shorter path.`,
+          highlights: { nodes: nodeStates, edges: getPathEdges(prev) },
+          dist: { ...dist },
+          prev: { ...prev },
+          visited: new Set(visited),
+          extracted: u,
+          totalCost: dist[u]
+        });
+
+        // Relax outgoing edges
+        const neighborEdges = graphData.edges.filter(e => 
+          e.src === u || (!isDirected && e.dst === u)
+        );
+
+        neighborEdges.forEach(edge => {
+          const v = (edge.src === u) ? edge.dst : edge.src;
+          if (!visited.has(v)) {
+            const alt = dist[u] + edge.weight;
+            const updated = alt < dist[v];
+            
+            const calcDesc = updated ? 
+              `Relaxed ${u}→${v}: min(${dist[v] === Infinity ? '∞' : dist[v]}, ${dist[u]} + ${edge.weight}) = ${alt}. Updated!` : 
+              `Checked ${u}→${v}: ${dist[u]} + ${edge.weight} = ${alt} ≥ d[${v}] (${dist[v]}). No change.`;
+
+            if (updated) {
+              dist[v] = alt;
+              prev[v] = u;
+            }
+
+            const currentEdges = getPathEdges(prev);
+            currentEdges[`${edge.src}-${edge.dst}`] = updated ? 'candidate' : 'rejected';
+
+            stepFrames.push({
+              phase: `Relax Edge (${u} → ${v})`,
+              description: calcDesc,
+              rationale: 'Edge Relaxation: d[v] = min(d[v], d[u] + w(u,v)).',
+              highlights: { nodes: { ...nodeStates, [v]: updated ? 'candidate' : nodeStates[v] }, edges: currentEdges },
+              dist: { ...dist },
+              prev: { ...prev },
+              visited: new Set(visited),
+              extracted: u,
+              totalCost: dist[u]
+            });
+          }
+        });
+      }
+
+      // Final Frame
+      const finalNodes = {};
+      graphData.vertices.forEach(v => finalNodes[v] = visited.has(v) ? 'finalized' : 'unvisited');
+      const target = document.getElementById('selectTarget')?.value || 'ALL';
+      const verificationCost = target !== 'ALL' && Number.isFinite(dist[target]) ? dist[target] : NaN;
+      stepFrames.push({
+        phase: 'Shortest Paths Finalized',
+        description: target !== 'ALL'
+          ? `Shortest paths finalized. Selected target ${target} has distance ${Number.isFinite(dist[target]) ? dist[target] : '∞'}.`
+          : 'All reachable vertices have been processed. Select a target vertex to verify a specific shortest-path cost.',
+        rationale: 'Dijkstra execution finished.',
+        highlights: { nodes: finalNodes, edges: getPathEdges(prev) },
+        dist: { ...dist },
+        prev: { ...prev },
+        visited: new Set(visited),
+        extracted: null,
+        totalCost: verificationCost
+      });
+    }
+
+    function getPathEdges(prev) {
+      const edges = {};
+      Object.keys(prev).forEach(v => {
+        const u = prev[v];
+        if (u) {
+          edges[`${u}-${v}`] = 'selected';
+          edges[`${v}-${u}`] = 'selected';
+        }
+      });
+      return edges;
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. PRIM'S MST STEP GENERATOR
+    // -------------------------------------------------------------------------
+    function generatePrimSteps() {
+      const startV = document.getElementById('selectSource').value || graphData.vertices[0];
+      const mstVertices = new Set([startV]);
+      const mstEdges = [];
+      let totalWeight = 0;
+
+      stepFrames.push({
+        phase: 'Initialization',
+        description: `Start Prim's algorithm at root vertex ${startV}. MST vertex set V_T = {${startV}}.`,
+        rationale: 'Prim grows a single connected tree component from an arbitrary initial vertex.',
+        highlights: { nodes: { [startV]: 'finalized' }, edges: {} },
+        mstEdges: [...mstEdges],
+        mstVertices: new Set(mstVertices),
+        totalCost: 0
+      });
+
+      while (mstVertices.size < graphData.vertices.length) {
+        // Find cut-crossing candidate edges
+        let bestEdge = null;
+        let minW = Infinity;
+
+        graphData.edges.forEach(e => {
+          const srcIn = mstVertices.has(e.src);
+          const dstIn = mstVertices.has(e.dst);
+
+          if ((srcIn && !dstIn) || (!isDirected && dstIn && !srcIn)) {
+            if (e.weight < minW) {
+              minW = e.weight;
+              bestEdge = e;
+            }
+          }
+        });
+
+        if (!bestEdge) break; // Disconnected graph
+
+        const nextV = mstVertices.has(bestEdge.src) ? bestEdge.dst : bestEdge.src;
+        mstVertices.add(nextV);
+        mstEdges.push(bestEdge);
+        totalWeight += bestEdge.weight;
+
+        const nodeStates = {};
+        graphData.vertices.forEach(v => {
+          nodeStates[v] = mstVertices.has(v) ? 'finalized' : 'unvisited';
+        });
+
+        const edgeHighlights = {};
+        mstEdges.forEach(e => {
+          edgeHighlights[`${e.src}-${e.dst}`] = 'selected';
+          edgeHighlights[`${e.dst}-${e.src}`] = 'selected';
+        });
+
+        stepFrames.push({
+          phase: `Add Edge (${bestEdge.src} — ${bestEdge.dst})`,
+          description: `Selected minimum crossing edge (${bestEdge.src}—${bestEdge.dst}) with weight ${bestEdge.weight}. Added ${nextV} to MST.`,
+          rationale: 'Cut Property: Minimum-weight cut-crossing edge must belong to the MST.',
+          highlights: { nodes: nodeStates, edges: edgeHighlights },
+          mstEdges: [...mstEdges],
+          mstVertices: new Set(mstVertices),
+          totalCost: totalWeight
+        });
+      }
+
+      if (mstVertices.size < graphData.vertices.length) {
+        stepFrames.push({
+          phase: 'Graph Disconnected',
+          description: `Prim could not reach all ${graphData.vertices.length} vertices from root ${startV}. The graph has no spanning tree.`,
+          rationale: 'A minimum spanning tree exists only when the undirected graph is connected.',
+          highlights: { nodes: Object.fromEntries(graphData.vertices.map(v => [v, mstVertices.has(v) ? 'finalized' : 'unvisited'])), edges: {} },
+          mstEdges: [...mstEdges],
+          mstVertices: new Set(mstVertices),
+          totalCost: NaN,
+          invalid: true
+        });
+      } else {
+        stepFrames.push({
+          phase: 'MST Finalized',
+          description: `Minimum spanning tree contains ${mstEdges.length} edges with total weight ${totalWeight}.`,
+          rationale: 'Prim has connected all vertices using minimum cut-crossing edges.',
+          highlights: { nodes: Object.fromEntries(graphData.vertices.map(v => [v, 'finalized'])), edges: Object.fromEntries(mstEdges.flatMap(e => [[`${e.src}-${e.dst}`,'selected'],[`${e.dst}-${e.src}`,'selected']])) },
+          mstEdges: [...mstEdges],
+          mstVertices: new Set(mstVertices),
+          totalCost: totalWeight
+        });
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. KRUSKAL'S MST STEP GENERATOR
+    // -------------------------------------------------------------------------
+    function generateKruskalSteps() {
+      const sortedEdges = [...graphData.edges].sort((a, b) => a.weight - b.weight);
+      const parent = {};
+      graphData.vertices.forEach(v => parent[v] = v);
+
+      function find(i) {
+        if (parent[i] === i) return i;
+        return parent[i] = find(parent[i]);
+      }
+
+      function union(i, j) {
+        const rootI = find(i);
+        const rootJ = find(j);
+        if (rootI !== rootJ) {
+          parent[rootI] = rootJ;
+          return true;
+        }
+        return false;
+      }
+
+      const mstEdges = [];
+      let totalWeight = 0;
+
+      stepFrames.push({
+        phase: 'Sort Edges Globally',
+        description: `Sorted all ${sortedEdges.length} edges in non-decreasing order of weight.`,
+        rationale: 'Kruskal operates globally on sorted edges across disconnected forest components.',
+        highlights: { nodes: {}, edges: {} },
+        sortedEdges,
+        mstEdges: [...mstEdges],
+        totalCost: 0
+      });
+
+      sortedEdges.forEach((e, idx) => {
+        const rootSrc = find(e.src);
+        const rootDst = find(e.dst);
+        const createsCycle = (rootSrc === rootDst);
+
+        const edgeHighlights = {};
+        mstEdges.forEach(me => {
+          edgeHighlights[`${me.src}-${me.dst}`] = 'selected';
+          edgeHighlights[`${me.dst}-${me.src}`] = 'selected';
+        });
+
+        if (!createsCycle) {
+          union(e.src, e.dst);
+          mstEdges.push(e);
+          totalWeight += e.weight;
+          edgeHighlights[`${e.src}-${e.dst}`] = 'selected';
+          edgeHighlights[`${e.dst}-${e.src}`] = 'selected';
+
+          stepFrames.push({
+            phase: `Step ${idx + 1}: Include Edge (${e.src} — ${e.dst})`,
+            description: `Edge (${e.src}—${e.dst}) weight ${e.weight} connects distinct components. Accepted!`,
+            rationale: 'DSU Check: find(src) ≠ find(dst). No cycle created.',
+            highlights: { nodes: {}, edges: edgeHighlights },
+            sortedEdges,
+            mstEdges: [...mstEdges],
+            totalCost: totalWeight
+          });
+        } else {
+          edgeHighlights[`${e.src}-${e.dst}`] = 'rejected';
+          edgeHighlights[`${e.dst}-${e.src}`] = 'rejected';
+
+          stepFrames.push({
+            phase: `Step ${idx + 1}: Reject Edge (${e.src} — ${e.dst})`,
+            description: `Edge (${e.src}—${e.dst}) weight ${e.weight} creates a cycle! Rejected.`,
+            rationale: 'Cycle Detection: find(src) == find(dst). Adding edge violates tree properties.',
+            highlights: { nodes: {}, edges: edgeHighlights },
+            sortedEdges,
+            mstEdges: [...mstEdges],
+            totalCost: totalWeight
+          });
+        }
+      });
+
+      if (mstEdges.length === graphData.vertices.length - 1) {
+        stepFrames.push({
+          phase: 'MST Finalized',
+          description: `Minimum spanning tree contains ${mstEdges.length} edges with total weight ${totalWeight}.`,
+          rationale: 'Kruskal has connected all vertices using the lightest cycle-safe edges.',
+          highlights: {
+            nodes: Object.fromEntries(graphData.vertices.map(v => [v, 'finalized'])),
+            edges: Object.fromEntries(mstEdges.flatMap(e => [[`${e.src}-${e.dst}`,'selected'],[`${e.dst}-${e.src}`,'selected']]))
+          },
+          sortedEdges,
+          mstEdges: [...mstEdges],
+          totalCost: totalWeight
+        });
+      } else {
+        stepFrames.push({
+          phase: 'Graph Disconnected',
+          description: `Only ${mstEdges.length} edges were selected for ${graphData.vertices.length} vertices. No spanning tree exists.`,
+          rationale: 'A spanning tree requires exactly |V|-1 edges and connectivity.',
+          highlights: { nodes: {}, edges: {} },
+          sortedEdges,
+          mstEdges: [...mstEdges],
+          totalCost: NaN,
+          invalid: true
+        });
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. HUFFMAN CODING STEP GENERATOR
+    // -------------------------------------------------------------------------
+    function generateHuffmanSteps() {
+      const data = huffmanData.map(d => ({ char: String(d.char || '').trim(), freq: Number(d.freq) }));
+      const seen = new Set();
+      const invalid = data.length === 0 ||
+        data.some(d => !d.char || !Number.isFinite(d.freq) || d.freq <= 0 ||
+          (seen.has(d.char) ? true : (seen.add(d.char), false)));
+      if (invalid) {
+        showAlert('Invalid Huffman Input', 'Each symbol must be unique and every frequency must be a positive finite number.');
+        stepFrames.push({
+          phase: 'Invalid Input',
+          description: 'Huffman coding requires unique symbols with positive frequencies.',
+          rationale: 'A valid frequency distribution is required to build the prefix tree.',
+          queue: [],
+          treeRoot: null,
+          codes: {},
+          totalCost: NaN,
+          invalid: true
+        });
+        return;
+      }
+
+      let nodes = data.map(d => ({ id: d.char, label: `${d.char}:${d.freq}`, freq: d.freq, left: null, right: null }));
+      let totalMergeCost = 0;
+
+      stepFrames.push({
+        phase: 'Priority Queue Initialized',
+        description: `Created ${nodes.length} leaf nodes in a min-priority queue sorted by frequency.`,
+        rationale: 'Huffman repeatedly combines the two least-frequent nodes.',
+        queue: [...nodes],
+        treeRoot: nodes.length === 1 ? nodes[0] : null,
+        totalCost: 0
+      });
+
+      while (nodes.length > 1) {
+        nodes.sort((a, b) => a.freq - b.freq);
+        const left = nodes.shift(), right = nodes.shift();
+        const mergeFreq = left.freq + right.freq;
+        totalMergeCost += mergeFreq;
+        const parentNode = {
+          id: `(${left.id}+${right.id})`,
+          label: `${mergeFreq}`,
+          freq: mergeFreq,
+          left, right
+        };
+        nodes.push(parentNode);
+        stepFrames.push({
+          phase: `Merge (${left.id}) & (${right.id})`,
+          description: `Extracted ${left.id}:${left.freq} and ${right.id}:${right.freq}. Combined frequency = ${mergeFreq}.`,
+          rationale: 'Greedy Choice: combining the two smallest frequencies minimizes weighted path length.',
+          queue: [...nodes],
+          treeRoot: parentNode,
+          totalCost: totalMergeCost
+        });
+      }
+
+      const root = nodes[0] || null;
+      const codes = {};
+      function buildCodes(node, currentCode) {
+        if (!node) return;
+        if (!node.left && !node.right) { codes[node.id] = currentCode || '0'; return; }
+        buildCodes(node.left, currentCode + '0');
+        buildCodes(node.right, currentCode + '1');
+      }
+      buildCodes(root, '');
+
+      const final = stepFrames[stepFrames.length - 1];
+      final.codes = codes;
+      final.treeRoot = root;
+      final.totalCost = totalMergeCost;
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. KNAPSACK STEP GENERATOR
+    // -------------------------------------------------------------------------
+    function generateKnapsackSteps() {
+      const capRaw = parseFloat(document.getElementById('knapsackCapacity').value);
+      const cap = Number.isFinite(capRaw) ? capRaw : 50;
+      const items = knapsackData.items.map(item => ({ ...item, profit: Number(item.profit), weight: Number(item.weight) }));
+      const invalid = cap < 0 || items.some(i => !Number.isFinite(i.profit) || !Number.isFinite(i.weight) || i.weight <= 0 || i.profit < 0);
+      if (invalid) {
+        showAlert('Invalid Knapsack Input', 'Capacity must be non-negative; each item must have a positive weight and non-negative profit.');
+        stepFrames.push({
+          phase: 'Invalid Input',
+          description: 'Fractional Knapsack was not executed because the capacity or an item value is invalid.',
+          rationale: 'Profit density p/w is defined only for positive weights.',
+          sortedItems: [],
+          allocations: [],
+          remainingCapacity: cap,
+          totalProfit: NaN,
+          totalCost: NaN,
+          invalid: true
+        });
+        return;
+      }
+
+      const sortedItems = items.map(item => ({ ...item, ratio: item.profit / item.weight })).sort((a, b) => b.ratio - a.ratio);
+      let currentWeight = 0, currentProfit = 0;
+      const allocations = [];
+
+      stepFrames.push({
+        phase: 'Value Density Sorting',
+        description: `Sorted items by descending profit-density ratio (p_i / w_i). Capacity W = ${cap}.`,
+        rationale: 'Greedy Choice: choose the highest profit per unit weight first.',
+        sortedItems, allocations: [...allocations], remainingCapacity: cap, totalProfit: 0, totalCost: 0
+      });
+
+      for (const item of sortedItems) {
+        if (currentWeight + item.weight <= cap + 1e-12) {
+          currentWeight += item.weight;
+          currentProfit += item.profit;
+          allocations.push({ id: item.id, weightTaken: item.weight, fraction: 1, profitEarned: item.profit });
+          stepFrames.push({
+            phase: `Include Complete Item ${item.id}`,
+            description: `Took 100% of Item ${item.id} (Weight: ${item.weight}, Profit: ${item.profit}).`,
+            rationale: 'The item fits completely and has the next-highest profit density.',
+            sortedItems, allocations: [...allocations], remainingCapacity: Math.max(0, cap-currentWeight),
+            totalProfit: currentProfit, totalCost: currentProfit
+          });
+        } else {
+          const remain = cap - currentWeight;
+          if (remain > 1e-12) {
+            const fraction = remain / item.weight;
+            const profitEarned = item.profit * fraction;
+            currentWeight += remain;
+            currentProfit += profitEarned;
+            allocations.push({ id: item.id, weightTaken: remain, fraction, profitEarned });
+          }
+          stepFrames.push({
+            phase: `Include Fractional Item ${item.id}`,
+            description: remain > 1e-12
+              ? `Took ${(remain/item.weight*100).toFixed(1)}% of Item ${item.id}.`
+              : `No remaining capacity for Item ${item.id}.`,
+            rationale: 'Fractional Knapsack permits taking the exact fraction needed to fill the remaining capacity.',
+            sortedItems, allocations: [...allocations], remainingCapacity: 0,
+            totalProfit: currentProfit, totalCost: currentProfit
+          });
+          break;
+        }
+      }
+
+      const final = stepFrames[stepFrames.length - 1];
+      final.totalProfit = currentProfit;
+      final.totalCost = currentProfit;
+    }
+
+    // =========================================================================
+    // CANVAS RENDERING ENGINE (NO SVG!)
+    // =========================================================================
+    function drawCurrentFrame() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!solverSolved) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Enter the problem, then click 🧠 Solve', canvas.width / 2, canvas.height / 2);
+        return;
+      }
+
+      const frame = stepFrames[currentFrameIdx] || {};
+      if (currentAlgorithm === 'huffman') {
+        drawHuffmanTreeCanvas(frame);
+      } else if (currentAlgorithm === 'knapsack') {
+        drawKnapsackBarCanvas(frame);
+      } else {
+        drawGraphCanvas(frame);
+      }
+    }
+
+    function drawGraphCanvas(frame) {
+      const highlights = frame.highlights || { nodes: {}, edges: {} };
+      const radius = 22;
+
+      // Group parallel/opposite edges so their geometry and labels never sit on top
+      // of one another. This is especially important for directed graphs.
+      const groups = new Map();
+      graphData.edges.forEach((e, idx) => {
+        const key = [e.src, e.dst].sort().join('|');
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push({ e, idx });
+      });
+
+      function edgeGeometry(e, laneIndex, laneCount) {
+        const p1 = graphData.nodesPos[e.src], p2 = graphData.nodesPos[e.dst];
+        const dx = p2.x - p1.x, dy = p2.y - p1.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len, uy = dy / len;
+        const nx = -uy, ny = ux;
+
+        // Single edges stay straight. Multiple edges get symmetric curved lanes.
+        const laneOffset = laneCount > 1 ? (laneIndex - (laneCount - 1) / 2) * 28 : 0;
+        const startX = p1.x + ux * radius;
+        const startY = p1.y + uy * radius;
+        const endX = p2.x - ux * radius;
+        const endY = p2.y - uy * radius;
+        const midX = (startX + endX) / 2 + nx * laneOffset;
+        const midY = (startY + endY) / 2 + ny * laneOffset;
+
+        return { startX, startY, endX, endY, midX, midY, nx, ny, ux, uy, laneOffset };
+      }
+
+      graphData.edges.forEach(e => {
+        const p1 = graphData.nodesPos[e.src], p2 = graphData.nodesPos[e.dst];
+        if (!p1 || !p2) return;
+
+        const groupKey = [e.src, e.dst].sort().join('|');
+        const group = groups.get(groupKey) || [];
+        const laneIndex = Math.max(0, group.findIndex(item => item.e === e));
+        const g = edgeGeometry(e, laneIndex, group.length);
+
+        const edgeKey1 = `${e.src}-${e.dst}`;
+        const edgeKey2 = `${e.dst}-${e.src}`;
+        const status = highlights.edges[edgeKey1] || highlights.edges[edgeKey2] || 'default';
+
+        ctx.beginPath();
+        ctx.moveTo(g.startX, g.startY);
+        if (group.length > 1) {
+          ctx.quadraticCurveTo(g.midX, g.midY, g.endX, g.endY);
+        } else {
+          ctx.lineTo(g.endX, g.endY);
+        }
+
+        if (status === 'selected') {
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 4;
+        } else if (status === 'candidate') {
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([6, 4]);
+        } else if (status === 'rejected') {
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+        } else {
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([]);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Protected edge-weight badge: never draw the number directly over the edge.
+        const labelX = g.midX + g.nx * 16;
+        const labelY = g.midY + g.ny * 16;
+        const label = String(e.weight);
+        ctx.font = 'bold 11px sans-serif';
+        const metrics = ctx.measureText(label);
+        const padX = 7, padY = 5;
+        const badgeW = metrics.width + padX * 2;
+        const badgeH = 18 + padY * 0.5;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(labelX - badgeW/2, labelY - badgeH/2, badgeW, badgeH, 7);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, labelX, labelY);
+
+        if (isDirected) {
+          drawArrowheadAtCurve(ctx, g.startX, g.startY, g.midX, g.midY, g.endX, g.endY);
+        }
+      });
+
+      // Draw nodes last so edges/arrowheads never cover the node circles.
+      graphData.vertices.forEach(v => {
+        const pos = graphData.nodesPos[v];
+        if (!pos) return;
+        const status = highlights.nodes[v] || 'unvisited';
+
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+        if (status === 'processing') ctx.fillStyle = '#3b82f6';
+        else if (status === 'finalized') ctx.fillStyle = '#10b981';
+        else if (status === 'candidate') ctx.fillStyle = '#f59e0b';
+        else ctx.fillStyle = '#1e293b';
+        ctx.fill();
+
+        ctx.strokeStyle = selectedCanvasNode === v ? '#ffffff' : '#64748b';
+        ctx.lineWidth = selectedCanvasNode === v ? 4 : 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(v, pos.x, pos.y);
+
+        if (currentAlgorithm === 'dijkstra' && frame.dist) {
+          const dVal = frame.dist[v] === Infinity ? '∞' : frame.dist[v];
+          const text = `d=${dVal}`;
+          ctx.font = 'bold 12px monospace';
+          const tw = ctx.measureText(text).width;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(pos.x - tw/2 - 5, pos.y + 25, tw + 10, 18, 5);
+          ctx.fill();
+          ctx.fillStyle = '#0369a1';
+          ctx.fillText(text, pos.x, pos.y + 34);
+        }
+      });
+    }
+
+    function drawArrowheadAtCurve(ctx, x1, y1, cx, cy, x2, y2) {
+      // Tangent near the endpoint of the quadratic Bézier.
+      const tx = x2 - cx, ty = y2 - cy;
+      const angle = Math.atan2(ty, tx);
+      const size = 10;
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - size * Math.cos(angle - Math.PI/6), y2 - size * Math.sin(angle - Math.PI/6));
+      ctx.lineTo(x2 - size * Math.cos(angle + Math.PI/6), y2 - size * Math.sin(angle + Math.PI/6));
+      ctx.closePath();
+      ctx.fillStyle = '#64748b';
+      ctx.fill();
+    }
+
+    function drawArrowhead(ctx, fromX, fromY, toX, toY, radius) {
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+      const endX = toX - radius * Math.cos(angle);
+      const endY = toY - radius * Math.sin(angle);
+
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(endX - 10 * Math.cos(angle - Math.PI / 6), endY - 10 * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(endX - 10 * Math.cos(angle + Math.PI / 6), endY - 10 * Math.sin(angle + Math.PI / 6));
+      ctx.fillStyle = '#94a3b8';
+      ctx.fill();
+    }
+
+    function drawHuffmanTreeCanvas(frame) {
+      const root = frame.treeRoot;
+      if (!root) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Building Huffman Tree...', canvas.width / 2, canvas.height / 2);
+        return;
+      }
+
+      const leaves = [];
+      (function collect(node) {
+        if (!node) return;
+        if (!node.left && !node.right) leaves.push(node);
+        else { collect(node.left); collect(node.right); }
+      })(root);
+
+      const leafGap = Math.max(48, Math.min(100, (canvas.width - 80) / Math.max(1, leaves.length)));
+      const positions = new Map();
+      let leafIndex = 0;
+
+      function assign(node, depth) {
+        if (!node) return 0;
+        if (!node.left && !node.right) {
+          positions.set(node, { x: 40 + leafIndex * leafGap + leafGap/2, y: 55 + depth * 62 });
+          leafIndex++;
+          return positions.get(node).x;
+        }
+        const lx = assign(node.left, depth + 1);
+        const rx = assign(node.right, depth + 1);
+        const x = (lx + rx) / 2;
+        positions.set(node, { x, y: 55 + depth * 62 });
+        return x;
+      }
+      assign(root, 0);
+
+      function drawBranch(x1, y1, x2, y2, bit) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1 + 20);
+        ctx.lineTo(x2, y2 - 20);
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        const mx = (x1 + x2) / 2;
+        const my = (y1 + y2) / 2;
+        ctx.font = 'bold 12px monospace';
+        const w = ctx.measureText(bit).width + 12;
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(mx - w/2, my - 9, w, 18, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = bit === '0' ? '#0284c7' : '#d97706';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(bit, mx, my);
+      }
+
+      function renderNode(node) {
+        if (!node) return;
+        const p = positions.get(node);
+        if (node.left) {
+          const lp = positions.get(node.left);
+          drawBranch(p.x, p.y, lp.x, lp.y, '0');
+          renderNode(node.left);
+        }
+        if (node.right) {
+          const rp = positions.get(node.right);
+          drawBranch(p.x, p.y, rp.x, rp.y, '1');
+          renderNode(node.right);
+        }
+
+        const label = String(node.label);
+        ctx.font = 'bold 11px sans-serif';
+        const w = Math.max(40, ctx.measureText(label).width + 14);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 21, 0, Math.PI * 2);
+        ctx.fillStyle = node.left ? '#1e293b' : '#10b981';
+        ctx.fill();
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, p.x, p.y);
+      }
+
+      renderNode(root);
+    }
+
+    function drawKnapsackBarCanvas(frame) {
+      const cap = parseFloat(document.getElementById('knapsackCapacity').value) || 50;
+      const allocations = frame.allocations || [];
+      const startX = 50;
+      const startY = 160;
+      const barWidth = Math.max(120, canvas.width - 100);
+      const barHeight = 60;
+
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(startX, startY, barWidth, barHeight);
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(startX, startY, barWidth, barHeight);
+
+      let currentX = startX;
+      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+
+      allocations.forEach((alloc, idx) => {
+        const segWidth = Math.max(0, (Number(alloc.weightTaken) / cap) * barWidth);
+        if (segWidth <= 0) return;
+
+        ctx.fillStyle = colors[idx % colors.length];
+        ctx.fillRect(currentX, startY, segWidth, barHeight);
+
+        const label = `${alloc.id} (${(Number(alloc.fraction) * 100).toFixed(0)}%)`;
+        ctx.font = 'bold 12px sans-serif';
+        const tw = ctx.measureText(label).width;
+
+        if (segWidth >= tw + 10) {
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, currentX + segWidth/2, startY + barHeight/2);
+        } else {
+          // Small segments get a numbered/short label above the bar instead of
+          // forcing text to overlap neighboring segments.
+          ctx.fillStyle = '#0f172a';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(alloc.id, currentX + segWidth/2, startY - 6);
+        }
+        currentX += segWidth;
+      });
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(
+        `Knapsack Volume Utilization: ${frame.remainingCapacity !== undefined ? (cap - frame.remainingCapacity).toFixed(1) : 0} / ${cap}`,
+        canvas.width / 2, 80
+      );
+    }
+
+    // =========================================================================
+    // STEP PLAYBACK & UI UPDATER
+    // =========================================================================
+    function updatePlaybackUI() {
+      const controls = ['btnReset','btnPrev','btnPlay','btnNext','btnLast'];
+      controls.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !solverSolved || stepFrames.length === 0;
+      });
+
+      const solveBtn = document.getElementById('btnSolve');
+      const status = document.getElementById('solveStatus');
+      if (solveBtn) {
+        solveBtn.classList.toggle('hidden', solverSolved);
+        solveBtn.disabled = solverSolved;
+      }
+      if (status) {
+        status.innerText = solverSolved ? '✓ Solved — Ready to Play' : 'Ready to Solve';
+        status.className = solverSolved
+          ? 'px-2 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800'
+          : 'px-2 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-800';
+      }
+
+      if (!solverSolved || stepFrames.length === 0) {
+        document.getElementById('stepProgressBadge').innerText = 'Step 0 / 0';
+        document.getElementById('explanationPhase').innerText = 'Awaiting Solve';
+        document.getElementById('explanationText').innerText = 'Enter the problem, then click 🧠 Solve to generate the verified execution trace.';
+        document.getElementById('explanationRationale').innerText = 'Playback is locked until the current problem is solved.';
+        document.getElementById('overlayMetric').innerText = '—';
+        drawCurrentFrame();
+        renderTraceTable({});
+        updateFinalAnswerPanel();
+        return;
+      }
+
+      const frame = stepFrames[currentFrameIdx];
+      document.getElementById('stepProgressBadge').innerText = `Step ${currentFrameIdx + 1} / ${stepFrames.length}`;
+      document.getElementById('explanationPhase').innerText = frame.phase;
+      document.getElementById('explanationText').innerText = frame.description;
+      document.getElementById('explanationRationale').innerText = frame.rationale;
+
+      const metric = Number(frame.totalCost);
+      document.getElementById('overlayMetric').innerText =
+        Number.isFinite(metric) ? metric.toFixed(2) : '—';
+
+      drawCurrentFrame();
+      renderTraceTable(frame);
+      updateFinalAnswerPanel();
+    }
+
+    function stepNext() {
+      if (!solverSolved) return;
+      if (currentFrameIdx < stepFrames.length - 1) {
+        currentFrameIdx++;
+        updatePlaybackUI();
+      } else {
+        stopPlay();
+      }
+    }
+
+    function stepPrev() {
+      if (!solverSolved) return;
+      if (currentFrameIdx > 0) {
+        currentFrameIdx--;
+        updatePlaybackUI();
+      }
+    }
+
+    function stepFirst() {
+      if (!solverSolved || stepFrames.length === 0) return;
+      stopPlay();
+      currentFrameIdx = 0;
+      updatePlaybackUI();
+    }
+
+    function stepLast() {
+      if (!solverSolved || stepFrames.length === 0) return;
+      stopPlay();
+      currentFrameIdx = stepFrames.length - 1;
+      updatePlaybackUI();
+    }
+
+    function togglePlay() {
+      if (!solverSolved || stepFrames.length === 0) return;
+      if (playInterval) {
+        stopPlay();
+      } else {
+        document.getElementById('btnPlay').innerText = '⏸ Pause';
+        playInterval = setInterval(() => {
+          if (currentFrameIdx < stepFrames.length - 1) stepNext();
+          else stopPlay();
+        }, animSpeed);
+      }
+    }
+
+    function stopPlay() {
+      if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+      }
+      const btn = document.getElementById('btnPlay');
+      if (btn) btn.innerText = '▶ Play';
+    }
+
+    function updateAnimationSpeed(val) {
+      animSpeed = 1600 - parseInt(val, 10);
+      if (playInterval) {
+        stopPlay();
+        togglePlay();
+      }
+    }
+
+    // =========================================================================
+    // DYNAMIC TRACE TABLES RENDERER
+    // =========================================================================
+    function renderTraceTable(frame) {
+      const table = document.getElementById('traceTable');
+      let html = '';
+
+      if (currentAlgorithm === 'dijkstra') {
+        html += `<thead class="bg-slate-100 font-bold"><tr><th class="p-2 border">Vertex</th><th class="p-2 border">Tentative Distance d[v]</th><th class="p-2 border">Predecessor p[v]</th></tr></thead><tbody>`;
+        graphData.vertices.forEach(v => {
+          const dVal = frame.dist[v] === Infinity ? '∞' : frame.dist[v];
+          const pVal = frame.prev[v] || '—';
+          const isExtracted = frame.extracted === v;
+          html += `<tr class="${isExtracted ? 'bg-blue-100 font-bold' : ''}"><td class="p-2 border">${v}</td><td class="p-2 border">${dVal}</td><td class="p-2 border">${pVal}</td></tr>`;
+        });
+        html += `</tbody>`;
+      } else if (currentAlgorithm === 'prim') {
+        html += `<thead class="bg-slate-100 font-bold"><tr><th class="p-2 border">MST Edge</th><th class="p-2 border">Weight</th></tr></thead><tbody>`;
+        (frame.mstEdges || []).forEach(e => {
+          html += `<tr><td class="p-2 border">${e.src} — ${e.dst}</td><td class="p-2 border">${e.weight}</td></tr>`;
+        });
+        html += `</tbody>`;
+      } else if (currentAlgorithm === 'kruskal') {
+        html += `<thead class="bg-slate-100 font-bold"><tr><th class="p-2 border">Sorted Edge</th><th class="p-2 border">Weight</th><th class="p-2 border">Decision</th></tr></thead><tbody>`;
+        (frame.sortedEdges || []).forEach(e => {
+          const isSelected = (frame.mstEdges || []).some(me => me.src === e.src && me.dst === e.dst);
+          html += `<tr><td class="p-2 border">${e.src} — ${e.dst}</td><td class="p-2 border">${e.weight}</td><td class="p-2 border font-bold ${isSelected ? 'text-emerald-600' : 'text-slate-400'}">${isSelected ? '✓ Included' : 'Evaluated/Rejected'}</td></tr>`;
+        });
+        html += `</tbody>`;
+      } else if (currentAlgorithm === 'huffman') {
+        html += `<thead class="bg-slate-100 font-bold"><tr><th class="p-2 border">Symbol</th><th class="p-2 border">Frequency</th><th class="p-2 border">Huffman Code</th></tr></thead><tbody>`;
+        huffmanData.forEach(d => {
+          const code = (frame.codes || {})[d.char] || 'In Progress...';
+          html += `<tr><td class="p-2 border font-bold">${d.char}</td><td class="p-2 border">${d.freq}</td><td class="p-2 border font-mono font-bold text-blue-600">${code}</td></tr>`;
+        });
+        html += `</tbody>`;
+      } else if (currentAlgorithm === 'knapsack') {
+        html += `<thead class="bg-slate-100 font-bold"><tr><th class="p-2 border">Item</th><th class="p-2 border">Profit</th><th class="p-2 border">Weight</th><th class="p-2 border">p/w Ratio</th></tr></thead><tbody>`;
+        (frame.sortedItems || []).forEach(item => {
+          html += `<tr><td class="p-2 border font-bold">${item.id}</td><td class="p-2 border">${item.profit}</td><td class="p-2 border">${item.weight}</td><td class="p-2 border font-mono font-bold">${item.ratio.toFixed(2)}</td></tr>`;
+        });
+        html += `</tbody>`;
+      }
+
+      table.innerHTML = html;
+    }
+
+    function renderComplexityInfo() {
+      const box = document.getElementById('complexityDisplay');
+      let html = '';
+      if (currentAlgorithm === 'dijkstra') {
+        html = `<p><strong>Vertex Selection (linear scan):</strong> $O(|V|^2)$</p><p><strong>Edge Relaxation:</strong> $O(|V||E|)$ with the current edge-list scan implementation</p><p><strong>Space Complexity:</strong> $O(|V| + |E|)$</p>`;
+      } else if (currentAlgorithm === 'prim') {
+        html = `<p><strong>Boundary-edge scan:</strong> $O(|V||E|)$ with the current edge-list implementation</p><p><strong>Space Complexity:</strong> $O(|V| + |E|)$</p>`;
+      } else if (currentAlgorithm === 'kruskal') {
+        html = `<p><strong>Edge Sorting:</strong> $O(|E| \log |E|)$</p><p><strong>DSU Path Compression:</strong> $O(|E| \alpha(|V|))$</p>`;
+      } else if (currentAlgorithm === 'huffman') {
+        html = `<p><strong>Repeated sorting:</strong> $O(|C|^2 \log |C|)$ worst-case with the current implementation</p><p><strong>Space Complexity:</strong> $O(|C|)</p>`;
+      } else if (currentAlgorithm === 'knapsack') {
+        html = `<p><strong>Greedy Ratio Sorting:</strong> $O(n \log n)$</p><p><strong>Selection Scan:</strong> $O(n)</p>`;
+      }
+      box.innerHTML = html + `<p class=\"mt-2 text-slate-500\"><strong>Note:</strong> Complexity shown here matches this site's actual implementation.</p>`;
+    }
+
+    // =========================================================================
+    // STUDENT ANSWER VERIFICATION ENGINE
+    // =========================================================================
+    
+function runAnswerVerification() {
+  const userCost = parseFloat(document.getElementById('verifyUserCost').value);
+  const raw = (document.getElementById('verifyUserEdges').value || '').trim();
+  const resultBox = document.getElementById('verificationResult');
+
+  if (!solverSolved || stepFrames.length === 0) {
+    resultBox.className = "p-4 rounded-lg border text-xs space-y-2 bg-amber-50 border-amber-200 text-amber-900";
+    resultBox.innerHTML = "<strong>🧠 Solve the current problem first.</strong><div>The verification scorecard is locked until the current input has been solved.</div>";
+    resultBox.classList.remove('hidden');
+    return;
+  }
+
+  const finalFrame = stepFrames[stepFrames.length - 1] || {};
+  const expectedCost = Number(finalFrame.totalCost);
+  const costOK = Number.isFinite(userCost) && Number.isFinite(expectedCost) &&
+    Math.abs(userCost - expectedCost) <= 1e-6;
+
+  let sequenceOK = true;
+  let sequenceMessage = "";
+
+  const normalize = s => String(s).trim().replace(/\s+/g, '').replace(/[→➜]/g, '-').toUpperCase();
+  const tokens = raw.split(',').map(normalize).filter(Boolean);
+  const canonEdge = s => {
+    const p = s.split('-');
+    return p.length === 2 ? p.sort().join('-') : s;
+  };
+
+  if (currentAlgorithm === 'dijkstra') {
+    const target = document.getElementById('selectTarget')?.value || 'ALL';
+    const source = String(document.getElementById('selectSource')?.value || '').toUpperCase();
+
+    if (target === 'ALL') {
+      sequenceOK = false;
+      sequenceMessage = "Select a specific target vertex to verify a Dijkstra path.";
+    } else {
+      const expectedPath = [];
+      const seen = new Set();
+      let cur = target;
+      while (cur && !seen.has(cur)) {
+        seen.add(cur);
+        expectedPath.unshift(String(cur).toUpperCase());
+        if (String(cur).toUpperCase() === source) break;
+        cur = finalFrame.prev?.[cur] || null;
+      }
+
+      const actualPath = raw.replace(/\s+/g, '').replace(/→/g, '-').split('-').filter(Boolean).map(x => x.toUpperCase());
+      sequenceOK = expectedPath[0] === source &&
+        actualPath.length === expectedPath.length &&
+        actualPath.every((v, i) => v === expectedPath[i]) &&
+        actualPath[actualPath.length - 1] === String(target).toUpperCase();
+      sequenceMessage = `Expected path: ${expectedPath.length ? expectedPath.join(' → ') : 'unreachable'}`;
+    }
+  } else if (currentAlgorithm === 'prim' || currentAlgorithm === 'kruskal') {
+    const expectedEdges = (finalFrame.mstEdges || []).map(e => canonEdge(`${e.src}-${e.dst}`)).sort();
+    const actualEdges = tokens.map(canonEdge).sort();
+    sequenceOK = actualEdges.length === expectedEdges.length &&
+      actualEdges.every((v, i) => v === expectedEdges[i]);
+    sequenceMessage = `Expected MST edges: ${expectedEdges.join(', ') || 'none'}`;
+  } else if (currentAlgorithm === 'huffman') {
+    const expected = finalFrame.codes || {};
+    const supplied = {};
+    raw.split(',').map(x => x.trim()).filter(Boolean).forEach(x => {
+      const p = x.split(/[:=]/);
+      if (p.length === 2) supplied[p[0].trim()] = p[1].trim();
+    });
+    const keys = Object.keys(expected);
+    sequenceOK = keys.length === Object.keys(supplied).length &&
+      keys.every(k => supplied[k] === expected[k]);
+    sequenceMessage = `Expected codes: ${keys.map(k => `${k}:${expected[k]}`).join(', ') || 'none'}`;
+  } else if (currentAlgorithm === 'knapsack') {
+    const expected = finalFrame.allocations || [];
+    const supplied = {};
+    raw.split(',').map(x => x.trim()).filter(Boolean).forEach(x => {
+      const p = x.split(/[:=]/);
+      if (p.length === 2) supplied[p[0].trim().toUpperCase()] = parseFloat(p[1]);
+    });
+    sequenceOK = expected.length === Object.keys(supplied).length &&
+      expected.every(it => {
+        const id = String(it.id || '').toUpperCase();
+        const f = Number(it.fraction);
+        return id && Number.isFinite(f) && Number.isFinite(supplied[id]) &&
+          Math.abs(f - supplied[id]) <= 1e-4;
+      });
+    sequenceMessage = `Expected fractions: ${expected.map(it => `${it.id}:${Number(it.fraction).toFixed(4)}`).join(', ') || 'none'}`;
+  }
+
+  const passed = costOK && sequenceOK;
+  const costScore = costOK ? 1 : 0;
+  const structureScore = sequenceOK ? 1 : 0;
+
+  resultBox.classList.remove('hidden');
+  resultBox.className = passed
+    ? "p-4 rounded-lg border text-xs space-y-3 bg-emerald-50 border-emerald-200 text-emerald-900"
+    : "p-4 rounded-lg border text-xs space-y-3 bg-rose-50 border-rose-200 text-rose-900";
+
+  resultBox.innerHTML = `
+    <div class="flex items-center justify-between gap-3">
+      <div class="font-bold text-base">${passed ? '✓ Verification Passed' : '✗ Verification Failed'}</div>
+      <div class="px-3 py-1 rounded-full font-extrabold ${passed ? 'bg-emerald-200 text-emerald-900' : 'bg-rose-200 text-rose-900'}">
+        Score: ${costScore + structureScore} / 2
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div class="bg-white/70 border rounded p-2">
+        <strong>Final Result:</strong> ${costOK ? '✓ Correct' : `✗ Expected ${Number.isFinite(expectedCost) ? expectedCost : '—'}, entered ${Number.isFinite(userCost) ? userCost : '—'}`}
+      </div>
+      <div class="bg-white/70 border rounded p-2">
+        <strong>Solution Structure:</strong> ${sequenceOK ? '✓ Correct' : '✗ Not matched'}
+      </div>
+    </div>
+    ${!sequenceOK ? `<div><strong>Correction:</strong> ${sequenceMessage}</div>` : ''}
+    <div class="text-[11px] opacity-80">Scorecard checks both the final numerical result and the required solution structure.</div>
+  `;
+}
+
+    // =========================================================================
+    // COMPARISON MODULES & CHART.JS
+    // =========================================================================
+    function runPrimVsKruskalComparison() {
+      if (isDirected) {
+        showAlert('Comparison Unavailable', 'Prim and Kruskal MST comparison requires an undirected graph.');
+        return;
+      }
+      const primFrames = [];
+      const savedFrames = stepFrames;
+      const savedSolved = solverSolved;
+      stepFrames = primFrames;
+      generatePrimSteps();
+      const primFinal = stepFrames[stepFrames.length - 1];
+      const primCost = primFinal?.totalCost;
+      const primEdges = (primFinal?.mstEdges || []).map(e => `${e.src}-${e.dst}`).join(', ');
+
+      stepFrames = [];
+      generateKruskalSteps();
+      const kruskalFinal = stepFrames[stepFrames.length - 1];
+      const kruskalCost = kruskalFinal?.totalCost;
+      const kruskalEdges = (kruskalFinal?.mstEdges || []).map(e => `${e.src}-${e.dst}`).join(', ');
+      stepFrames = savedFrames;
+      solverSolved = savedSolved;
+
+      document.getElementById('comparisonResultsBox').classList.remove('hidden');
+      document.getElementById('comparePrimEdges').innerText = primEdges || 'No spanning tree';
+      document.getElementById('comparePrimCost').innerText = Number.isFinite(primCost) ? primCost : 'No MST';
+      document.getElementById('compareKruskalEdges').innerText = kruskalEdges || 'No spanning tree';
+      document.getElementById('compareKruskalCost').innerText = Number.isFinite(kruskalCost) ? kruskalCost : 'No MST';
+
+      const success = document.getElementById('compareVerificationSuccess');
+      success.classList.toggle('hidden', !(Number.isFinite(primCost) && Number.isFinite(kruskalCost) && Math.abs(primCost-kruskalCost)<0.01));
+    }
+
+    function renderKnapsackComparisonChart() {
+      const ctxChart = document.getElementById('knapsackComparisonChart');
+      if (!ctxChart) return;
+      if (knapsackChartInstance) knapsackChartInstance.destroy();
+
+      const items = knapsackData.items.map(i => ({profit:Number(i.profit), weight:Number(i.weight), id:i.id}))
+        .filter(i => Number.isFinite(i.profit) && Number.isFinite(i.weight) && i.weight > 0 && i.profit >= 0);
+      const cap = Math.max(0, Number(knapsackData.capacity) || 0);
+
+      let fractional = 0, remaining = cap;
+      [...items].sort((a,b)=>(b.profit/b.weight)-(a.profit/a.weight)).forEach(i=>{
+        if(remaining<=0)return;
+        const take=Math.min(1,remaining/i.weight);
+        fractional += i.profit*take;
+        remaining -= i.weight*take;
+      });
+
+      // Exact 0/1 DP for integer capacity; use floor for non-integer capacities.
+      const W=Math.floor(cap);
+      const dp=Array(W+1).fill(0);
+      items.forEach(i=>{
+        const wt=Math.ceil(i.weight);
+        if(wt<=W) for(let w=W;w>=wt;w--) dp[w]=Math.max(dp[w],dp[w-wt]+i.profit);
+      });
+      const zeroOne=dp[W];
+
+      knapsackChartInstance = new Chart(ctxChart, {
+        type:'bar',
+        data:{labels:['Fractional (Greedy)','0/1 Optimal (DP)'],datasets:[{label:'Total Profit',data:[fractional,zeroOne],backgroundColor:['#10b981','#3b82f6']}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:`Current Knapsack Comparison (W=${cap})`}}}
+      });
+      document.getElementById('knapsackContrastDetails').innerHTML =
+        `<p><strong>Fractional Greedy:</strong> ${fractional.toFixed(2)}</p>
+         <p><strong>0/1 DP:</strong> ${zeroOne.toFixed(2)}${Number.isInteger(cap)?'':' (capacity floored for integer DP)'}</p>`;
+    }
+
+    // =========================================================================
+    // PRELOADED EXAMPLES & ALERT BANNER
+    // =========================================================================
+    function loadExampleData() {
+      graphData = {
+        vertices: ['A', 'B', 'C', 'D', 'E'],
+        edges: [
+          { src: 'A', dst: 'B', weight: 4 },
+          { src: 'A', dst: 'C', weight: 2 },
+          { src: 'B', dst: 'C', weight: 1 },
+          { src: 'B', dst: 'D', weight: 5 },
+          { src: 'C', dst: 'D', weight: 8 },
+          { src: 'C', dst: 'E', weight: 10 },
+          { src: 'D', dst: 'E', weight: 2 }
+        ],
+        nodesPos: {
+          'A': { x: 80, y: 190 },
+          'B': { x: 220, y: 90 },
+          'C': { x: 220, y: 290 },
+          'D': { x: 380, y: 90 },
+          'E': { x: 480, y: 190 }
+        }
+      };
+
+      huffmanData = [
+        { char: 'A', freq: 5 },
+        { char: 'B', freq: 9 },
+        { char: 'C', freq: 12 },
+        { char: 'D', freq: 13 },
+        { char: 'E', freq: 16 },
+        { char: 'F', freq: 45 }
+      ];
+
+      knapsackData = {
+        capacity: 50,
+        items: [
+          { id: 'A', profit: 60, weight: 10 },
+          { id: 'B', profit: 100, weight: 20 },
+          { id: 'C', profit: 120, weight: 30 }
+        ]
+      };
+
+      const capInput = document.getElementById('knapsackCapacity');
+      if (capInput) capInput.value = knapsackData.capacity;
+      renderMatrixInput();
+      renderEdgeListInput();
+      renderHuffmanInputs();
+      renderKnapsackInputs();
+      updateSourceTargetSelectors();
+      recalculateAlgorithm();
+      showAlert('Preset Loaded', 'Standard curriculum dataset preloaded into memory buffer.');
+    }
+
+    function showAlert(title, message) {
+      const banner = document.getElementById('alertBanner');
+      document.getElementById('alertTitle').innerText = title;
+      document.getElementById('alertMessage').innerText = message;
+      banner.className = "rounded-lg p-4 border text-sm flex justify-between items-center bg-amber-50 border-amber-200 text-amber-900 shadow-sm transition-all";
+      banner.classList.remove('hidden');
+    }
+
+    function dismissAlert() {
+      document.getElementById('alertBanner').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
