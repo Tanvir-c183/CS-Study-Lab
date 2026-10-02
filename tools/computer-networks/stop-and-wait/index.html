@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stop-and-Wait ARQ Interactive Engineering Workbench</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN for Efficiency Curve -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' },
+                        frame: { light:'#eff6ff', border:'#3b82f6', text:'#1d4ed8', dark:'#1e40af' },
+                        ack: { light:'#fff7ed', border:'#f97316', text:'#ea580c', dark:'#c2410c' }
+                    },
+                    fontFamily: {
+                        mono: ['ui-monospace','SFMono-Regular','Menlo','Monaco','Consolas','Courier New','monospace'],
+                        sans: ['system-ui','-apple-system','BlinkMacSystemFont','Segoe UI','Roboto','Helvetica Neue','Arial','sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 680px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 380px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
+        .tab-btn.active {
+            background-color: #4f46e5;
+            color: #ffffff;
+            border-color: #4338ca;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .stopwatch-active {
+            animation: pulse-ring 1.5s infinite ease-in-out;
+        }
+    </style>
+    <!-- Chosen Palette: Classic Engineering Slate & Indigo (Data Frames: Royal Blue #2563eb, ACK Signals: Energetic Orange #ea580c, Background: Light Slate #f8fafc) -->
+    <!-- Application Structure Plan:
+        The application is specifically tailored for Stop-and-Wait ARQ (1-bit sequence number 0/1, W_T=1, W_R=1):
+        1. MODULE 1: INTERACTIVE STOP-AND-WAIT SIMULATOR & STOPWATCH TIMER
+           - Space-Time ladder diagram canvas displaying single frame flight and ACK return trajectories.
+           - Interactive Sender Stopwatch Timer Dial showing precise countdown to timeout and triggering retransmissions.
+           - Queue Inspector showing pending data packets and alternating 1-bit sequence number states (Frame 0 / Frame 1).
+           - On-demand Fault Injectors: Lost Frame, Lost ACK, Corrupt Frame, and Delayed ACK (Timeout).
+        2. MODULE 2: STOP-AND-WAIT NUMERICAL PROBLEM SOLVER
+           - Link parameter calculator for Tt, Tp, RTT, ratio 'a = Tp/Tt', and Stop-and-Wait Efficiency (η = 1 / (1 + 2a)).
+           - Hand-calculation verifier for student exam preparation.
+        3. MODULE 3: FORMULAS, FSM & THEORETICAL SPECIFICATION
+           - FSM breakdown for Sender and Receiver states (Ready, Waiting for ACK, Expecting Frame 0/1).
+           - Chart.js interactive plot of Efficiency (η) vs Ratio 'a' specifically for Stop-and-Wait ARQ.
+    -->
+    <!-- Visualization & Content Choices:
+        - Space-Time Ladder Visualizer: Dynamic trajectory vectors rendering alternating sequence frames (F0/F1) and ACKs (ACK1/ACK0).
+        - Circular Canvas Stopwatch Dial: Visual countdown timer tracking unacknowledged frame timeout.
+        - FSM State Cards: Clean HTML/CSS styled state machines showing transitions without external SVG graphics.
+        - Chart.js Line Plot: Shows how Stop-and-Wait efficiency rapidly degrades as propagation delay increases relative to transmission delay (a = Tp/Tt).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white font-mono font-bold px-2.5 py-1 rounded text-lg tracking-wider border border-indigo-400">[STOP-AND-WAIT ARQ]</div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-100">Stop-and-Wait ARQ Interactive Engineering Workbench</h1>
+                    <p class="text-xs text-slate-400">Data Link Layer Protocol • 1-Bit Sequence Number (W_T=1, W_R=1) • Fault Injection & Timer Analysis</p>
+                </div>
+            </div>
+            
+            <!-- Module Navigation Tabs -->
+            <div class="flex bg-slate-800 p-1 rounded-lg border border-slate-700 text-xs font-semibold">
+                <button id="tab-btn-sim" onclick="switchModule('sim')" class="tab-btn active px-3.5 py-1.5 rounded-md transition-all flex items-center gap-1.5">
+                    <span>▶</span> Protocol Visualizer
+                </button>
+                <button id="tab-btn-solver" onclick="switchModule('solver')" class="tab-btn px-3.5 py-1.5 text-slate-300 hover:text-white rounded-md transition-all flex items-center gap-1.5">
+                    <span>🧮</span> Problem Solver
+                </button>
+                <button id="tab-btn-theory" onclick="switchModule('theory')" class="tab-btn px-3.5 py-1.5 text-slate-300 hover:text-white rounded-md transition-all flex items-center gap-1.5">
+                    <span>📖</span> Formulas & FSM
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Global Toast Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- MODULE 1: STOP-AND-WAIT SIMULATOR -->
+        <div id="module-sim" class="space-y-6">
+            
+            <!-- Simulation Banner -->
+            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-0.5 rounded border border-indigo-200">Stop-and-Wait ARQ</span>
+                        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-0.5 rounded border border-blue-200">1-Bit Sequence Space (0 & 1)</span>
+                        <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded border border-emerald-200">Strict W_T=1, W_R=1</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-900">Interactive Stop-and-Wait Protocol & Timeout Visualizer</h2>
+                    <p class="text-xs text-slate-600 mt-1 max-w-3xl">In Stop-and-Wait ARQ, the sender transmits exactly one data frame (F_0 or F_1) and stops, starting a timer. It waits for a matching acknowledgment (ACK_1 or ACK_0) before transmitting the next frame.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono bg-slate-900 text-emerald-400 px-3 py-1.5 rounded border border-slate-700 font-bold">W_T = 1 | W_R = 1</span>
+                </div>
+            </div>
+
+            <!-- Configuration & Buffer Controls -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Parameter Controls -->
+                <div class="lg:col-span-6 bg-indigo-900 text-white rounded-xl p-4 border border-indigo-800 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between border-b border-indigo-700/60 pb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-200 flex items-center gap-2">
+                            <span>⚙️</span> Stop-and-Wait Link Parameters
+                        </span>
+                        <span class="text-[11px] font-mono text-indigo-300">Modifiable Live</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <!-- Timer Timeout Duration -->
+                        <div class="bg-indigo-950/60 p-3 rounded-lg border border-indigo-800/80 space-y-1 w-full">
+                            <div class="flex justify-between items-center text-xs font-bold text-indigo-200">
+                                <span>Timeout Duration (T_{out}):</span>
+                                <span id="label-sim-timeout" class="font-mono text-amber-400 font-bold">3.0 s</span>
+                            </div>
+                            <input id="slider-sim-timeout" type="range" min="1.5" max="6.0" step="0.5" value="3.0" class="w-full accent-amber-400 cursor-pointer">
+                            <p class="text-[10px] text-indigo-300">Stopwatch limit before triggering retransmission.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User-Defined Frame Line -->
+                <div class="lg:col-span-12 bg-slate-900 text-white rounded-xl p-4 border border-slate-800 shadow-sm">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wider text-indigo-300">Frame Line Configuration</div>
+                            <div class="text-sm font-semibold mt-1">Choose how many data frames to display in the sender line.</div>
+                            <div class="text-[11px] text-slate-400 mt-1">Example: selecting <b class="text-white">4</b> creates exactly Frame 0, Frame 1, Frame 2 and Frame 3. The Stop-and-Wait sequence bit still alternates only between 0 and 1.</div>
+                        </div>
+                        <div class="flex items-center gap-3 bg-slate-800 rounded-lg border border-slate-700 p-2.5 shrink-0">
+                            <label for="input-last-frame" class="text-xs font-bold text-slate-200 whitespace-nowrap">Number of Frames</label>
+                            <input id="input-last-frame" type="number" min="1" max="20" step="1" value="4" class="w-20 px-2.5 py-2 rounded-md bg-slate-950 border border-slate-600 text-white font-mono text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <button id="btn-apply-frame-line" type="button" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-md text-xs transition">Apply</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sender Buffer Queue Inspector -->
+                <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-2 mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-blue-600"></span>
+                                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">Sender Frame Packet Queue</h3>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="sender-buffer-count" class="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">0 Packets</span>
+                                <button id="btn-enqueue-5" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-2.5 py-1 rounded text-xs transition">
+                                    + Frame Line
+                                </button>
+                            </div>
+                        </div>
+                        <div id="sender-buffer-visual" class="flex items-center gap-2 min-h-[48px] overflow-x-auto p-2 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono">
+                            <span class="text-slate-400 italic text-[11px]">Buffer is empty. Click '+ Frame Line' to enqueue data for transmission.</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                        <span>Sender must wait for matching ACK before transmitting next queued packet.</span>
+                        <button id="btn-clear-buffer" class="text-rose-600 hover:text-rose-800 font-semibold underline">Clear Queue</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Simulation Control & Fault Injection Panel -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                    
+                    <!-- Transport Controls -->
+                    <div class="flex items-center gap-2">
+                        <button id="btn-sim-play" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-sm transition flex items-center gap-1.5">
+                            <span>▶</span> Transmit / Resume
+                        </button>
+                        <button id="btn-sim-pause" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs shadow-sm transition flex items-center gap-1.5">
+                            <span>⏸</span> Pause
+                        </button>
+                        <button id="btn-sim-stop" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow-sm transition flex items-center gap-1.5">
+                            <span>⏹</span> Reset Simulation
+                        </button>
+                        <button id="btn-sim-step" class="px-3.5 py-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold rounded-lg text-xs shadow-sm transition flex items-center gap-1">
+                            <span>⏭</span> Send Next Single Frame
+                        </button>
+                    </div>
+
+                    <!-- Animation Speed Slider -->
+                    <div class="flex items-center gap-3 bg-slate-50 px-3.5 py-1.5 rounded-lg border border-slate-200">
+                        <span class="text-xs font-bold text-slate-700">Animation Speed:</span>
+                        <input id="slider-speed" type="range" min="0.2" max="2.5" step="0.1" value="1.0" class="w-28 accent-indigo-600 cursor-pointer">
+                        <span id="speed-label" class="font-mono text-xs font-bold text-indigo-700 w-8">1.0x</span>
+                    </div>
+                </div>
+
+                <!-- On-Demand Channel Fault Injection Controls -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Interactive Channel Fault Injection Controls:</label>
+                        <span id="queued-fault-indicator" class="text-xs font-mono font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Next Transmission: Normal Link</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <button id="btn-inject-lose-frame" class="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs active:scale-95">
+                            <span>💥</span> Lose Data Frame (F_k)
+                        </button>
+                        <button id="btn-inject-lose-ack" class="px-3.5 py-2.5 bg-orange-50 hover:bg-orange-100 text-orange-900 border border-orange-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs active:scale-95">
+                            <span>⚡</span> Lose ACK Frame (ACK_k)
+                        </button>
+                        <button id="btn-inject-corrupt" class="px-3.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs active:scale-95">
+                            <span>☣️</span> Corrupt Data Frame
+                        </button>
+                        <button id="btn-inject-timeout" class="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs active:scale-95">
+                            <span>⏱️</span> Delay ACK (Trigger Timeout)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Sender / Receiver Window Display -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Protocol Window Display</h3>
+                        <p class="text-[11px] text-slate-500 mt-0.5">A visual row showing the sender window, channel, receiver window and receiver buffer.</p>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-mono font-bold">Frames Sent at a Time: 1</span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
+                    <!-- Sender Window -->
+                    <div class="lg:col-span-4 rounded-xl border-2 border-blue-200 bg-blue-50/60 p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-blue-800">SENDER WINDOW</span>
+                            <span class="text-[10px] font-mono font-bold text-blue-600">W_T = 1</span>
+                        </div>
+                        <div id="sender-window-visual" class="min-h-[76px] rounded-lg border border-blue-200 bg-white p-2 flex items-center gap-2 overflow-x-auto">
+                            <span class="text-[11px] text-slate-400 italic">No frame selected</span>
+                        </div>
+                        <div class="mt-2 text-[10px] text-blue-700 font-mono" id="sender-window-status">READY • Waiting for frame</div>
+                    </div>
+
+                    <!-- Channel -->
+                    <div class="lg:col-span-4 rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-col justify-center">
+                        <div class="text-center text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Transmission Channel</div>
+                        <div class="flex items-center gap-2">
+                            <div class="h-px bg-blue-300 flex-1"></div>
+                            <div id="channel-frame-pill" class="px-3 py-2 rounded-full bg-white border border-slate-300 text-[11px] font-mono font-bold text-slate-500 text-center min-w-[120px]">CHANNEL IDLE</div>
+                            <div class="h-px bg-orange-300 flex-1"></div>
+                        </div>
+                        <div id="channel-direction" class="text-center text-[10px] font-mono text-slate-500 mt-2">Sender → Receiver • ACK Receiver → Sender</div>
+                    </div>
+
+                    <!-- Receiver Window + Buffer -->
+                    <div class="lg:col-span-4 rounded-xl border-2 border-orange-200 bg-orange-50/60 p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-orange-800">RECEIVER WINDOW</span>
+                            <span class="text-[10px] font-mono font-bold text-orange-600">W_R = 1</span>
+                        </div>
+                        <div id="receiver-window-visual" class="min-h-[76px] rounded-lg border border-orange-200 bg-white p-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <div class="text-[10px] text-slate-500 uppercase font-bold">Expected</div>
+                                    <div id="receiver-expected-label" class="text-sm font-mono font-bold text-orange-700">Frame 0</div>
+                                </div>
+                                <div class="text-2xl">📥</div>
+                            </div>
+                            <div class="mt-2 border-t border-orange-100 pt-2">
+                                <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Receiver Buffer</div>
+                                <div id="receiver-buffer-visual" class="h-8 rounded border border-dashed border-orange-200 bg-orange-50 flex items-center px-2 text-[11px] font-mono text-orange-700">Empty</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-[10px] text-orange-700 font-mono" id="receiver-window-status">LISTENING • Waiting for Frame 0</div>
+                    </div>
+                </div>
+
+                <!-- Statistics Display Row -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-center"><div id="stat-frames-line" class="text-base font-mono font-bold text-blue-900">5</div><div class="text-[10px] text-blue-700">Frames in Line</div></div>
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-2.5 text-center"><div id="stat-total-tx" class="text-base font-mono font-bold text-indigo-900">0</div><div class="text-[10px] text-indigo-700">Frames Sent</div></div>
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-center"><div id="stat-delivered" class="text-base font-mono font-bold text-emerald-900">0</div><div class="text-[10px] text-emerald-700">Frames Delivered</div></div>
+                    <div class="bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-center"><div id="stat-retrans" class="text-base font-mono font-bold text-rose-900">0</div><div class="text-[10px] text-rose-700">Retransmissions</div></div>
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-2.5 text-center"><div id="stat-acks" class="text-base font-mono font-bold text-orange-900">0</div><div class="text-[10px] text-orange-700">ACKs Received</div></div>
+                    <div class="bg-slate-100 border border-slate-200 rounded-lg p-2.5 text-center"><div class="text-base font-mono font-bold text-slate-900">1</div><div class="text-[10px] text-slate-600">Sent at a Time</div></div>
+                </div>
+            </div>
+
+            <!-- Visualizer & Real-time Monitor Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                <!-- White Simulation Canvas -->
+                <div class="lg:col-span-8 bg-white rounded-xl p-4 text-slate-800 shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center text-xs font-bold text-slate-700 mb-2 font-mono border-b border-slate-200 pb-2">
+                        <span class="text-blue-700 flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span> SENDER (TX) — [W_T = 1]
+                        </span>
+                        <span class="text-slate-400">Space-Time Ladder Visualizer</span>
+                        <span class="text-orange-600 flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded-full bg-orange-500 inline-block"></span> RECEIVER (RX) — [W_R = 1]
+                        </span>
+                    </div>
+                    <div class="relative flex justify-center bg-slate-50 p-2 rounded-lg border border-slate-200">
+                        <canvas id="canvas-space-time" width="620" height="480" class="bg-white rounded border border-slate-300 w-full max-w-[620px] shadow-xs"></canvas>
+                    </div>
+                </div>
+
+                <!-- Monitors Side Column -->
+                <div class="lg:col-span-4 space-y-4">
+                    
+                    <!-- Sender Stopwatch Widget Card -->
+                    <div class="bg-slate-900 text-white p-5 rounded-xl border border-slate-800 shadow-sm space-y-3 relative overflow-hidden">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                                <span class="text-base">⏱️</span> Sender Stopwatch Timer
+                            </span>
+                            <span id="stopwatch-status-tag" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700">IDLE</span>
+                        </div>
+
+                        <!-- Visual Stopwatch Display -->
+                        <div class="flex items-center justify-around py-2">
+                            <!-- Circular Timer Dial -->
+                            <div class="relative w-24 h-24 flex items-center justify-center">
+                                <canvas id="canvas-stopwatch-dial" width="96" height="96" class="w-24 h-24"></canvas>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                    <span id="stopwatch-time-num" class="font-mono text-base font-bold text-white leading-none">0.00s</span>
+                                    <span class="text-[9px] text-slate-400 font-mono mt-0.5">ELAPSED</span>
+                                </div>
+                            </div>
+
+                            <!-- Stopwatch Details -->
+                            <div class="space-y-1 font-mono text-xs">
+                                <div class="text-slate-400 text-[10px]">Timer Threshold (T_{out}):</div>
+                                <div id="stopwatch-threshold-val" class="text-amber-400 font-bold text-sm">3.00 Seconds</div>
+                                <div class="text-slate-400 text-[10px] pt-1">Current Status:</div>
+                                <div id="stopwatch-action-desc" class="text-slate-200 font-semibold text-[11px]">Ready for Transmission</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-800/80 p-2 rounded border border-slate-700/80 text-[11px] font-mono text-slate-300 flex justify-between">
+                            <span>Timer State:</span>
+                            <span id="stopwatch-state-val" class="text-emerald-400 font-bold">READY</span>
+                        </div>
+                    </div>
+
+                    <!-- Live Protocol State Monitor -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200 pb-2 flex justify-between items-center">
+                            <span>Live Protocol State</span>
+                            <span id="sim-status-badge" class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-mono text-[10px]">READY</span>
+                        </h4>
+                        <div class="space-y-2 text-xs font-mono">
+                            <div class="flex justify-between items-center bg-blue-50/70 p-2 rounded border border-blue-200">
+                                <span class="text-slate-700">Sender Next Seq Num (S_{next}):</span> 
+                                <b id="state-seq-tx" class="text-blue-700 font-bold">Frame 0</b>
+                            </div>
+                            <div class="flex justify-between items-center bg-orange-50/70 p-2 rounded border border-orange-200">
+                                <span class="text-slate-700">Receiver Expecting (R_{next}):</span> 
+                                <b id="state-seq-rx" class="text-orange-700 font-bold">Frame 0 (ACK1)</b>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-center pt-1">
+                                <div class="bg-slate-100 p-2 rounded border border-slate-200">
+                                    <div id="state-total-tx" class="text-base font-bold text-slate-900">0</div>
+                                    <div class="text-[10px] text-slate-500 font-sans">Total Transmissions</div>
+                                </div>
+                                <div class="bg-slate-100 p-2 rounded border border-slate-200">
+                                    <div id="state-retrans" class="text-base font-bold text-rose-700">0</div>
+                                    <div class="text-[10px] text-slate-500 font-sans">Retransmissions</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Simulation Event Log -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200 pb-2">Event Log</h4>
+                        <div id="event-log" class="font-mono text-[11px] h-44 overflow-y-auto space-y-1.5 p-2.5 rounded border border-slate-300 bg-white text-slate-700 leading-tight">
+                            <div class="text-slate-400">Click 'Transmit' or '+5 Packets' to start simulation...</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- MODULE 2: QUESTION & PROBLEM SOLVER -->
+        <div id="module-solver" class="hidden space-y-6">
+            
+            <div class="bg-white text-slate-800 rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                    <span class="inline-block bg-indigo-50 text-indigo-700 text-xs font-semibold px-2.5 py-0.5 rounded border border-indigo-200 mb-1">Numerical Question Solver</span>
+                    <h2 class="text-lg font-bold text-slate-900">Stop-and-Wait ARQ Calculator & Exam Verifier</h2>
+                    <p class="text-xs text-slate-600 mt-1 max-w-3xl">Enter channel parameters to compute exact Transmission Delay (T_t), Propagation Delay (T_p), Round Trip Time (RTT), Parameter Ratio (a = T_p / T_t), and Stop-and-Wait Efficiency (\eta = \frac{1}{1+2a}).</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <select id="question-select" class="px-3 py-2 text-xs font-semibold bg-white border border-slate-300 text-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="1">Q1 • Tt & Tp</option>
+                        <option value="2">Q2 • Efficiency</option>
+                        <option value="3">Q3 • Throughput</option>
+                        <option value="4">Q4 • Minimum Frame Size</option>
+                        <option value="5">Q5 • Satellite Link</option>
+                        <option value="6">Q6 • Frames in 2 Seconds</option>
+                        <option value="7">Q7 • Efficiency & Wasted BW</option>
+                        <option value="8">Q8 • ACK / Processing</option>
+                        <option value="9">Q9 • Timeout</option>
+                        <option value="10">Q10 • Error Probability</option>
+                        <option value="11">Q11 • Effective Efficiency</option>
+                        <option value="12">Q12 • Frame Size Trade-off</option>
+                        <option value="13">Q13 • Minimum Bandwidth</option>
+                        <option value="14">Q14 • Errors + Throughput</option>
+                        <option value="15">Q15 • Lost ACKs</option>
+                    </select>
+                    <button id="btn-load-exam-preset" class="px-3.5 py-2 text-xs font-semibold bg-slate-700 hover:bg-slate-800 text-white rounded-lg shadow-sm transition">
+                        Load Question
+                    </button>
+                    <button id="btn-solve-question" class="px-4 py-2 text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition flex items-center justify-center gap-1.5">
+                        ▶ Solve Question
+                    </button>
+                </div>
+            </div>
+
+            <!-- Question Bank / Guided Solver -->
+            <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 shadow-sm">
+                <div class="flex flex-col lg:flex-row lg:items-start gap-4">
+                    <div class="shrink-0 w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-extrabold">Q</div>
+                    <div class="flex-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span id="question-number-badge" class="text-xs font-mono font-bold text-indigo-700 bg-white border border-indigo-200 px-2 py-1 rounded">Question 1</span>
+                            <span class="text-[10px] uppercase tracking-wider font-bold text-indigo-500">From supplied question set</span>
+                        </div>
+                        <p id="question-text" class="text-sm font-semibold text-slate-800 mt-2 leading-relaxed">Find the transmission time (Tt) and propagation time (Tp) for a 2 Mbps link, 600 km apart, signal speed 2×10^8 m/s, frame size 2000 bits.</p>
+                        <p id="question-method" class="text-[11px] text-slate-600 mt-2">Load a question, then press Solve Question. The solver uses the exact wording and assumptions from the supplied question set.</p>
+                    </div>
+                    <div class="bg-white rounded-lg border border-indigo-200 px-3 py-2 text-center min-w-[120px]">
+                        <div class="text-[10px] uppercase font-bold text-slate-500">Mode</div>
+                        <div class="font-mono text-xs font-extrabold text-indigo-700 mt-1">15-TYPE QUESTION SOLVER</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Problem Solver Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                <!-- Universal Input Bank -->
+                <div class="lg:col-span-5 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="border-b border-slate-200 pb-3 space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Universal Input Bank</h3>
+                            <span id="input-type-badge" class="text-xs font-mono font-semibold text-indigo-600">Q1 • Required fields highlighted</span>
+                        </div>
+
+                    </div>
+                    <div class="text-[11px] text-slate-600 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                        <b>How to use:</b> Choose a question type. Only the parameters required by that question are shown. Enter the given values and press Solve.
+                    </div>
+                    <div id="universal-question-inputs" class="space-y-4 max-h-[720px] overflow-y-auto pr-1"></div>
+                    <div class="text-[10px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+                        <b>Important:</b> Each physical quantity appears only once. Units can be changed where applicable; blank fields are not treated as zero.
+                    </div>
+                </div>
+
+                <!-- Solved Breakdown -->
+                <div class="lg:col-span-7 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
+                    <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-3 flex items-center justify-between">
+                        <span>Step-by-Step Solved Results</span>
+                        <span class="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">Computed Ground Truth</span>
+                    </h3>
+
+                    <!-- Calculated Values -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Calculated Values</h4>
+                            <span class="text-[10px] text-slate-400">Only derivable quantities are shown</span>
+                        </div>
+                        <div id="calculated-values-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+                    </div>
+
+                    <!-- Formula Walkthrough Box -->
+                    <div class="bg-slate-900 text-slate-100 p-4 rounded-xl font-mono text-xs space-y-2 border border-slate-800">
+                        <div class="font-sans font-bold text-[11px] text-slate-400 border-b border-slate-800 pb-1.5 flex justify-between">
+                            <span>MATHEMATICAL SOLUTION STEPS</span>
+                            <span>Stop-and-Wait ARQ</span>
+                        </div>
+                        <div id="solver-step-by-step" class="space-y-1.5 leading-relaxed text-slate-200">
+                        </div>
+                    </div>
+
+                    <!-- Question Solver Answer -->
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-emerald-900 uppercase tracking-wider">Solved Answer</h4>
+                            <span id="solver-answer-status" class="px-2 py-0.5 rounded bg-white border border-emerald-200 text-[10px] font-mono font-bold text-emerald-700">NOT SOLVED</span>
+                        </div>
+                        <div id="solver-question-answer" class="text-sm font-mono font-bold text-emerald-900">Press “Solve” to calculate the selected problem.</div>
+                    </div>
+
+                    <!-- Exam Answer Verification -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Verify Student Hand Calculations</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <input id="verify-user-tt" type="text" placeholder="Your Tt (ms)" class="px-3 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded outline-none focus:ring-2 focus:ring-emerald-500">
+                            <input id="verify-user-tp" type="text" placeholder="Your Tp (ms)" class="px-3 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded outline-none focus:ring-2 focus:ring-emerald-500">
+                            <input id="verify-user-eff" type="text" placeholder="Your Efficiency (%)" class="px-3 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button id="btn-check-student-answer" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow-sm transition">
+                                ✓ Check My Answer
+                            </button>
+                            <span id="verify-status-msg" class="text-xs font-semibold"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODULE 3: FORMULAS, FSM & PROTOCOL SPECIFICATION -->
+        <div id="module-theory" class="hidden space-y-6">
+            
+            <div class="bg-white text-slate-800 rounded-xl p-5 border border-slate-200 shadow-sm">
+                <span class="inline-block bg-indigo-50 text-indigo-700 text-xs font-semibold px-2.5 py-0.5 rounded border border-indigo-200 mb-1">Theoretical Protocol Manual</span>
+                <h2 class="text-lg font-bold text-slate-900">Stop-and-Wait ARQ Formal Specification & Performance Model</h2>
+                <p class="text-xs text-slate-600 mt-1 max-w-3xl">Comprehensive mathematical derivations, Finite State Machine (FSM) transitions, and efficiency bounds for Stop-and-Wait ARQ.</p>
+            </div>
+
+            <!-- Formulas Reference Card -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2">Stop-and-Wait Mathematical Formulas</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                    <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1">
+                        <div class="font-sans font-bold text-blue-700 text-sm">Stop-and-Wait Efficiency (\eta)</div>
+                        <div class="text-slate-700">\eta = \frac{T_t}{T_t + 2T_p} = \frac{1}{1 + 2a}</div>
+                        <div class="text-[11px] font-sans text-slate-500">Derived where a = T_p / T_t. Assumes zero ACK transmission time and error-free channel.</div>
+                    </div>
+                    <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1">
+                        <div class="font-sans font-bold text-purple-700 text-sm">1-Bit Sequence Space (M = 2)</div>
+                        <div class="text-slate-700">S \in \{0, 1\}, \quad ACK \in \{0, 1\}</div>
+                        <div class="text-[11px] font-sans text-slate-500">A single bit sequence number is necessary and sufficient to prevent duplicate packet confusion caused by lost ACKs.</div>
+                    </div>
+                    <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1">
+                        <div class="font-sans font-bold text-emerald-700 text-sm">Effective Throughput (S)</div>
+                        <div class="text-slate-700">Throughput = \eta \times Bandwidth</div>
+                        <div class="text-[11px] font-sans text-slate-500">Actual useful data rate delivered across the link.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Finite State Machine (FSM) Specification -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Sender FSM -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-blue-700 border-b border-slate-200 pb-2 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-blue-600"></span> Sender Finite State Machine (FSM)
+                    </h3>
+                    <div class="space-y-2 text-xs font-mono">
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                            <span class="font-bold text-slate-800 font-sans block">State 1: Ready / Idle State</span>
+                            <p class="text-slate-600 font-sans text-[11px]">Awaiting packet request from network layer. Assigns current sequence bit S_{next} \in \{0,1\}, sends frame F_{S_{next}}, and starts timer.</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                            <span class="font-bold text-slate-800 font-sans block">State 2: Blocking Wait State</span>
+                            <p class="text-slate-600 font-sans text-[11px]">Cannot accept new network packets until current frame is ACKed.
+                                <br>• <b>On Matching ACK:</b> Stop timer, flip sequence bit S_{next} \leftarrow 1 - S_{next}, return to Ready State.
+                                <br>• <b>On Timeout / Corrupt ACK:</b> Retransmit F_{S_{next}}, restart timer.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Receiver FSM -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-orange-700 border-b border-slate-200 pb-2 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-orange-500"></span> Receiver Finite State Machine (FSM)
+                    </h3>
+                    <div class="space-y-2 text-xs font-mono">
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                            <span class="font-bold text-slate-800 font-sans block">Expecting Frame R_{next} \in \{0, 1\}</span>
+                            <p class="text-slate-600 font-sans text-[11px]">Receiver listens continuously for incoming data frames.</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                            <span class="font-bold text-slate-800 font-sans block">Handling Arrival Events</span>
+                            <p class="text-slate-600 font-sans text-[11px]">
+                                • <b>Valid Frame F_{R_{next}} Arrives:</b> Deliver payload to application layer, update R_{next} \leftarrow 1 - R_{next}, send ACK_{R_{next}}.
+                                <br>• <b>Duplicate Frame Arrives (Old S):</b> Discard payload (duplicate), re-send ACK expecting R_{next}.
+                                <br>• <b>Corrupted Frame:</b> Discard frame completely; take no action (sender timer will expire).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Chart -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+                <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2">Stop-and-Wait Efficiency (\eta) vs Ratio a = T_p / T_t</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                    <div class="lg:col-span-7">
+                        <div class="chart-container">
+                            <canvas id="chart-efficiency"></canvas>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs leading-relaxed space-y-2">
+                        <h4 class="font-bold text-slate-800">Stop-and-Wait Limitations:</h4>
+                        <ul class="space-y-1.5 text-slate-700">
+                            <li>• <b>Low Link Utilization:</b> When propagation delay (T_p) is high compared to frame transmission time (T_t), efficiency drops rapidly toward zero.</li>
+                            <li>• <b>High Delay-Bandwidth Products:</b> For long-haul links or satellite links (a \gg 1), Stop-and-Wait spends almost all its time waiting for ACKs.</li>
+                            <li>• <b>Optimal Condition:</b> Stop-and-Wait is efficient (\eta > 50\%) only when a < 0.5 (short physical distance or very low bandwidth).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-5 mt-10 text-center border-t border-slate-800">
+        Stop-and-Wait ARQ Interactive Engineering Suite • Computer Networks Data Link Layer
+    </footer>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        'use strict';
+
+        /* Module Tab Switcher */
+        function switchModule(moduleName) {
+            ['sim', 'solver', 'theory'].forEach(m => {
+                document.getElementById(`module-${m}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${m}`).classList.remove('active');
+            });
+
+            document.getElementById(`module-${moduleName}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${moduleName}`).classList.add('active');
+
+            if (moduleName === 'theory' && !chartInstance) {
+                initEfficiencyChart();
+            }
+        }
+
+        /* Toast Alert System */
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-slate-800 text-white border-slate-700';
+            if (type === 'success') bgClass = 'bg-emerald-800 text-white border-emerald-600';
+            if (type === 'error') bgClass = 'bg-rose-800 text-white border-rose-600';
+            if (type === 'warning') bgClass = 'bg-amber-800 text-white border-amber-600';
+
+            toast.className = `px-4 py-2.5 rounded-lg border shadow-lg text-xs font-semibold pointer-events-auto transition-all duration-300 transform translate-y-2 opacity-0 ${bgClass}`;
+            toast.innerText = message;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        /* STOP-AND-WAIT ARQ SIMULATION ENGINE */
+        let simEngine = {
+            isRunning: false,
+            speed: 1.0,
+            
+            
+            sendSeqNum: 0,       // 0 or 1
+            rcvExpectSeq: 0,     // 0 or 1
+            nextPacketId: 1,
+            
+            senderBuffer: [],    // Enqueued data packets waiting to be transmitted
+            activePacketInFlight: null, // Current Stop-and-Wait packet/ACK in flight
+            
+            pendingFaultCase: null,
+            totalTx: 0,
+            totalRetrans: 0,
+            totalDelivered: 0,
+            totalAcksReceived: 0,
+            nextFrameNumber: 0,
+            lastFrameNumber: 4,
+            
+            timerState: 'IDLE',   // IDLE, RUNNING, EXPIRED, ACK_RCV
+            stopwatchTime: 0.0,
+            stopwatchMax: 3.0,
+            
+            currentActivePktObj: null
+        };
+
+        let canvasCtx = null;
+        let stopwatchCtx = null;
+
+        function logSimEvent(msg, type = 'normal') {
+            const logBox = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            
+            let colorClass = 'text-slate-600';
+            if (type === 'tx') colorClass = 'text-blue-700 font-bold';
+            if (type === 'rx') colorClass = 'text-orange-700 font-bold';
+            if (type === 'fault') colorClass = 'text-rose-700 font-bold';
+            if (type === 'timeout') colorClass = 'text-amber-700 font-bold';
+
+            const timeStr = new Date().toLocaleTimeString().split(' ')[0];
+            entry.className = colorClass;
+            entry.innerText = `[${timeStr}] ${msg}`;
+            
+            logBox.appendChild(entry);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function updateFaultIndicator() {
+            const ind = document.getElementById('queued-fault-indicator');
+            if (!simEngine.pendingFaultCase) {
+                ind.innerText = 'Next Transmission: Normal Link';
+                ind.className = 'text-xs font-mono font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200';
+            } else if (simEngine.pendingFaultCase === 'lose-frame') {
+                ind.innerText = 'Queued Fault: Lost Data Frame';
+                ind.className = 'text-xs font-mono font-semibold text-rose-800 bg-rose-100 px-2 py-0.5 rounded border border-rose-300';
+            } else if (simEngine.pendingFaultCase === 'lose-ack') {
+                ind.innerText = 'Queued Fault: Lost ACK Frame';
+                ind.className = 'text-xs font-mono font-semibold text-orange-800 bg-orange-100 px-2 py-0.5 rounded border border-orange-300';
+            } else if (simEngine.pendingFaultCase === 'corrupt') {
+                ind.innerText = 'Queued Fault: Corrupt Data Frame';
+                ind.className = 'text-xs font-mono font-semibold text-purple-800 bg-purple-100 px-2 py-0.5 rounded border border-purple-300';
+            } else if (simEngine.pendingFaultCase === 'timeout') {
+                ind.innerText = 'Queued Fault: Delay ACK (Timeout)';
+                ind.className = 'text-xs font-mono font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300';
+            }
+        }
+
+        /* Render Sender Buffer Queue */
+        function renderBuffersUI() {
+            const txContainer = document.getElementById('sender-buffer-visual');
+            const txCountTag = document.getElementById('sender-buffer-count');
+            
+            const totalCount = simEngine.senderBuffer.length + (simEngine.currentActivePktObj ? 1 : 0);
+            txCountTag.innerText = `${totalCount} Packets Enqueued`;
+
+            if (totalCount === 0) {
+                txContainer.innerHTML = '<span class="text-slate-400 italic text-[11px]">Buffer is empty. Click "+ Frame Line" to enqueue data.</span>';
+            } else {
+                txContainer.innerHTML = '';
+
+                // Active in-flight packet
+                if (simEngine.currentActivePktObj) {
+                    const activePkt = simEngine.currentActivePktObj;
+                    const badge = document.createElement('div');
+                    badge.className = 'px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md shadow-xs shrink-0 border border-blue-400 text-xs flex items-center gap-1';
+                    badge.innerHTML = `<span>▶ F${activePkt.frameNumber} [Seq ${activePkt.seq}] (In Transit / Waiting ACK)</span>`;
+                    txContainer.appendChild(badge);
+                }
+
+                // Remaining queued packets
+                simEngine.senderBuffer.forEach((pkt) => {
+                    const badge = document.createElement('div');
+                    badge.className = 'px-2.5 py-1 bg-slate-200 text-slate-700 border border-slate-300 font-semibold rounded-md text-xs shrink-0 flex items-center gap-1';
+                    badge.innerHTML = `<span>F${pkt.frameNumber}</span>`;
+                    txContainer.appendChild(badge);
+                });
+            }
+        }
+
+        function enqueueSenderFrames(count = null) {
+            const frameCount = count === null ? simEngine.lastFrameNumber : count;
+            for (let i = 0; i < frameCount; i++) {
+                const pktObj = {
+                    id: simEngine.nextPacketId++,
+                    frameNumber: i,
+                    sizeBytes: 1000
+                };
+                simEngine.senderBuffer.push(pktObj);
+            }
+            logSimEvent(`Enqueued Frame 0–${frameCount - 1} into Sender Buffer (${frameCount} frame(s)).`, 'tx');
+            renderBuffersUI();
+
+            if (!simEngine.isRunning && !simEngine.activePacketInFlight) {
+                simEngine.isRunning = true;
+                triggerTransmission();
+            }
+        }
+
+        function updateStopwatchWidget() {
+            const timeNum = document.getElementById('stopwatch-time-num');
+            const statusTag = document.getElementById('stopwatch-status-tag');
+            const actionDesc = document.getElementById('stopwatch-action-desc');
+            const stateVal = document.getElementById('stopwatch-state-val');
+            const threshVal = document.getElementById('stopwatch-threshold-val');
+
+            threshVal.innerText = `${simEngine.stopwatchMax.toFixed(2)} Seconds`;
+            timeNum.innerText = `${simEngine.stopwatchTime.toFixed(2)}s`;
+
+            if (simEngine.timerState === 'RUNNING') {
+                statusTag.innerText = 'STOPWATCH TICKING';
+                statusTag.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 stopwatch-active';
+                actionDesc.innerText = `Awaiting ACK for Frame ${simEngine.sendSeqNum}...`;
+                stateVal.innerText = 'TIMER RUNNING';
+                stateVal.className = 'text-amber-400 font-bold';
+            } else if (simEngine.timerState === 'ACK_RCV') {
+                statusTag.innerText = 'ACK RECEIVED';
+                statusTag.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                actionDesc.innerText = `ACK verified! Ready for next.`;
+                stateVal.innerText = 'ACK VALIDATED';
+                stateVal.className = 'text-emerald-400 font-bold';
+            } else if (simEngine.timerState === 'EXPIRED') {
+                statusTag.innerText = 'TIMEOUT EXPIRED';
+                statusTag.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40';
+                actionDesc.innerText = `Timeout! Retransmitting frame...`;
+                stateVal.innerText = 'TIMEOUT ALARM';
+                stateVal.className = 'text-rose-400 font-bold';
+            } else {
+                statusTag.innerText = 'STOPWATCH IDLE';
+                statusTag.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700';
+                actionDesc.innerText = 'Ready for Transmission';
+                stateVal.innerText = 'READY';
+                stateVal.className = 'text-slate-400 font-bold';
+            }
+
+            if (!stopwatchCtx) {
+                const dial = document.getElementById('canvas-stopwatch-dial');
+                stopwatchCtx = dial.getContext('2d');
+            }
+            
+            const w = 96, h = 96;
+            stopwatchCtx.clearRect(0, 0, w, h);
+
+            stopwatchCtx.beginPath();
+            stopwatchCtx.arc(w / 2, h / 2, 38, 0, 2 * Math.PI);
+            stopwatchCtx.lineWidth = 6;
+            stopwatchCtx.strokeStyle = '#334155';
+            stopwatchCtx.stroke();
+
+            const pct = Math.min(simEngine.stopwatchTime / simEngine.stopwatchMax, 1.0);
+            const startAngle = -0.5 * Math.PI;
+            const endAngle = startAngle + (pct * 2 * Math.PI);
+
+            stopwatchCtx.beginPath();
+            stopwatchCtx.arc(w / 2, h / 2, 38, startAngle, endAngle);
+            stopwatchCtx.lineWidth = 6;
+            stopwatchCtx.strokeStyle = simEngine.timerState === 'EXPIRED' ? '#f43f5e' : (simEngine.timerState === 'RUNNING' ? '#f59e0b' : '#10b981');
+            stopwatchCtx.stroke();
+        }
+
+        function updateWindowDisplay() {
+            const senderWindow = document.getElementById('sender-window-visual');
+            const senderStatus = document.getElementById('sender-window-status');
+            const receiverExpected = document.getElementById('receiver-expected-label');
+            const receiverBuffer = document.getElementById('receiver-buffer-visual');
+            const receiverStatus = document.getElementById('receiver-window-status');
+            const channelPill = document.getElementById('channel-frame-pill');
+            const channelDirection = document.getElementById('channel-direction');
+
+            if (simEngine.currentActivePktObj) {
+                const p = simEngine.currentActivePktObj;
+                senderWindow.innerHTML = `<div class="px-3 py-2 rounded-lg bg-blue-600 text-white border border-blue-500 shadow-sm min-w-[170px]"><div class="font-mono font-bold text-sm">Frame F${p.frameNumber}</div><div class="text-[10px] opacity-90">Sequence bit: ${p.seq}</div></div>`;
+                senderStatus.innerText = simEngine.timerState === 'RUNNING' ? `WAITING FOR ACK • F${p.frameNumber} [Seq ${p.seq}]` : `ACTIVE • F${p.frameNumber}`;
+            } else {
+                senderWindow.innerHTML = '<span class="text-[11px] text-slate-400 italic">No frame selected</span>';
+                senderStatus.innerText = 'READY • Waiting for frame';
+            }
+
+            receiverExpected.innerText = `Frame ${simEngine.rcvExpectSeq}`;
+            receiverBuffer.innerText = simEngine.activePacketInFlight && simEngine.activePacketInFlight.type === 'DATA' ? `Receiving F${simEngine.activePacketInFlight.frameNumber ?? '—'}` : (simEngine.totalDelivered > 0 ? 'Last accepted frame stored / delivered ✓' : 'Empty');
+            receiverStatus.innerText = `LISTENING • Waiting for Frame ${simEngine.rcvExpectSeq}`;
+
+            if (simEngine.activePacketInFlight) {
+                const p = simEngine.activePacketInFlight;
+                if (p.type === 'DATA') {
+                    channelPill.innerText = `F${p.frameNumber} • Seq ${p.seq}`;
+                    channelPill.className = 'px-3 py-2 rounded-full bg-blue-50 border border-blue-300 text-[11px] font-mono font-bold text-blue-700 text-center min-w-[120px]';
+                    channelDirection.innerText = 'DATA • Sender → Receiver';
+                } else {
+                    channelPill.innerText = `ACK${p.ackNum}`;
+                    channelPill.className = 'px-3 py-2 rounded-full bg-orange-50 border border-orange-300 text-[11px] font-mono font-bold text-orange-700 text-center min-w-[120px]';
+                    channelDirection.innerText = 'ACK • Receiver → Sender';
+                }
+            } else {
+                channelPill.innerText = 'CHANNEL IDLE';
+                channelPill.className = 'px-3 py-2 rounded-full bg-white border border-slate-300 text-[11px] font-mono font-bold text-slate-500 text-center min-w-[120px]';
+                channelDirection.innerText = 'Sender → Receiver • ACK Receiver → Sender';
+            }
+
+            document.getElementById('stat-frames-line').innerText = simEngine.lastFrameNumber + 1;
+            document.getElementById('stat-total-tx').innerText = simEngine.totalTx;
+            document.getElementById('stat-delivered').innerText = simEngine.totalDelivered;
+            document.getElementById('stat-retrans').innerText = simEngine.totalRetrans;
+            document.getElementById('stat-acks').innerText = simEngine.totalAcksReceived;
+        }
+
+        function updateSimUI() {
+            document.getElementById('state-seq-tx').innerText = `Frame ${simEngine.sendSeqNum}`;
+            document.getElementById('state-seq-rx').innerText = `Frame ${simEngine.rcvExpectSeq} (Sending ACK${1 - simEngine.rcvExpectSeq})`;
+            document.getElementById('state-total-tx').innerText = simEngine.totalTx;
+            document.getElementById('state-retrans').innerText = simEngine.totalRetrans;
+
+            const badge = document.getElementById('sim-status-badge');
+            if (simEngine.isRunning) {
+                badge.innerText = 'TRANSMITTING';
+                badge.className = 'px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-mono text-[10px] font-bold';
+            } else {
+                badge.innerText = 'PAUSED / IDLE';
+                badge.className = 'px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-mono text-[10px]';
+            }
+
+            updateFaultIndicator();
+            updateStopwatchWidget();
+            renderBuffersUI();
+            updateWindowDisplay();
+        }
+
+        function triggerTransmission() {
+            // Stop-and-Wait condition: Can only transmit if no active packet is in flight
+            if (simEngine.activePacketInFlight) return;
+
+            if (!simEngine.currentActivePktObj) {
+                if (simEngine.senderBuffer.length === 0) {
+                    simEngine.isRunning = false;
+                    updateSimUI();
+                    return;
+                }
+                simEngine.currentActivePktObj = simEngine.senderBuffer.shift();
+                simEngine.currentActivePktObj.seq = simEngine.sendSeqNum;
+            }
+
+            const pktToTrans = simEngine.currentActivePktObj;
+            simEngine.totalTx++;
+
+            let isLost = false, isCorrupt = false, isAckLost = false, isDelayed = false;
+
+            if (simEngine.pendingFaultCase === 'lose-frame') {
+                isLost = true;
+                simEngine.pendingFaultCase = null;
+            } else if (simEngine.pendingFaultCase === 'corrupt') {
+                isCorrupt = true;
+                simEngine.pendingFaultCase = null;
+            } else if (simEngine.pendingFaultCase === 'lose-ack') {
+                isAckLost = true;
+                simEngine.pendingFaultCase = null;
+            } else if (simEngine.pendingFaultCase === 'timeout') {
+                isDelayed = true;
+                simEngine.pendingFaultCase = null;
+            }
+
+            const flightPkt = {
+                type: 'DATA',
+                id: pktToTrans.id,
+                seq: simEngine.sendSeqNum,
+                frameNumber: pktToTrans.frameNumber,
+                sizeBytes: pktToTrans.sizeBytes,
+                progress: 0,
+                startY: 60,
+                endY: 200,
+                isCorrupted: isCorrupt,
+                isLost: isLost,
+                isAckLost: isAckLost,
+                isDelayed: isDelayed
+            };
+
+            simEngine.activePacketInFlight = flightPkt;
+            simEngine.timerState = 'RUNNING';
+            simEngine.stopwatchTime = 0.0;
+            
+            logSimEvent(`TX sent Frame F${pktToTrans.frameNumber} [Seq ${simEngine.sendSeqNum}]`, 'tx');
+            updateSimUI();
+        }
+
+        function handleSimArrival(pkt) {
+            if (pkt.type === 'DATA') {
+                if (pkt.isLost) {
+                    logSimEvent(`💥 Data Frame F${pkt.seq} LOST in transit! Timer running...`, 'fault');
+                    return;
+                }
+
+                if (pkt.isCorrupted) {
+                    logSimEvent(`☣️ Receiver detected CRC Error in Frame F${pkt.seq}! Discarded.`, 'fault');
+                    return;
+                }
+
+                // Check sequence number matching
+                if (pkt.seq === simEngine.rcvExpectSeq) {
+                    logSimEvent(`Receiver accepted Frame F${pkt.frameNumber} [Seq ${pkt.seq}] in-order!`, 'rx');
+                    simEngine.totalDelivered++;
+                    simEngine.rcvExpectSeq = 1 - simEngine.rcvExpectSeq; // Flip 0 <-> 1
+
+                    // Send ACK with expected next sequence number
+                    const ackPkt = {
+                        type: 'ACK',
+                        ackNum: simEngine.rcvExpectSeq,
+                        progress: 0,
+                        startY: pkt.endY,
+                        endY: pkt.endY + 140,
+                        isAckLost: pkt.isAckLost,
+                        isDelayed: pkt.isDelayed
+                    };
+                    simEngine.activePacketInFlight = ackPkt;
+                    logSimEvent(`Receiver sent ACK${simEngine.rcvExpectSeq} (Expecting Frame ${simEngine.rcvExpectSeq})`, 'rx');
+                } else {
+                    logSimEvent(`Receiver detected DUPLICATE Frame F${pkt.seq}. Discarded payload, re-sending ACK${simEngine.rcvExpectSeq}`, 'fault');
+                    const ackPkt = {
+                        type: 'ACK',
+                        ackNum: simEngine.rcvExpectSeq,
+                        progress: 0,
+                        startY: pkt.endY,
+                        endY: pkt.endY + 140,
+                        isAckLost: pkt.isAckLost,
+                        isDelayed: pkt.isDelayed
+                    };
+                    simEngine.activePacketInFlight = ackPkt;
+                }
+
+            } else if (pkt.type === 'ACK') {
+                if (pkt.isAckLost) {
+                    logSimEvent(`⚡ ACK${pkt.ackNum} LOST in return path! Timer running...`, 'fault');
+                    return;
+                }
+
+                if (pkt.isDelayed) {
+                    logSimEvent(`⏱️ ACK${pkt.ackNum} delayed beyond timeout! Sender timer will trigger.`, 'timeout');
+                    return;
+                }
+
+                // Verify ACK
+                const expectedAckNum = (simEngine.sendSeqNum + 1) % 2;
+                if (pkt.ackNum === expectedAckNum) {
+                    logSimEvent(`TX received ACK${pkt.ackNum}. Frame F${simEngine.currentActivePktObj.frameNumber} successfully delivered!`, 'rx');
+                    simEngine.totalAcksReceived++;
+                    
+                    simEngine.sendSeqNum = expectedAckNum; // Advance 0 <-> 1
+                    simEngine.currentActivePktObj = null;
+                    simEngine.timerState = 'ACK_RCV';
+                    simEngine.stopwatchTime = 0.0;
+                    simEngine.activePacketInFlight = null;
+
+                    updateSimUI();
+
+                    // Automatically send next packet if buffer is not empty
+                    if (simEngine.isRunning && simEngine.senderBuffer.length > 0) {
+                        setTimeout(() => { triggerTransmission(); }, 400 / simEngine.speed);
+                    } else if (simEngine.senderBuffer.length === 0) {
+                        simEngine.isRunning = false;
+                        updateSimUI();
+                        showToast('All queued packets successfully delivered!', 'success');
+                    }
+                } else {
+                    logSimEvent(`TX received unexpected ACK${pkt.ackNum}. Ignored.`, 'fault');
+                }
+            }
+        }
+
+        function triggerSenderTimeout() {
+            simEngine.timerState = 'EXPIRED';
+            simEngine.stopwatchTime = simEngine.stopwatchMax;
+            updateSimUI();
+
+            setTimeout(() => {
+                if (simEngine.isRunning && simEngine.currentActivePktObj) {
+                    logSimEvent(`⏱️ STOPWATCH TIMEOUT EXPIRED! Retransmitting Data Frame F${simEngine.sendSeqNum}...`, 'timeout');
+                    simEngine.totalRetrans++;
+                    simEngine.activePacketInFlight = null;
+                    simEngine.timerState = 'RUNNING';
+                    simEngine.stopwatchTime = 0.0;
+                    triggerTransmission();
+                }
+            }, 800 / simEngine.speed);
+        }
+
+        function drawPillBadge(ctx, x, y, width, height, text, strokeColor, fillColor, textColor) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(x - width / 2, y - height / 2, width, height, height / 2);
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = strokeColor;
+            ctx.stroke();
+
+            ctx.fillStyle = textColor;
+            ctx.font = 'bold 11px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, x, y + 0.5);
+            ctx.restore();
+        }
+
+        function initCanvas() {
+            const canvas = document.getElementById('canvas-space-time');
+            canvasCtx = canvas.getContext('2d');
+
+            function render() {
+                canvasCtx.fillStyle = '#ffffff';
+                canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+                const txX = 90;
+                const rxX = 530;
+
+                // Sender Axis Line
+                canvasCtx.beginPath();
+                canvasCtx.strokeStyle = '#2563eb';
+                canvasCtx.lineWidth = 4;
+                canvasCtx.moveTo(txX, 35);
+                canvasCtx.lineTo(txX, canvas.height - 35);
+                canvasCtx.stroke();
+
+                // Receiver Axis Line
+                canvasCtx.beginPath();
+                canvasCtx.strokeStyle = '#ea580c';
+                canvasCtx.lineWidth = 4;
+                canvasCtx.moveTo(rxX, 35);
+                canvasCtx.lineTo(rxX, canvas.height - 35);
+                canvasCtx.stroke();
+
+                // Headers
+                canvasCtx.font = 'bold 12px sans-serif';
+                canvasCtx.fillStyle = '#1d4ed8';
+                canvasCtx.textAlign = 'center';
+                canvasCtx.textBaseline = 'alphabetic';
+                canvasCtx.fillText(`TX (Sender S_next=${simEngine.sendSeqNum})`, txX, 22);
+
+                canvasCtx.fillStyle = '#ea580c';
+                canvasCtx.fillText(`RX (Receiver R_next=${simEngine.rcvExpectSeq})`, rxX, 22);
+
+                canvasCtx.fillStyle = '#64748b';
+                canvasCtx.font = '10px monospace';
+                canvasCtx.textAlign = 'center';
+                canvasCtx.fillText('Time (t) ↓', txX - 55, canvas.height / 2);
+
+                // Single Packet Flight Visualizer
+                const pkt = simEngine.activePacketInFlight;
+                if (pkt) {
+                    canvasCtx.save();
+                    if (pkt.type === 'DATA') {
+                        const curX = txX + (rxX - txX) * pkt.progress;
+                        const curY = pkt.startY + (pkt.endY - pkt.startY) * pkt.progress;
+                        const dynamicLineWidth = Math.max(3, Math.min(10, (pkt.sizeBytes / 400)));
+
+                        if (pkt.isLost && pkt.progress >= 0.5) {
+                            canvasCtx.fillStyle = '#e11d48';
+                            canvasCtx.font = 'bold 12px sans-serif';
+                            canvasCtx.textAlign = 'left';
+                            canvasCtx.textBaseline = 'middle';
+                            canvasCtx.fillText('💥 FRAME LOST', curX + 12, curY);
+                        } else {
+                            canvasCtx.strokeStyle = pkt.isCorrupted ? '#dc2626' : '#2563eb';
+                            canvasCtx.lineWidth = dynamicLineWidth;
+                            canvasCtx.beginPath();
+                            canvasCtx.moveTo(txX, pkt.startY);
+                            canvasCtx.lineTo(curX, curY);
+                            canvasCtx.stroke();
+
+                            const badgeText = pkt.isCorrupted ? `F${pkt.frameNumber} [${pkt.seq}] ☣` : `F${pkt.frameNumber} [Seq ${pkt.seq}]`;
+                            drawPillBadge(canvasCtx, curX, curY, 86, 22, badgeText, pkt.isCorrupted ? '#b91c1c' : '#1d4ed8', '#ffffff', '#1e293b');
+                        }
+                    } else if (pkt.type === 'ACK') {
+                        const curX = rxX - (rxX - txX) * pkt.progress;
+                        const curY = pkt.startY + (pkt.endY - pkt.startY) * pkt.progress;
+
+                        if (pkt.isAckLost && pkt.progress >= 0.5) {
+                            canvasCtx.fillStyle = '#ea580c';
+                            canvasCtx.font = 'bold 12px sans-serif';
+                            canvasCtx.textAlign = 'right';
+                            canvasCtx.textBaseline = 'middle';
+                            canvasCtx.fillText('⚡ ACK LOST', curX - 12, curY);
+                        } else {
+                            canvasCtx.strokeStyle = '#ea580c';
+                            canvasCtx.lineWidth = 4;
+                            canvasCtx.beginPath();
+                            canvasCtx.moveTo(rxX, pkt.startY);
+                            canvasCtx.lineTo(curX, curY);
+                            canvasCtx.stroke();
+
+                            drawPillBadge(canvasCtx, curX, curY, 74, 22, `ACK${pkt.ackNum}`, '#ea580c', '#ffffff', '#1e293b');
+                        }
+                    }
+                    canvasCtx.restore();
+                }
+            }
+
+            let lastTime = 0;
+            function loop(timestamp) {
+                if (!lastTime) lastTime = timestamp;
+                const dt = (timestamp - lastTime) / 1000;
+                lastTime = timestamp;
+
+                if (simEngine.isRunning) {
+                    if (simEngine.timerState === 'RUNNING') {
+                        simEngine.stopwatchTime += dt * simEngine.speed;
+                        if (simEngine.stopwatchTime >= simEngine.stopwatchMax) {
+                            triggerSenderTimeout();
+                        }
+                        updateStopwatchWidget();
+                    }
+
+                    if (simEngine.activePacketInFlight) {
+                        const pkt = simEngine.activePacketInFlight;
+                        pkt.progress += dt * 0.8 * simEngine.speed;
+
+                        if (pkt.progress >= 1.0) {
+                            simEngine.activePacketInFlight = null;
+                            handleSimArrival(pkt);
+                        }
+                    }
+                }
+
+                render();
+                requestAnimationFrame(loop);
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        /* 15-TYPE QUESTION SOLVER STOP-AND-WAIT ARQ SOLVER
+           Source: supplied Stop_and_Wait_ARQ_Questions.pdf.
+           The original auto-calculator used 1000 BYTES by default, while Q1 specifies
+           2000 BITS. That unit mismatch is why the screenshot showed 8 ms instead of 1 ms.
+        */
+        const questionBank = {
+            1: {
+                text:'Find the transmission time (Tt) and propagation time (Tp) for a 2 Mbps link, 600 km apart, signal speed 2×10^8 m/s, frame size 2000 bits.',
+                method:'Enter the known frame size, bandwidth, distance and propagation speed. The solver derives Tt and Tp.',
+                required:['frameBits','bandwidth','distance','speed'],
+                solve(v){
+                    const tt=v.frameBits/v.bandwidth*1000, tp=(v.distance*1000/v.speed)*1000;
+                    return result({tt,tp,eff:100/(1+2*tp/tt),answer:`Tt = ${tt.toFixed(2)} ms; Tp = ${tp.toFixed(2)} ms.`,
+                        steps:[`1. Tt = L/B = ${v.frameBits.toLocaleString()} / ${(v.bandwidth*1e6).toLocaleString()} = ${tt.toFixed(3)} ms`,`2. Tp = d/v = ${(v.distance*1000).toLocaleString()} m / ${v.speed.toLocaleString()} m/s = ${tp.toFixed(3)} ms`],
+                        metrics:{'Frame size L':`${v.frameBits.toLocaleString()} bits`,'Bandwidth B':`${v.bandwidth} Mbps`,'Tt':`${tt.toFixed(3)} ms`,'Tp':`${tp.toFixed(3)} ms`,'a = Tp/Tt':(tp/tt).toFixed(3),'Efficiency':`${(100/(1+2*tp/tt)).toFixed(2)}%`}});
+                }
+            },
+            2: {
+                text:'Using Tt = 1 ms and Tp = 3 ms from Question 1, find the efficiency, ignoring ACK time and processing delay.',
+                method:'Enter Tt and Tp. Use U = Tt / (Tt + 2Tp) = 1 / (1 + 2a).',
+                required:['tt','tp'],
+                solve(v){
+                    const a=v.tp/v.tt,eff=100/(1+2*a);
+                    return result({tt:v.tt,tp:v.tp,eff,answer:`a = ${a.toFixed(2)}; Stop-and-Wait efficiency = ${eff.toFixed(2)}%.`,
+                        steps:[`1. a = Tp/Tt = ${v.tp}/${v.tt} = ${a.toFixed(2)}`,`2. U = 1/(1+2a) = ${eff.toFixed(2)}%`],
+                        metrics:{'Tt':`${v.tt.toFixed(3)} ms`,'Tp':`${v.tp.toFixed(3)} ms`,'RTT (propagation only)':`${(2*v.tp).toFixed(3)} ms`,'a':a.toFixed(3),'Efficiency':`${eff.toFixed(2)}%`}});
+                }
+            },
+            3: {
+                text:'For B = 2 Mbps and U = 14.28% (from Q2), determine the effective throughput.',
+                method:'Enter bandwidth and efficiency. Throughput = U × B.',
+                required:['bandwidth','effInput'],
+                solve(v){
+                    const th=v.bandwidth*v.effInput/100;
+                    return result({eff:v.effInput,answer:`Effective throughput = ${th.toFixed(4)} Mbps = ${(th*1000).toFixed(1)} kbps.`,
+                        steps:[`1. U = ${v.effInput}% = ${(v.effInput/100).toFixed(5)}`,`2. Throughput = U × B = ${(v.effInput/100).toFixed(5)} × ${v.bandwidth} Mbps = ${th.toFixed(4)} Mbps`],
+                        metrics:{'Bandwidth B':`${v.bandwidth} Mbps`,'Efficiency U':`${v.effInput.toFixed(2)}%`,'Effective throughput':`${th.toFixed(4)} Mbps`}}); 
+                }
+            },
+            4: {
+                text:'Find the minimum frame size for a 500 kbps link with Tp = 25 ms to achieve at least 60% efficiency (ACK time and processing delay negligible).',
+                method:'Enter B, Tp and target efficiency. From U = Tt/(Tt+2Tp), Tt = 2TpU/(1−U), then L = B×Tt.',
+                required:['bandwidth','tp','targetEff'],
+                solve(v){
+                    const B=v.bandwidth*1e6,tp=v.tp/1000,U=v.targetEff/100,tt=(2*tp*U)/(1-U),L=B*tt;
+                    return result({tt:tt*1000,tp:v.tp,eff:v.targetEff,answer:`Minimum Tt = ${(tt*1000).toFixed(2)} ms; minimum frame size = ${L.toFixed(0)} bits = ${(L/8).toFixed(0)} bytes.`,
+                        steps:[`1. U = ${v.targetEff}% = Tt/(Tt + 2×${v.tp} ms)`,`2. Tt = 2TpU/(1−U) = ${(tt*1000).toFixed(3)} ms`,`3. Lmin = B×Tt = ${B.toLocaleString()} × ${tt.toFixed(6)} = ${L.toFixed(0)} bits = ${(L/8).toFixed(0)} bytes`],
+                        metrics:{'Bandwidth B':`${v.bandwidth} Mbps`,'Tp':`${v.tp.toFixed(3)} ms`,'Target efficiency':`${v.targetEff.toFixed(2)}%`,'Minimum Tt':`${(tt*1000).toFixed(3)} ms`,'Minimum L':`${L.toFixed(0)} bits`}}); 
+                }
+            },
+            5: {
+                text:'A geostationary satellite link: B = 1 Mbps, one-way Tp = 270 ms, L = 1000 bits, ACK time negligible. Find cycle time and efficiency.',
+                method:'Enter B, Tp and frame size. Cycle time = Tt + 2Tp; efficiency = Tt/cycle time.',
+                required:['bandwidth','tp','frameBits'],
+                solve(v){
+                    const tt=v.frameBits/v.bandwidth*1000,cycle=tt+2*v.tp,eff=tt/cycle*100;
+                    return result({tt,tp:v.tp,eff,answer:`Cycle time = ${cycle.toFixed(2)} ms; efficiency = ${eff.toFixed(4)}%.`,
+                        steps:[`1. Tt = L/B = ${v.frameBits.toLocaleString()}/${(v.bandwidth*1e6).toLocaleString()} = ${tt.toFixed(3)} ms`,`2. Tcycle = Tt + 2Tp = ${tt.toFixed(3)} + 2×${v.tp} = ${cycle.toFixed(2)} ms`,`3. U = Tt/Tcycle = ${eff.toFixed(4)}%`],
+                        metrics:{'Tt':`${tt.toFixed(3)} ms`,'Tp':`${v.tp.toFixed(3)} ms`,'RTT':`${(2*v.tp).toFixed(3)} ms`,'Cycle time':`${cycle.toFixed(3)} ms`,'Efficiency':`${eff.toFixed(4)}%`}}); 
+                }
+            },
+            6: {
+                text:'With Tt = 5 ms and Tp = 15 ms (no errors), how many data frames can be completely sent and acknowledged in 2 seconds?',
+                method:'Enter Tt, Tp and available time. One complete cycle takes Tt + 2Tp; use floor(total time/cycle).',
+                required:['tt','tp','duration'],
+                solve(v){
+                    const cycle=(v.tt+2*v.tp)/1000,n=Math.floor(v.duration/cycle);
+                    return result({answer:`Cycle time = ${(cycle*1000).toFixed(0)} ms; ${n} complete data frame(s) can be sent and acknowledged.`,
+                        steps:[`1. Tcycle = ${v.tt} + 2×${v.tp} = ${(cycle*1000).toFixed(0)} ms`,`2. Available time / cycle = ${v.duration} / ${cycle.toFixed(6)} = ${(v.duration/cycle).toFixed(3)}`,`3. Complete cycles = floor(...) = ${n}`],
+                        metrics:{'Tt':`${v.tt.toFixed(3)} ms`,'Tp':`${v.tp.toFixed(3)} ms`,'Cycle time':`${(cycle*1000).toFixed(3)} ms`,'Available time':`${v.duration} s`,'Complete frames':`${n}`}}); 
+                }
+            },
+            7: {
+                text:'A 10 Mbps link with Tt = 2 ms, Tp = 8 ms (ACK time negligible). Find efficiency, effective throughput, and wasted bandwidth.',
+                method:'Enter B, Tt and Tp. U = Tt/(Tt+2Tp); throughput = U×B; wasted bandwidth = B−throughput.',
+                required:['bandwidth','tt','tp'],
+                solve(v){
+                    const eff=v.tt/(v.tt+2*v.tp)*100,th=v.bandwidth*eff/100,w=v.bandwidth-th;
+                    return result({tt:v.tt,tp:v.tp,eff,answer:`Efficiency = ${eff.toFixed(2)}%; throughput = ${th.toFixed(3)} Mbps; wasted bandwidth = ${w.toFixed(3)} Mbps.`,
+                        steps:[`1. U = ${v.tt}/(${v.tt}+2×${v.tp}) = ${eff.toFixed(2)}%`,`2. Throughput = ${v.bandwidth}×${(eff/100).toFixed(6)} = ${th.toFixed(3)} Mbps`,`3. Wasted bandwidth = ${v.bandwidth} − ${th.toFixed(3)} = ${w.toFixed(3)} Mbps`],
+                        metrics:{'Bandwidth B':`${v.bandwidth} Mbps`,'Tt':`${v.tt.toFixed(3)} ms`,'Tp':`${v.tp.toFixed(3)} ms`,'a':(v.tp/v.tt).toFixed(3),'Efficiency':`${eff.toFixed(2)}%`,'Throughput':`${th.toFixed(3)} Mbps`,'Wasted bandwidth':`${w.toFixed(3)} Mbps`}}); 
+                }
+            },
+            8: {
+                text:'4000-bit frames over a 200 kbps link, one-way Tp = 20 ms, receiver Tproc = 2 ms, ACK size = 200 bits. Find Tt, Tack, Tcycle, and U.',
+                method:'Enter frame size, data bandwidth, Tp, processing delay, ACK size and ACK bandwidth. Tcycle = Tt + 2Tp + Tproc + Tack.',
+                required:['frameBits','bandwidth','tp','proc','ackBits','ackBandwidth'],
+                solve(v){
+                    const tt=v.frameBits/v.bandwidth*1000,tack=v.ackBits/v.ackBandwidth*1000,cycle=tt+2*v.tp+v.proc+tack,eff=tt/cycle*100;
+                    return result({tt,tp:v.tp,eff,answer:`Tt = ${tt.toFixed(2)} ms; Tack = ${tack.toFixed(2)} ms; Tcycle = ${cycle.toFixed(2)} ms; U = ${eff.toFixed(2)}%.`,
+                        steps:[`1. Tt = L/B = ${v.frameBits.toLocaleString()}/${(v.bandwidth*1e6).toLocaleString()} = ${tt.toFixed(2)} ms`,`2. Tack = ACK bits / ACK bandwidth = ${v.ackBits}/${(v.ackBandwidth*1e6).toLocaleString()} = ${tack.toFixed(2)} ms`,`3. Tcycle = Tt + 2Tp + Tproc + Tack = ${cycle.toFixed(2)} ms`,`4. U = Tt/Tcycle = ${eff.toFixed(2)}%`],
+                        metrics:{'Tt':`${tt.toFixed(3)} ms`,'Tp':`${v.tp.toFixed(3)} ms`,'Tack':`${tack.toFixed(3)} ms`,'Tproc':`${v.proc.toFixed(3)} ms`,'Tcycle':`${cycle.toFixed(3)} ms`,'Efficiency':`${eff.toFixed(2)}%`}}); 
+                }
+            },
+            9: {
+                text:'Using the Question 8 system, find the minimum timeout, and the practical timeout with 5 ms jitter.',
+                method:'Enter the complete cycle components and jitter. Minimum timeout covers Tt + 2Tp + Tproc + Tack; practical timeout adds jitter.',
+                required:['tt','tp','proc','tack','jitter'],
+                solve(v){
+                    const min=v.tt+2*v.tp+v.proc+v.tack,practical=min+v.jitter;
+                    return result({answer:`Minimum timeout = ${min.toFixed(2)} ms; practical timeout = ${practical.toFixed(2)} ms.`,
+                        steps:[`1. Tmin = Tt + 2Tp + Tproc + Tack = ${v.tt} + 2×${v.tp} + ${v.proc} + ${v.tack} = ${min.toFixed(2)} ms`,`2. Practical timeout = ${min.toFixed(2)} + ${v.jitter} = ${practical.toFixed(2)} ms`],
+                        metrics:{'Tt':`${v.tt.toFixed(3)} ms`,'2Tp':`${(2*v.tp).toFixed(3)} ms`,'Tproc':`${v.proc.toFixed(3)} ms`,'Tack':`${v.tack.toFixed(3)} ms`,'Minimum timeout':`${min.toFixed(3)} ms`,'Jitter':`${v.jitter.toFixed(3)} ms`,'Practical timeout':`${practical.toFixed(3)} ms`}}); 
+                }
+            },
+            10: {
+                text:'On a noisy Wi-Fi link with frame error probability p = 0.3, find (a) the expected number of transmissions, and (b) the probability that exactly 3 transmissions are required.',
+                method:'Enter p and the requested attempt count n. Assume independent attempts: E[N]=1/(1−p); P(N=n)=(1−p)^(n−1)p.',
+                required:['p','n'],
+                solve(v){
+                    const success=1-v.p,exp=1/success,exact=Math.pow(success,v.n-1)*v.p;
+                    return result({answer:`Expected transmissions = ${exp.toFixed(4)}; P(exactly ${v.n}) = ${(exact*100).toFixed(2)}%.`,
+                        steps:[`1. Success probability = 1−${v.p} = ${success.toFixed(4)}`,`2. E[N] = 1/(1−p) = ${exp.toFixed(4)}`,`3. P(N=${v.n}) = ${success.toFixed(4)}^${v.n-1}×${v.p} = ${exact.toFixed(4)} = ${(exact*100).toFixed(2)}%`],
+                        metrics:{'Error probability p':v.p.toFixed(4),'Success probability':success.toFixed(4),'Expected transmissions':exp.toFixed(4),[`P(exactly ${v.n})`]:`${(exact*100).toFixed(2)}%`}}); 
+                }
+            },
+            11: {
+                text:'Given error-free efficiency U = 45% and frame error probability p = 0.25, find the effective efficiency accounting for retransmissions.',
+                method:'Enter error-free efficiency and p. Use the supplied question-set model: effective efficiency = U×(1−p).',
+                required:['effInput','p'],
+                solve(v){
+                    const eff=v.effInput*(1-v.p);
+                    return result({eff,answer:`Effective efficiency = ${eff.toFixed(2)}%.`,
+                        steps:[`1. Success probability = 1−${v.p} = ${(1-v.p).toFixed(2)}`,`2. Effective U = ${v.effInput}% × ${(1-v.p).toFixed(2)} = ${eff.toFixed(2)}%`],
+                        metrics:{'Error-free efficiency':`${v.effInput.toFixed(2)}%`,'p':v.p.toFixed(4),'Success probability':(1-v.p).toFixed(4),'Effective efficiency':`${eff.toFixed(2)}%`}}); 
+                }
+            },
+            12: {
+                text:'A 4 Mbps link, one-way Tp = 10 ms. Compare efficiency for frame sizes 5000 bits and 50,000 bits, and comment on the trade-off of large frames.',
+                method:'Enter B, Tp and both frame sizes. For each frame, Tt=L/B and U=Tt/(Tt+2Tp).',
+                required:['bandwidth','tp','frame1','frame2'],
+                solve(v){
+                    const t1=v.frame1/v.bandwidth*1000,t2=v.frame2/v.bandwidth*1000,e1=t1/(t1+2*v.tp)*100,e2=t2/(t2+2*v.tp)*100;
+                    return result({answer:`${v.frame1}-bit frame: ${e1.toFixed(2)}%; ${v.frame2}-bit frame: ${e2.toFixed(2)}%. Larger frames improve efficiency in this ideal model, but a loss can make each retransmission more costly.`,
+                        steps:[`1. ${v.frame1} bits: Tt = ${t1.toFixed(2)} ms; U = ${e1.toFixed(2)}%`,`2. ${v.frame2} bits: Tt = ${t2.toFixed(2)} ms; U = ${e2.toFixed(2)}%`,`3. Larger L increases Tt relative to Tp, improving ideal utilization but increasing the amount retransmitted after a loss.`],
+                        metrics:{'Bandwidth B':`${v.bandwidth} Mbps`,'Tp':`${v.tp.toFixed(3)} ms`,[`Frame ${v.frame1} Tt`]:`${t1.toFixed(3)} ms`,[`Frame ${v.frame1} efficiency`]:`${e1.toFixed(2)}%`,[`Frame ${v.frame2} Tt`]:`${t2.toFixed(3)} ms`,[`Frame ${v.frame2} efficiency`]:`${e2.toFixed(2)}%`}}); 
+                }
+            },
+            13: {
+                text:'Find the minimum bandwidth B for Tp = 15 ms and L = 12,000 bits to achieve throughput ≥ 200 kbps (ACK/processing negligible).',
+                method:'Enter L, Tp and target throughput. Use S = L/(L/B + 2Tp) and solve for B.',
+                required:['frameBits','tp','targetThroughput'],
+                solve(v){
+                    const L=v.frameBits,tp=v.tp/1000,S=v.targetThroughput*1000,den=L/S-2*tp;
+                    if(den<=0) return result({answer:'No finite bandwidth can satisfy this target with the given parameters.',steps:['1. Check L/S − 2Tp > 0.','2. The requested throughput is at or above the theoretical limit for the stated Stop-and-Wait model.'],metrics:{'Feasibility':'Not achievable','L':`${L} bits`,'Tp':`${v.tp} ms`,'Target throughput':`${v.targetThroughput} Kbps`}});
+                    const bps=L/den,tt=L/bps,eff=tt/(tt+2*tp)*100;
+                    return result({tt:tt*1000,tp:v.tp,eff,answer:`Minimum bandwidth = ${(bps/1000).toFixed(2)} Kbps (≈ ${(bps/1e6).toFixed(6)} Mbps).`,
+                        steps:[`1. S = L/(L/B + 2Tp)`,`2. L/B = L/S − 2Tp = ${(L/S-2*tp).toFixed(6)} s`,`3. B = L/(L/S − 2Tp) = ${(bps/1000).toFixed(2)} Kbps`,`4. Boundary efficiency = ${eff.toFixed(2)}%`],
+                        metrics:{'Frame size L':`${L.toLocaleString()} bits`,'Tp':`${v.tp.toFixed(3)} ms`,'Target throughput':`${v.targetThroughput.toFixed(3)} Kbps`,'Minimum bandwidth':`${(bps/1000).toFixed(3)} Kbps`,'Tt at boundary':`${(tt*1000).toFixed(3)} ms`,'Efficiency':`${eff.toFixed(2)}%`}}); 
+                }
+            },
+            14: {
+                text:'B = 1 Mbps, L = 8000 bits, one-way Tp = 10 ms, negligible ACK/processing, p = 0.1. Find error-free efficiency, effective efficiency, and effective throughput.',
+                method:'Enter B, L, Tp and p. Compute error-free U, multiply by success probability, then multiply by B.',
+                required:['bandwidth','frameBits','tp','p'],
+                solve(v){
+                    const tt=v.frameBits/v.bandwidth*1000,eff=tt/(tt+2*v.tp)*100,ee=eff*(1-v.p),th=v.bandwidth*ee/100;
+                    return result({tt,tp:v.tp,eff:ee,answer:`Error-free efficiency = ${eff.toFixed(2)}%; effective efficiency = ${ee.toFixed(2)}%; effective throughput = ${th.toFixed(4)} Mbps = ${(th*1000).toFixed(1)} Kbps.`,
+                        steps:[`1. Tt = L/B = ${v.frameBits.toLocaleString()}/${(v.bandwidth*1e6).toLocaleString()} = ${tt.toFixed(2)} ms`,`2. Error-free U = ${tt.toFixed(2)}/(${tt.toFixed(2)}+2×${v.tp}) = ${eff.toFixed(2)}%`,`3. Effective U = ${eff.toFixed(2)}%×${(1-v.p).toFixed(2)} = ${ee.toFixed(2)}%`,`4. Effective throughput = ${ee.toFixed(2)}%×${v.bandwidth} = ${th.toFixed(4)} Mbps`],
+                        metrics:{'Tt':`${tt.toFixed(3)} ms`,'Tp':`${v.tp.toFixed(3)} ms`,'Error-free efficiency':`${eff.toFixed(2)}%`,'p':v.p.toFixed(4),'Effective efficiency':`${ee.toFixed(2)}%`,'Effective throughput':`${th.toFixed(4)} Mbps`}}); 
+                }
+            },
+            15: {
+                text:'6 data frames sent using 1-bit sequence numbers (F0, F1, F0, F1, ...); exactly 2 ACKs are lost (data frames never lost). Find total transmissions, duplicate frames, and frames delivered to the application.',
+                method:'Enter original data frames and lost ACKs. Each lost ACK causes one retransmission; duplicates are detected using the 1-bit sequence number.',
+                required:['frames','lostAcks'],
+                solve(v){
+                    if(v.lostAcks>v.frames) return result({answer:'Lost ACKs cannot exceed the number of original frames in this question model.',steps:['Enter lost ACKs ≤ original data frames.'],metrics:{'Validation':'Invalid input'}});
+                    const total=v.frames+v.lostAcks;
+                    return result({answer:`Total data-frame transmissions = ${total}; duplicate frames = ${v.lostAcks}; frames delivered to the application = ${v.frames}.`,
+                        steps:[`1. Original data transmissions = ${v.frames}`,`2. Lost ACKs = ${v.lostAcks} → ${v.lostAcks} retransmissions`,`3. Total transmissions = ${v.frames} + ${v.lostAcks} = ${total}`,`4. Retransmitted frames are duplicates and are discarded by the receiver`,`5. Unique frames delivered to application = ${v.frames}`],
+                        metrics:{'Original frames':`${v.frames}`,'Lost ACKs':`${v.lostAcks}`,'Retransmissions':`${v.lostAcks}`,'Total data transmissions':`${total}`,'Duplicate frames':`${v.lostAcks}`,'Application deliveries':`${v.frames}`}}); 
+                }
+            }
+        };
+
+        function result(obj){ return obj; }
+
+        const universalFields = [
+            {key:'frameBits',label:'Frame Size (L)',group:'Frame & Link',unit:'bits',type:'number',min:0},
+            {key:'bandwidth',label:'Bandwidth (B)',group:'Frame & Link',unit:'Mbps',type:'number',min:0},
+            {key:'distance',label:'Distance (d)',group:'Frame & Link',unit:'km',type:'number',min:0},
+            {key:'speed',label:'Propagation Speed (v)',group:'Frame & Link',unit:'m/s',type:'number',min:0},
+            {key:'frame1',label:'Frame Size A',group:'Frame & Link',unit:'bits',type:'number',min:0},
+            {key:'frame2',label:'Frame Size B',group:'Frame & Link',unit:'bits',type:'number',min:0},
+            {key:'tt',label:'Transmission Time (Tt)',group:'Timing',unit:'ms',type:'number',min:0},
+            {key:'tp',label:'Propagation Time (Tp)',group:'Timing',unit:'ms',type:'number',min:0},
+            {key:'tack',label:'ACK Transmission Time (Tack)',group:'Timing',unit:'ms',type:'number',min:0},
+            {key:'proc',label:'Receiver Processing (Tproc)',group:'Timing',unit:'ms',type:'number',min:0},
+            {key:'duration',label:'Available Time',group:'Timing',unit:'s',type:'number',min:0},
+            {key:'jitter',label:'Timer Jitter Margin',group:'Timing',unit:'ms',type:'number',min:0},
+            {key:'ackBits',label:'ACK Size',group:'ACK / Error',unit:'bits',type:'number',min:0},
+            {key:'ackBandwidth',label:'ACK Bandwidth',group:'ACK / Error',unit:'Mbps',type:'number',min:0},
+            {key:'p',label:'Frame Error Probability (p)',group:'ACK / Error',unit:'0–1',type:'number',min:0,max:.999999,step:.01},
+            {key:'n',label:'Attempt Count (n)',group:'ACK / Error',unit:'attempts',type:'number',min:1,step:1},
+            {key:'frames',label:'Original Data Frames',group:'ACK / Error',unit:'frames',type:'number',min:1,step:1},
+            {key:'lostAcks',label:'Lost ACKs',group:'ACK / Error',unit:'ACKs',type:'number',min:0,step:1},
+            {key:'effInput',label:'Efficiency (U)',group:'Targets',unit:'%',type:'number',min:0,max:100,step:.01},
+            {key:'targetEff',label:'Target Efficiency',group:'Targets',unit:'%',type:'number',min:0,max:100,step:.01},
+            {key:'targetThroughput',label:'Target Throughput',group:'Targets',unit:'Kbps',type:'number',min:0}
+        ];
+
+        function getFieldMeta(key){ return universalFields.find(f=>f.key===key); }
+
+        function getFieldValues() {
+            const values={};
+            universalFields.forEach(f=>{
+                const el=document.getElementById(`uinput-${f.key}`);
+                if(!el) return;
+                const raw=el.value.trim();
+                if(raw!=='') values[f.key]=Number(raw);
+            });
+            return values;
+        }
+
+        function renderQuestionInputs() {
+            const id = Number(document.getElementById('question-select').value);
+            const q = questionBank[id];
+            const box = document.getElementById('universal-question-inputs');
+
+            document.getElementById('input-type-badge').innerText =
+                `Q${id} • ${q.required.length} input${q.required.length === 1 ? '' : 's'} needed`;
+
+            // Show only the parameters that belong to this question's formula.
+            // The complete parameter bank still exists internally, but irrelevant
+            // fields are not rendered, keeping the UI short and exam-friendly.
+            box.innerHTML = '';
+            const section = document.createElement('div');
+            section.className = 'space-y-2';
+
+            q.required.forEach(key => {
+                const f = getFieldMeta(key);
+                const row = document.createElement('div');
+                row.className = 'rounded-lg border border-indigo-300 bg-indigo-50/50 p-2.5';
+                const prev = (window.universalInputMemory || {})[key] ?? '';
+
+                row.innerHTML = `
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <label class="text-[11px] font-bold text-indigo-800">${f.label}
+                            <span class="ml-1 text-rose-500">*</span>
+                        </label>
+                        <span class="text-[9px] font-mono text-indigo-600">REQUIRED</span>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="uinput-${f.key}" type="${f.type}"
+                            ${f.min != null ? `min="${f.min}"` : ''}
+                            ${f.max != null ? `max="${f.max}"` : ''}
+                            ${f.step != null ? `step="${f.step}"` : 'step="any"'}
+                            value="${prev}" placeholder="Enter value"
+                            class="w-full px-3 py-2 font-mono text-sm bg-white border border-slate-300 rounded-l-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 text-[10px] font-bold text-slate-600 rounded-r-lg whitespace-nowrap">${f.unit}</span>
+                    </div>`;
+                section.appendChild(row);
+            });
+
+            box.appendChild(section);
+
+            box.querySelectorAll('input').forEach(el => {
+                el.addEventListener('input', () => {
+                    window.universalInputMemory ||= {};
+                    window.universalInputMemory[el.id.replace('uinput-', '')] = el.value;
+                });
+            });
+        }
+
+        let lastSolvedQuestion = null;
+
+        function resetSolverOutputs() {
+            document.getElementById('calculated-values-grid').innerHTML='<div class="col-span-full text-slate-400 text-xs">Enter the required values and press Solve.</div>';
+            document.getElementById('solver-answer-status').innerText='READY';
+            document.getElementById('solver-answer-status').className='px-2 py-0.5 rounded bg-white border border-indigo-200 text-[10px] font-mono font-bold text-indigo-700';
+            document.getElementById('solver-question-answer').innerText='Enter the known values, leave unknowns blank, then press “Solve Question”.';
+            document.getElementById('solver-step-by-step').innerHTML='<div class="text-slate-400">Solution hidden until you press Solve Question.</div>';
+            document.getElementById('verify-status-msg').innerText='';
+            lastSolvedQuestion=null;
+        }
+
+        function solveSelectedQuestion() {
+            const id = Number(document.getElementById('question-select').value);
+            const q = questionBank[id];
+            const values = getFieldValues();
+
+            // Only the fields required by the selected question are mandatory.
+            const missing = q.required.filter(k => !Number.isFinite(values[k]));
+            if (missing.length) {
+                const names = missing.map(k => getFieldMeta(k).label).join(', ');
+                setSolverStatus('MISSING INPUTS', `Enter: ${names}`, 'warning');
+                return;
+            }
+
+            // Validate only values that were actually entered.
+            for (const [key, value] of Object.entries(values)) {
+                if (!Number.isFinite(value) || value < 0) {
+                    setSolverStatus('INVALID INPUT', `${getFieldMeta(key).label} must be a valid non-negative number.`, 'warning');
+                    return;
+                }
+            }
+            if (values.p != null && (values.p < 0 || values.p >= 1)) {
+                setSolverStatus('INVALID INPUT', 'Frame Error Probability p must be from 0 up to but not including 1.', 'warning');
+                return;
+            }
+            if (values.effInput != null && (values.effInput < 0 || values.effInput > 100)) {
+                setSolverStatus('INVALID INPUT', 'Efficiency must be between 0% and 100%.', 'warning');
+                return;
+            }
+            if (values.targetEff != null && (values.targetEff <= 0 || values.targetEff > 100)) {
+                setSolverStatus('INVALID INPUT', 'Target efficiency must be greater than 0% and at most 100%.', 'warning');
+                return;
+            }
+
+            const result = q.solve(values);
+            lastSolvedQuestion = { id, result, values };
+
+            document.getElementById('question-number-badge').innerText = `Question ${id}`;
+            document.getElementById('question-text').innerText = q.text;
+            document.getElementById('question-method').innerText = q.method;
+            document.getElementById('solver-answer-status').innerText = 'SOLVED';
+            document.getElementById('solver-answer-status').className =
+                'px-2 py-0.5 rounded bg-emerald-100 border border-emerald-200 text-[10px] font-mono font-bold text-emerald-700';
+            document.getElementById('solver-question-answer').innerText = result.answer;
+            document.getElementById('solver-step-by-step').innerHTML =
+                result.steps.map(s => `<div>${s}</div>`).join('');
+
+            const grid = document.getElementById('calculated-values-grid');
+            const metrics = result.metrics || {};
+            grid.innerHTML = Object.entries(metrics).map(([label, value]) =>
+                `<div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-center">
+                    <div class="text-[9px] font-bold uppercase tracking-wide text-slate-500">${label}</div>
+                    <div class="text-sm font-mono font-bold text-slate-900 mt-1">${value}</div>
+                </div>`
+            ).join('') || '<div class="col-span-full text-slate-400 text-xs">No additional derived values.</div>';
+
+            updateCoreMetrics(result);
+            showToast(`Q${id} solved from your entered values.`, 'success');
+        }
+
+        function setSolverStatus(status, message, type='warning') {
+            const el = document.getElementById('solver-answer-status');
+            const answer = document.getElementById('solver-question-answer');
+            el.innerText = status;
+            el.className = type === 'warning'
+                ? 'px-2 py-0.5 rounded bg-amber-100 border border-amber-200 text-[10px] font-mono font-bold text-amber-700'
+                : 'px-2 py-0.5 rounded bg-rose-100 border border-rose-200 text-[10px] font-mono font-bold text-rose-700';
+            answer.innerText = message;
+            showToast(message, type);
+        }
+
+        function updateCoreMetrics(result) {
+            document.getElementById('sol-tt').innerText =
+                result.tt != null ? `${Number(result.tt).toFixed(2)} ms` : '—';
+            document.getElementById('sol-tp').innerText =
+                result.tp != null ? `${Number(result.tp).toFixed(2)} ms` : '—';
+            document.getElementById('sol-a').innerText =
+                result.tt != null && result.tp != null
+                    ? (Number(result.tp) / Number(result.tt)).toFixed(2)
+                    : '—';
+            document.getElementById('sol-eff').innerText =
+                result.eff != null && Number.isFinite(result.eff)
+                    ? `${Number(result.eff).toFixed(2)} %`
+                    : '—';
+        }
+
+        function loadSelectedQuestion() {
+            const id=Number(document.getElementById('question-select').value);
+            const q=questionBank[id];
+            document.getElementById('question-number-badge').innerText=`Question ${id}`;
+            document.getElementById('question-text').innerText=q.text;
+            document.getElementById('question-method').innerText=q.method;
+            renderQuestionInputs();
+            resetSolverOutputs();
+        }
+
+        function calculateProblemSolution(){ solveSelectedQuestion(); }
+
+        function verifyStudentAnswer() {
+            if(!lastSolvedQuestion){
+                const status=document.getElementById('verify-status-msg');
+                status.className='text-xs font-bold text-amber-700';
+                status.innerText='Solve the selected question first.';
+                return;
+            }
+            const result=lastSolvedQuestion.result;
+            const userTt=parseFloat(document.getElementById('verify-user-tt').value);
+            const userTp=parseFloat(document.getElementById('verify-user-tp').value);
+            const userEff=parseFloat(document.getElementById('verify-user-eff').value);
+            const status=document.getElementById('verify-status-msg');
+            const errors=[];
+            if(result.tt!=null && !isNaN(userTt) && Math.abs(userTt-result.tt)>0.1) errors.push(`Tt mismatch (Expected ${Number(result.tt).toFixed(2)} ms)`);
+            if(result.tp!=null && !isNaN(userTp) && Math.abs(userTp-result.tp)>0.1) errors.push(`Tp mismatch (Expected ${Number(result.tp).toFixed(2)} ms)`);
+            if(result.eff!=null && !isNaN(userEff) && Math.abs(userEff-result.eff)>0.5) errors.push(`Efficiency mismatch (Expected ${Number(result.eff).toFixed(2)}%)`);
+            if(isNaN(userTt)&&isNaN(userTp)&&isNaN(userEff)){status.className='text-xs font-bold text-amber-700';status.innerText='Enter at least one applicable numeric answer to verify.';return;}
+            if(!errors.length){status.className='text-xs font-bold text-emerald-700';status.innerText='✓ Correct for the checked numeric fields.';showToast('Answer verification passed!','success');}
+            else{status.className='text-xs font-bold text-rose-700';status.innerText=`❌ ${errors.join(', ')}`;showToast('Check the calculation.','error');}
+        }
+
+
+
+/* EFFICIENCY CHART INITIALIZATION */
+        let chartInstance = null;
+        function initEfficiencyChart() {
+            const ctx = document.getElementById('chart-efficiency').getContext('2d');
+            const aVals = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0, 20.0];
+            
+            const effSAW = aVals.map(a => (1 / (1 + 2 * a)) * 100);
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: aVals.map(a => `a=${a}`),
+                    datasets: [
+                        { 
+                            label: 'Stop-and-Wait Efficiency (η = 1 / (1 + 2a))', 
+                            data: effSAW, 
+                            borderColor: '#4f46e5', 
+                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                            borderWidth: 3, 
+                            tension: 0.3, 
+                            pointRadius: 4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true } },
+                    scales: {
+                        x: { title: { display: true, text: 'Link Parameter Ratio a = Tp / Tt' } },
+                        y: { title: { display: true, text: 'Protocol Efficiency (%)' }, min: 0, max: 100 }
+                    }
+                }
+            });
+        }
+
+        /* Setup Event Handlers */
+        function setupEventListeners() {
+            // Transport buttons
+            document.getElementById('btn-sim-play').addEventListener('click', () => {
+                if (simEngine.senderBuffer.length === 0 && !simEngine.currentActivePktObj) {
+                    enqueueSenderFrames(null);
+                } else {
+                    simEngine.isRunning = true;
+                    if (!simEngine.activePacketInFlight) triggerTransmission();
+                    updateSimUI();
+                    showToast('Simulation Playing', 'success');
+                }
+            });
+
+            document.getElementById('btn-sim-pause').addEventListener('click', () => {
+                simEngine.isRunning = false;
+                updateSimUI();
+                showToast('Simulation Paused', 'warning');
+            });
+
+            document.getElementById('btn-sim-stop').addEventListener('click', () => {
+                simEngine.isRunning = false;
+                simEngine.activePacketInFlight = null;
+                simEngine.currentActivePktObj = null;
+                simEngine.senderBuffer = [];
+                simEngine.sendSeqNum = 0;
+                simEngine.rcvExpectSeq = 0;
+                simEngine.pendingFaultCase = null;
+                simEngine.totalTx = 0;
+                simEngine.totalRetrans = 0;
+                simEngine.totalDelivered = 0;
+                simEngine.totalAcksReceived = 0;
+                simEngine.timerState = 'IDLE';
+                simEngine.stopwatchTime = 0.0;
+                document.getElementById('event-log').innerHTML = '<div class="text-slate-400">Simulation reset to initial state.</div>';
+                updateSimUI();
+                showToast('Simulation Reset', 'info');
+            });
+
+            document.getElementById('btn-sim-step').addEventListener('click', () => {
+                simEngine.isRunning = false;
+                if (simEngine.senderBuffer.length === 0 && !simEngine.currentActivePktObj) {
+                    enqueueSenderFrames(1);
+                } else {
+                    triggerTransmission();
+                }
+                updateSimUI();
+            });
+
+            document.getElementById('slider-speed').addEventListener('input', (e) => {
+                simEngine.speed = parseFloat(e.target.value);
+                document.getElementById('speed-label').innerText = `${simEngine.speed.toFixed(1)}x`;
+            });
+
+            // User-defined frame line
+            document.getElementById('btn-apply-frame-line').addEventListener('click', () => {
+                const input = document.getElementById('input-last-frame');
+                let value = parseInt(input.value, 10);
+                if (!Number.isFinite(value)) value = 4;
+                value = Math.max(1, Math.min(20, value));
+                input.value = value;
+                simEngine.lastFrameNumber = value;
+                simEngine.senderBuffer = [];
+                simEngine.currentActivePktObj = null;
+                simEngine.activePacketInFlight = null;
+                simEngine.isRunning = false;
+                simEngine.sendSeqNum = 0;
+                simEngine.rcvExpectSeq = 0;
+                simEngine.totalTx = 0;
+                simEngine.totalRetrans = 0;
+                simEngine.totalDelivered = 0;
+                simEngine.totalAcksReceived = 0;
+                simEngine.nextPacketId = 1;
+                simEngine.timerState = 'IDLE';
+                simEngine.stopwatchTime = 0;
+                logSimEvent(`Frame line configured: F0–F${value - 1} (${value} frame(s)).`, 'tx');
+                enqueueSenderFrames(null);
+                updateSimUI();
+                showToast(`Frame line set to F0–F${value - 1}`, 'success');
+            });
+
+            // Buffer Actions
+            document.getElementById('btn-enqueue-5').addEventListener('click', () => enqueueSenderFrames(null));
+            document.getElementById('btn-clear-buffer').addEventListener('click', () => {
+                simEngine.senderBuffer = [];
+                renderBuffersUI();
+                showToast('Sender Queue cleared', 'info');
+            });
+            // Timeout Slider
+            document.getElementById('slider-sim-timeout').addEventListener('input', (e) => {
+                simEngine.stopwatchMax = parseFloat(e.target.value);
+                document.getElementById('label-sim-timeout').innerText = `${simEngine.stopwatchMax.toFixed(1)} s`;
+                updateStopwatchWidget();
+            });
+
+            // On-Demand Fault Injections
+            document.getElementById('btn-inject-lose-frame').addEventListener('click', () => {
+                simEngine.pendingFaultCase = 'lose-frame';
+                if (!simEngine.isRunning) simEngine.isRunning = true;
+                if (!simEngine.activePacketInFlight) triggerTransmission();
+                updateSimUI();
+                showToast('Fault Queued: Data Frame will be LOST in transit', 'error');
+            });
+
+            document.getElementById('btn-inject-lose-ack').addEventListener('click', () => {
+                simEngine.pendingFaultCase = 'lose-ack';
+                if (!simEngine.isRunning) simEngine.isRunning = true;
+                if (!simEngine.activePacketInFlight) triggerTransmission();
+                updateSimUI();
+                showToast('Fault Queued: ACK Frame will be LOST in return path', 'warning');
+            });
+
+            document.getElementById('btn-inject-corrupt').addEventListener('click', () => {
+                simEngine.pendingFaultCase = 'corrupt';
+                if (!simEngine.isRunning) simEngine.isRunning = true;
+                if (!simEngine.activePacketInFlight) triggerTransmission();
+                updateSimUI();
+                showToast('Fault Queued: Data Frame will be CORRUPTED (CRC Error)', 'warning');
+            });
+
+            document.getElementById('btn-inject-timeout').addEventListener('click', () => {
+                simEngine.pendingFaultCase = 'timeout';
+                if (!simEngine.isRunning) simEngine.isRunning = true;
+                if (!simEngine.activePacketInFlight) triggerTransmission();
+                updateSimUI();
+                showToast('Fault Queued: ACK will be DELAYED to trigger Timeout', 'warning');
+            });
+
+            // Question-driven Problem Solver
+            document.getElementById('question-select').addEventListener('change', loadSelectedQuestion);
+            document.getElementById('btn-load-exam-preset').addEventListener('click', loadSelectedQuestion);
+            document.getElementById('btn-solve-question').addEventListener('click', solveSelectedQuestion);
+            document.getElementById('btn-check-student-answer').addEventListener('click', verifyStudentAnswer);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initCanvas();
+            loadSelectedQuestion();
+            setupEventListeners();
+            enqueueSenderFrames(null);
+            updateSimUI();
+        });
+    </script>
+</body>
+</html>
