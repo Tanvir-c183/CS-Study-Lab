@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selective Repeat ARQ Interactive Engineering Workbench</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Slate & Indigo Engineering Palette -->
+    <!-- Application Structure Plan: The application is structured into three primary functional modules: (1) Interactive Selective Repeat Visualizer featuring per-frame timer management, independent sender/receiver sliding windows, live channel animation, explicit out-of-order reassembly buffer visualizer, single-frame step controls, preset scenarios, and comprehensive fault injection; (2) Numerical Problem Solver providing physical parameter configuration, step-by-step mathematical derivations, interactive student answer verification, and responsive Chart.js comparative performance graphs; (3) Formulas, FSM & Protocol Theory detailing state transition matrices for sender and receiver FSMs, window constraint proofs (W <= M/2), and side-by-side protocol comparison tables. -->
+    <!-- Visualization & Content Choices: 1. Sliding Windows & Reassembly Buffers: Dynamic HTML/CSS grid element matrix with responsive state color-coding (Yellow=Ready/Expected, Blue=Waiting/Buffered, Green=ACKed/Delivered, Red=Retransmitting/Corrupted). 2. Transmission Channel: HTML5 Canvas for smooth vector-based rendering of in-flight data frames and selective ACK packets. 3. Protocol Comparison Graph: Chart.js canvas graph comparing link efficiency across S&W, GBN, and Selective Repeat across variable loss probabilities (NO SVG used). 4. FSM Visualization: HTML/CSS flexbox state nodes with dynamic active-state highlights linked to live simulation state. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 750px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 360px;
+            }
+        }
+        /* Custom scrollbar for log and buffer windows */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- HEADER SECTION -->
+    <header class="bg-slate-900 text-white border-b border-indigo-500/30 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="bg-indigo-600 text-white text-xs font-bold px-2.5 py-0.5 rounded tracking-wide uppercase">Selective Repeat ARQ</span>
+                    <span class="text-xs text-slate-400 font-mono">Data Link Layer • Sliding Window Protocol</span>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white mt-1">
+                    Selective Repeat ARQ Interactive Engineering Workbench
+                </h1>
+                <p class="text-xs text-slate-300 font-medium">
+                    Sliding Window ARQ • <span class="text-indigo-300 font-mono">W<sub>T</sub> = N, W<sub>R</sub> = N</span> • Independent Timers & Out-of-Order Reassembly Buffering
+                </p>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <nav class="flex bg-slate-800 p-1 rounded-lg border border-slate-700 self-start md:self-auto">
+                <button id="tab-btn-visualizer" onclick="switchTab('visualizer')" class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 bg-indigo-600 text-white shadow-sm">
+                    1. Protocol Visualizer
+                </button>
+                <button id="tab-btn-solver" onclick="switchTab('solver')" class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 text-slate-300 hover:text-white hover:bg-slate-700">
+                    2. Numerical Solver
+                </button>
+                <button id="tab-btn-theory" onclick="switchTab('theory')" class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 text-slate-300 hover:text-white hover:bg-slate-700">
+                    3. Formulas & FSM Theory
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ========================================== -->
+        <!-- MODULE 1: INTERACTIVE PROTOCOL VISUALIZER  -->
+        <!-- ========================================== -->
+        <section id="module-visualizer" class="space-y-6">
+            
+            <!-- Intro Callout -->
+            <div class="bg-indigo-900/10 border border-indigo-200 rounded-xl p-4 text-slate-700 text-sm">
+                <div class="flex items-start gap-3">
+                    <span class="text-xl">ℹ️</span>
+                    <div>
+                        <h2 class="font-bold text-indigo-950 text-base">Module 1: Selective Repeat ARQ Operational Engine</h2>
+                        <p class="mt-0.5 leading-relaxed">
+                            Unlike Go-Back-N, Selective Repeat allows the receiver to accept and buffer out-of-order frames within its window (<span class="font-mono font-semibold text-indigo-700">W<sub>R</sub> = N</span>). Every frame runs an <strong>independent timer</strong>. Upon timeout, <em>only the missing frame</em> is retransmitted. When the missing frame arrives, an atomic contiguous buffer drain delivers all in-sequence buffered frames to the application layer.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration & Presets Panel -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Parameters Form -->
+                <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                            <span>⚙️</span> Link & Protocol Parameters
+                        </h3>
+                        <span id="config-status-badge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200">
+                            ✓ Valid Configuration
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Total Frames (N)</label>
+                            <input type="number" id="cfg-total-frames" value="8" min="2" max="16" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="validateAndUpdateConfig()">
+                            <span class="text-[10px] text-slate-400">Total stream length</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Sender Window (W<sub>T</sub>)</label>
+                            <input type="number" id="cfg-window-sender" value="4" min="1" max="8" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="validateAndUpdateConfig()">
+                            <span class="text-[10px] text-slate-400">Max sent unack'd</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Receiver Window (W<sub>R</sub>)</label>
+                            <input type="number" id="cfg-window-receiver" value="4" min="1" max="8" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="validateAndUpdateConfig()">
+                            <span class="text-[10px] text-slate-400">Max acceptance buffer</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Sequence Bits (m)</label>
+                            <select id="cfg-seq-bits" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="validateAndUpdateConfig()">
+                                <option value="2">2 bits (M = 4)</option>
+                                <option value="3" selected>3 bits (M = 8)</option>
+                                <option value="4">4 bits (M = 16)</option>
+                            </select>
+                            <span id="cfg-seq-modulus" class="text-[10px] text-indigo-600 font-semibold font-mono">M = 2³ = 8</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-1">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Timeout Duration (s)</label>
+                            <input type="number" id="cfg-timeout" value="4.0" step="0.5" min="1.0" max="10.0" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="updateSimParams()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Animation Speed</label>
+                            <select id="cfg-anim-speed" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="updateSimParams()">
+                                <option value="0.5">0.5x (Slow)</option>
+                                <option value="1.0" selected>1.0x (Normal)</option>
+                                <option value="2.0">2.0x (Fast)</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2 sm:col-span-1 flex items-end">
+                            <button onclick="applyConfiguration()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-1.5 px-3 rounded transition shadow-sm">
+                                Apply & Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Validation Banner -->
+                    <div id="validation-error-box" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs space-y-1">
+                        <div class="font-bold flex items-center gap-1.5">
+                            <span>🚨</span> Invalid Selective Repeat Configuration
+                        </div>
+                        <p id="validation-error-msg">
+                            Window size exceeds safety limit. Sequence space condition <span class="font-mono font-bold">W<sub>T</sub> + W<sub>R</sub> ≤ M</span> (or <span class="font-mono font-bold">W ≤ M/2</span>) must hold to prevent sequence ambiguity.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Preset Scenarios Card -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2 border-b border-slate-100 pb-2 mb-3">
+                            <span>🧪</span> Educational Preset Scenarios
+                        </h3>
+                        <p class="text-xs text-slate-500 mb-3 leading-relaxed">
+                            Select a scenario to automatically inject specific channel behaviors and demonstrate key Selective Repeat features:
+                        </p>
+                        <div class="grid grid-cols-1 gap-2">
+                            <button onclick="loadPreset('normal')" class="text-left px-3 py-1.5 rounded text-xs font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-transparent transition">
+                                🟢 <strong>Normal Flow:</strong> Error-free pipeline streaming
+                            </button>
+                            <button onclick="loadPreset('lost-frame')" class="text-left px-3 py-1.5 rounded text-xs font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-transparent transition">
+                                💥 <strong>Lost Data Frame:</strong> Selective retransmission of lost frame only
+                            </button>
+                            <button onclick="loadPreset('lost-ack')" class="text-left px-3 py-1.5 rounded text-xs font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-transparent transition">
+                                ⚡ <strong>Lost ACK:</strong> Individual timeout & duplicate ACK clearance
+                            </button>
+                            <button onclick="loadPreset('out-of-order')" class="text-left px-3 py-1.5 rounded text-xs font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-transparent transition">
+                                🔀 <strong>Out-of-Order Recovery:</strong> Reassembly buffer & contiguous delivery
+                            </button>
+                            <button onclick="loadPreset('wraparound')" class="text-left px-3 py-1.5 rounded text-xs font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-transparent transition">
+                                🔄 <strong>Sequence Wraparound:</strong> Modulo arithmetic bounds (Seq 0..7)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Interactive Workbench Canvas & Controls -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                
+                <!-- Action Controls Toolbar -->
+                <div class="bg-slate-100 px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 text-slate-800">
+                    <!-- Playback controls -->
+                    <div class="flex items-center gap-2">
+                        <button id="btn-play" onclick="toggleSimulation()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-1.5 rounded flex items-center gap-1.5 shadow transition">
+                            <span id="btn-play-icon">▶</span> <span id="btn-play-text">Start Simulation</span>
+                        </button>
+                        <button id="btn-step" onclick="stepSingleFrame()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3.5 py-1.5 rounded flex items-center gap-1.5 shadow transition">
+                            <span>⏭</span> Send Next Single Frame
+                        </button>
+                        <button onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs px-3 py-1.5 rounded transition">
+                            <span>⏹</span> Reset
+                        </button>
+                    </div>
+
+                    <!-- Fault Injection Buttons -->
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mr-1">Fault Injector:</span>
+                        <button onclick="injectFault('drop-frame')" class="bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-200 text-xs px-2.5 py-1 rounded transition">
+                            💥 Lose Frame
+                        </button>
+                        <button onclick="injectFault('corrupt-frame')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-200 text-xs px-2.5 py-1 rounded transition">
+                            ☣️ Corrupt Frame
+                        </button>
+                        <button onclick="injectFault('drop-ack')" class="bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-200 text-xs px-2.5 py-1 rounded transition">
+                            ⚡ Lose ACK
+                        </button>
+                        <button onclick="injectFault('delay-ack')" class="bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 text-xs px-2.5 py-1 rounded transition">
+                            ⏱️ Delay ACK
+                        </button>
+                        <button onclick="injectFault('reorder')" class="bg-cyan-100 hover:bg-cyan-200 text-cyan-800 border border-cyan-200 text-xs px-2.5 py-1 rounded transition">
+                            🔀 Out-of-Order
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Simulation State Banner -->
+                <div id="sim-status-banner" class="bg-indigo-50 border-b border-indigo-100 px-4 py-2 flex items-center justify-between text-xs font-mono text-indigo-900">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
+                        <span id="sim-status-text">Ready to begin simulation. Click "Start Simulation" or "Send Next Single Frame".</span>
+                    </div>
+                    <div id="sim-fault-indicator" class="hidden text-rose-700 font-bold bg-rose-100 px-2 py-0.5 rounded border border-rose-200">
+                        ⚡ Pending Fault: <span id="pending-fault-name">None</span>
+                    </div>
+                </div>
+
+                <!-- Visual Domain Grid: Sender -> Channel -> Receiver -->
+                <div class="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    <!-- SENDER SIDE (4 cols) -->
+                    <div class="lg:col-span-4 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                            <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span> Sender Entity
+                            </h4>
+                            <span class="text-[11px] font-mono font-semibold text-slate-500">
+                                S<sub>base</sub>: <span id="disp-sbase" class="text-indigo-700 font-bold">0</span> | S<sub>next</sub>: <span id="disp-snext" class="text-indigo-700 font-bold">0</span>
+                            </span>
+                        </div>
+
+                        <!-- Sender Active Window Representation -->
+                        <div>
+                            <div class="flex items-center justify-between text-xs mb-1.5">
+                                <span class="font-semibold text-slate-700">Sender Window (W<sub>T</sub> = <span id="disp-wt-val">4</span>)</span>
+                                <span class="text-[10px] text-slate-400">Slots: [S<sub>base</sub> … S<sub>base</sub>+W<sub>T</sub>-1]</span>
+                            </div>
+                            <div id="sender-window-container" class="grid grid-cols-4 gap-2">
+                                <!-- Dynamic Frame Cards rendered via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Sender Buffer -->
+                        <div>
+                            <div class="flex items-center justify-between text-xs mb-1.5">
+                                <span class="font-semibold text-slate-700">Upstream Transmission Queue</span>
+                                <span class="text-[10px] text-slate-400">Pending transmission</span>
+                            </div>
+                            <div id="sender-buffer-container" class="flex flex-wrap gap-1.5 p-2 bg-white rounded border border-slate-200 min-h-[44px]">
+                                <!-- Dynamic Buffer Cards rendered via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Active Per-Frame Timers Monitor -->
+                        <div>
+                            <div class="flex items-center justify-between text-xs mb-1 text-slate-700 font-semibold">
+                                <span>⏱️ Active Per-Frame Timers</span>
+                                <span class="text-[10px] text-slate-400">Independent Countdown</span>
+                            </div>
+                            <div id="active-timers-container" class="space-y-1.5 text-xs font-mono max-h-28 overflow-y-auto custom-scrollbar bg-white p-2 rounded border border-slate-200">
+                                <div class="text-slate-400 italic text-[11px] text-center py-1">No active frame timers running</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CHANNEL PIPELINE (4 cols) -->
+                    <div class="lg:col-span-4 bg-slate-100 p-4 rounded-xl text-slate-800 space-y-3 flex flex-col justify-between self-stretch">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <h4 class="font-bold text-xs text-indigo-700 uppercase tracking-wide flex items-center gap-1.5">
+                                <span>📡</span> Propagation Channel
+                            </h4>
+                            <span class="text-[10px] font-mono text-slate-500">In-Flight Packets</span>
+                        </div>
+
+                        <!-- Channel Animated Canvas -->
+                        <div class="relative bg-white rounded-lg border border-slate-200 h-64 overflow-hidden">
+                            <canvas id="channelCanvas" class="w-full h-full block"></canvas>
+                            <div class="absolute top-2 left-2 text-[10px] font-mono text-slate-500 pointer-events-none">
+                                Data Frames → (Left to Right)
+                            </div>
+                            <div class="absolute bottom-2 right-2 text-[10px] font-mono text-slate-500 pointer-events-none">
+                                ← Selective ACKs (Right to Left)
+                            </div>
+                        </div>
+
+                        <!-- Channel Legend & State -->
+                        <div class="grid grid-cols-2 gap-2 text-[11px] font-mono bg-slate-100 p-2 rounded border border-slate-200">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                                <span class="text-slate-600">Data Frame (F<sub>k</sub>)</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                                <span class="text-slate-600">Selective ACK (ACK<sub>k</sub>)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RECEIVER SIDE (4 cols) -->
+                    <div class="lg:col-span-4 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                            <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Receiver Entity
+                            </h4>
+                            <span class="text-[11px] font-mono font-semibold text-slate-500">
+                                R<sub>base</sub>: <span id="disp-rbase" class="text-emerald-700 font-bold">0</span> | Window: <span id="disp-wr-val" class="text-emerald-700 font-bold">4</span>
+                            </span>
+                        </div>
+
+                        <!-- Receiver Acceptance Window -->
+                        <div>
+                            <div class="flex items-center justify-between text-xs mb-1.5">
+                                <span class="font-semibold text-slate-700">Acceptance Window (W<sub>R</sub> = N)</span>
+                                <span class="text-[10px] text-slate-400">Slots: [R<sub>base</sub> … R<sub>base</sub>+W<sub>R</sub>-1]</span>
+                            </div>
+                            <div id="receiver-window-container" class="grid grid-cols-4 gap-2">
+                                <!-- Dynamic Receiver Window Cards rendered via JS -->
+                            </div>
+                        </div>
+
+                        <!-- RECEIVER REASSEMBLY BUFFER (CRITICAL FEATURE) -->
+                        <div>
+                            <div class="flex items-center justify-between text-xs mb-1.5">
+                                <span class="font-semibold text-slate-700 flex items-center gap-1">
+                                    <span>📥</span> Out-of-Order Reassembly Buffer
+                                </span>
+                                <span class="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-mono font-bold">Selective Repeat Core</span>
+                            </div>
+                            <div id="receiver-buffer-container" class="p-2.5 bg-white rounded-lg border border-slate-200 space-y-2 min-h-[80px]">
+                                <!-- Dynamic Out-of-order slots rendered via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Application Delivered Stream -->
+                        <div>
+                            <div class="flex items-center justify-between text-xs mb-1 text-slate-700 font-semibold">
+                                <span>🎉 Delivered to Application</span>
+                                <span class="text-[10px] text-slate-400">In-Order Sequential Stream</span>
+                            </div>
+                            <div id="delivered-stream-container" class="flex flex-wrap gap-1 p-2 bg-emerald-50 rounded border border-emerald-200 min-h-[38px] items-center text-xs font-mono font-bold text-emerald-800">
+                                <span class="text-slate-400 italic text-[11px] font-normal">No frames delivered yet</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Color-Coded State Legend -->
+                <div class="bg-slate-100 px-6 py-2.5 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <span class="font-bold text-slate-700 uppercase text-[10px] tracking-wider">Protocol Color Legend:</span>
+                    <div class="flex flex-wrap items-center gap-4 text-slate-600 font-medium">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded bg-amber-300 border border-amber-400"></span>
+                            <span>Ready to Send / Expected Base</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded bg-blue-400 border border-blue-500"></span>
+                            <span>Waiting for ACK / Out-of-Order Buffered</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded bg-emerald-400 border border-emerald-500"></span>
+                            <span>ACK Received / Delivered</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded bg-rose-400 border border-rose-500"></span>
+                            <span>Retransmitting / CRC Error</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded bg-slate-200 border border-slate-300"></span>
+                            <span>Outside Active Window</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Protocol Statistics & Event Log Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Metrics Counter Cards (4 cols) -->
+                <div class="lg:col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-900 text-sm flex items-center justify-between border-b border-slate-100 pb-2">
+                        <span>📊</span> Live Protocol Metrics & Telemetry
+                        <span class="text-[10px] text-slate-400 font-normal">Real-time counters</span>
+                    </h3>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">Total Frames</div>
+                            <div id="stat-total-frames" class="text-lg font-extrabold text-slate-900 font-mono">8</div>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">Frames Sent</div>
+                            <div id="stat-frames-sent" class="text-lg font-extrabold text-indigo-700 font-mono">0</div>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">Delivered</div>
+                            <div id="stat-delivered" class="text-lg font-extrabold text-emerald-700 font-mono">0</div>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">Outstanding</div>
+                            <div id="stat-outstanding" class="text-lg font-extrabold text-blue-700 font-mono">0</div>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">RX Buffered</div>
+                            <div id="stat-rx-buffered" class="text-lg font-extrabold text-purple-700 font-mono">0</div>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">Retransmissions</div>
+                            <div id="stat-retransmissions" class="text-lg font-extrabold text-rose-700 font-mono">0</div>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">ACKs Sent</div>
+                            <div id="stat-acks-sent" class="text-lg font-extrabold text-slate-800 font-mono">0</div>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">ACKs Received</div>
+                            <div id="stat-acks-rcvd" class="text-lg font-extrabold text-slate-800 font-mono">0</div>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">Timeouts</div>
+                            <div id="stat-timeouts" class="text-lg font-extrabold text-amber-700 font-mono">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Live Protocol State Variables Summary -->
+                    <div class="bg-slate-900 text-white p-3 rounded-lg text-xs font-mono space-y-1">
+                        <div class="text-indigo-300 font-bold border-b border-slate-800 pb-1 flex justify-between">
+                            <span>STATE MATRIX SUMMARY</span>
+                            <span id="stat-window-util">Util: 0%</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] pt-1">
+                            <div>Sender Window: <span id="matrix-wt" class="text-amber-400">4</span></div>
+                            <div>Receiver Window: <span id="matrix-wr" class="text-amber-400">4</span></div>
+                            <div>Seq Bits: <span id="matrix-m" class="text-emerald-400">3 (M=8)</span></div>
+                            <div>Max Safe W: <span id="matrix-wmax" class="text-emerald-400 font-bold">4</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Event Log Terminal (7 cols) -->
+                <div class="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
+                            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                <span>📜</span> Real-Time Protocol Event Stream
+                            </h3>
+                            <button onclick="clearEventLog()" class="text-[10px] font-semibold text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 px-2 py-0.5 rounded transition">
+                                Clear Log
+                            </button>
+                        </div>
+                        <!-- Log container -->
+                        <div id="event-log-container" class="h-64 overflow-y-auto custom-scrollbar font-mono text-xs space-y-1.5 p-3 bg-white rounded-lg text-slate-700 border border-slate-200 shadow-inner">
+                            <div class="text-slate-500 italic text-center py-4">[00:00.00] Simulation initialized. Awaiting user action.</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-100 pt-2">
+                        <span>Event Types: <span class="text-indigo-600 font-bold">TX</span> • <span class="text-emerald-600 font-bold">RX</span> • <span class="text-purple-600 font-bold">ACK</span> • <span class="text-blue-600 font-bold">BUFFER</span> • <span class="text-rose-600 font-bold">LOSS/RETX</span></span>
+                        <span>Auto-scroll active</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- MODULE 2: NUMERICAL PROBLEM SOLVER         -->
+        <!-- ========================================== -->
+        <section id="module-solver" class="hidden space-y-6">
+            
+            <div class="bg-indigo-900/10 border border-indigo-200 rounded-xl p-4 text-slate-700 text-sm">
+                <div class="flex items-start gap-3">
+                    <span class="text-xl">🧮</span>
+                    <div>
+                        <h2 class="font-bold text-indigo-950 text-base">Module 2: Selective Repeat Analytical Calculator & Performance Modeling</h2>
+                        <p class="mt-0.5 leading-relaxed">
+                            Compute link delays, round-trip metrics, sequence bounds, and effective throughput under non-zero packet loss rates (<span class="font-mono font-semibold">p</span>). Test your understanding with the interactive student verification mode.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Input Controls Panel (5 cols) -->
+                <div class="lg:col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-900 text-sm border-b border-slate-100 pb-2 flex items-center gap-2">
+                        <span>📐</span> Physical Link & Window Inputs
+                    </h3>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Frame Payload Size (L)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="solv-frame-size" value="8000" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" oninput="recalculateSolver()">
+                                <select id="solv-frame-unit" class="bg-slate-100 border border-slate-300 rounded px-2 py-1 text-xs font-mono font-semibold" onchange="recalculateSolver()">
+                                    <option value="1">bits</option>
+                                    <option value="8">bytes</option>
+                                    <option value="8000">Kbits</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Channel Bandwidth (B)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="solv-bandwidth" value="2" step="0.1" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" oninput="recalculateSolver()">
+                                <select id="solv-bw-unit" class="bg-slate-100 border border-slate-300 rounded px-2 py-1 text-xs font-mono font-semibold" onchange="recalculateSolver()">
+                                    <option value="1000">Kbps</option>
+                                    <option value="1000000" selected>Mbps</option>
+                                    <option value="1000000000">Gbps</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Link Distance (d)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="solv-distance" value="3000" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" oninput="recalculateSolver()">
+                                <select id="solv-dist-unit" class="bg-slate-100 border border-slate-300 rounded px-2 py-1 text-xs font-mono font-semibold" onchange="recalculateSolver()">
+                                    <option value="1">meters</option>
+                                    <option value="1000" selected>km</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Propagation Velocity (v)</label>
+                            <input type="number" id="solv-velocity" value="200000" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" oninput="recalculateSolver()">
+                            <span class="text-[10px] text-slate-400">Default: 200,000 km/s (2×10⁸ m/s in fiber/copper)</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 pt-1">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Window Size (W)</label>
+                                <input type="number" id="solv-window" value="8" min="1" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" oninput="recalculateSolver()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Seq Bits (m)</label>
+                                <input type="number" id="solv-bits" value="4" min="2" max="16" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" oninput="recalculateSolver()">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Frame Error Rate (p)</label>
+                            <input type="number" id="solv-loss-rate" value="0.05" step="0.01" min="0" max="0.5" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" oninput="recalculateSolver()">
+                            <span class="text-[10px] text-slate-400">e.g., 0.05 = 5% frame loss rate</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step-by-Step Derivation & Verification (7 cols) -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <!-- Derivation Display Card -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                <span>🔍</span> Step-by-Step Analytical Execution Trace
+                            </h3>
+                            <span class="text-xs text-indigo-700 font-mono font-bold">Selective Repeat Model</span>
+                        </div>
+
+                        <div class="space-y-3 font-mono text-xs">
+                            <!-- Step 1 -->
+                            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <div class="font-bold text-slate-800 flex justify-between">
+                                    <span>STEP 1: Transmission Delay (T<sub>t</sub>)</span>
+                                    <span id="solv-res-tt" class="text-indigo-700">4.00 ms</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500 mt-1">
+                                    T<sub>t</sub> = L / B = <span id="solv-formula-tt">8000 bits / 2.0 Mbps = 0.004 s</span>
+                                </div>
+                            </div>
+
+                            <!-- Step 2 -->
+                            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <div class="font-bold text-slate-800 flex justify-between">
+                                    <span>STEP 2: Propagation Delay & RTT (T<sub>p</sub>, RTT)</span>
+                                    <span id="solv-res-tp" class="text-indigo-700">T<sub>p</sub> = 15.00 ms | RTT = 30.00 ms</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500 mt-1">
+                                    T<sub>p</sub> = d / v = <span id="solv-formula-tp">3000 km / 200,000 km/s = 0.015 s</span>
+                                </div>
+                            </div>
+
+                            <!-- Step 3 -->
+                            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <div class="font-bold text-slate-800 flex justify-between">
+                                    <span>STEP 3: Delay Ratio (a) & Sequence Bounds</span>
+                                    <span id="solv-res-a" class="text-indigo-700">a = 3.75 | M = 16</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500 mt-1">
+                                    a = T<sub>p</sub> / T<sub>t</sub> = 15.00 ms / 4.00 ms = 3.75. Max Safe W<sub>max</sub> = 2<sup>m-1</sup> = 2<sup>3</sup> = 8.
+                                </div>
+                            </div>
+
+                            <!-- Step 4 -->
+                            <div class="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                                <div class="font-bold text-indigo-950 flex justify-between">
+                                    <span>STEP 4: Selective Repeat Efficiency & Net Throughput</span>
+                                    <span id="solv-res-eta" class="text-emerald-700 font-extrabold">η<sub>SR</sub> = 89.41% | S = 1.788 Mbps</span>
+                                </div>
+                                <div class="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                                    Ideal Efficiency η₀ = min(1, W / (1+2a)) = min(1, 8 / 8.5) = 94.12%.<br>
+                                    Lossy Efficiency η<sub>SR</sub> = (1 - p) × η₀ = (1 - 0.05) × 94.12% = <strong>89.41%</strong>.<br>
+                                    Throughput S<sub>SR</sub> = η<sub>SR</sub> × B = 0.8941 × 2.0 Mbps = <strong>1.788 Mbps</strong>.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Verification Quiz Card -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <h3 class="font-bold text-slate-900 text-sm border-b border-slate-100 pb-2 flex items-center justify-between">
+                            <span class="flex items-center gap-2"><span>✏️</span> Student Calculation Verifier</span>
+                            <span class="text-xs text-slate-400 font-normal">Check your homework/exam answers</span>
+                        </h3>
+                        <p class="text-xs text-slate-600">
+                            Enter your computed values based on the physical parameters above and click "Check Answers":
+                        </p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Your T<sub>t</sub> (ms)</label>
+                                <input type="number" id="quiz-user-tt" step="0.01" placeholder="e.g. 4.00" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Your Efficiency η<sub>SR</sub> (%)</label>
+                                <input type="number" id="quiz-user-eta" step="0.1" placeholder="e.g. 89.4" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Your Throughput (Mbps)</label>
+                                <input type="number" id="quiz-user-tp" step="0.01" placeholder="e.g. 1.79" class="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-2">
+                            <button onclick="verifyStudentAnswers()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-1.5 px-4 rounded transition shadow-sm">
+                                Check My Answers
+                            </button>
+                            <div id="quiz-feedback-box" class="text-xs font-bold font-mono"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Protocol Efficiency Comparison Graph -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                            <span>📈</span> Protocol Efficiency Comparison: S&W vs GBN vs Selective Repeat
+                        </h3>
+                        <p class="text-xs text-slate-500">
+                            Dynamic curve plotting link efficiency (%) against increasing frame error probability (p).
+                        </p>
+                    </div>
+                    <div class="text-xs font-mono bg-slate-100 px-3 py-1 rounded text-slate-700">
+                        Configured W = <span id="graph-w-val" class="font-bold text-indigo-700">8</span>, a = <span id="graph-a-val" class="font-bold text-indigo-700">3.75</span>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="efficiencyChart"></canvas>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- MODULE 3: FORMULAS, FSM & PROTOCOL THEORY  -->
+        <!-- ========================================== -->
+        <section id="module-theory" class="hidden space-y-6">
+            
+            <div class="bg-indigo-900/10 border border-indigo-200 rounded-xl p-4 text-slate-700 text-sm">
+                <div class="flex items-start gap-3">
+                    <span class="text-xl">📚</span>
+                    <div>
+                        <h2 class="font-bold text-indigo-950 text-base">Module 3: Formal Protocol Theory, FSM Architectures & Proofs</h2>
+                        <p class="mt-0.5 leading-relaxed">
+                            Comprehensive reference for the mathematical foundations of Selective Repeat ARQ, finite state machine transition matrices, sequence space bounds, and comparative trade-off analyses.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Protocol Architecture FSM Breakdown -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Sender FSM Card -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <h3 class="font-bold text-slate-900 text-sm border-b border-slate-100 pb-2 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-indigo-600"></span> Sender Finite State Machine (FSM)
+                    </h3>
+                    <div class="space-y-2 text-xs">
+                        <div class="p-2.5 bg-slate-50 rounded border border-slate-200">
+                            <span class="font-bold text-indigo-900">1. WINDOW_AVAILABLE State</span>
+                            <p class="text-slate-600 text-[11px] mt-0.5">
+                                Guard: <span class="font-mono">S<sub>next</sub> &lt; S<sub>base</sub> + W<sub>T</sub></span>. Encapsulates frame with sequence <span class="font-mono">Seq = S<sub>next</sub> mod M</span>, transmits frame, starts frame-specific timer <span class="font-mono">Timer(S<sub>next</sub>)</span>, and increments <span class="font-mono">S<sub>next</sub></span>.
+                            </p>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded border border-slate-200">
+                            <span class="font-bold text-indigo-900">2. WAITING_FOR_ACK State</span>
+                            <p class="text-slate-600 text-[11px] mt-0.5">
+                                Monitors incoming selective ACKs. Upon receiving <span class="font-mono">ACK<sub>k</sub></span>, halts <span class="font-mono">Timer(k)</span> and marks frame <span class="font-mono">k</span> acknowledged. If <span class="font-mono">k == S<sub>base</sub></span>, advances <span class="font-mono">S<sub>base</sub></span> to the lowest unacknowledged index.
+                            </p>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded border border-slate-200">
+                            <span class="font-bold text-rose-900">3. SELECTIVE_RETRANSMIT State</span>
+                            <p class="text-slate-600 text-[11px] mt-0.5">
+                                Trigger: Expiration of <span class="font-mono">Timer(k)</span>. Transmits <em>only frame F<sub>k</sub></em>. Restarts <span class="font-mono">Timer(k)</span>. Does not retransmit succeeding frames in the pipeline.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Receiver FSM Card -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <h3 class="font-bold text-slate-900 text-sm border-b border-slate-100 pb-2 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-600"></span> Receiver Finite State Machine (FSM)
+                    </h3>
+                    <div class="space-y-2 text-xs">
+                        <div class="p-2.5 bg-slate-50 rounded border border-slate-200">
+                            <span class="font-bold text-emerald-900">1. IN_ORDER_RECEIVE State</span>
+                            <p class="text-slate-600 text-[11px] mt-0.5">
+                                Arrival of <span class="font-mono">F<sub>k</sub></span> where <span class="font-mono">k == R<sub>base</sub></span>. Delivers frame to application, emits <span class="font-mono">ACK<sub>k</sub></span>, scans reassembly buffer for contiguous successors, delivers buffered stream, and advances <span class="font-mono">R<sub>base</sub></span>.
+                            </p>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded border border-slate-200">
+                            <span class="font-bold text-blue-900">2. OUT_OF_ORDER_BUFFER State</span>
+                            <p class="text-slate-600 text-[11px] mt-0.5">
+                                Arrival of <span class="font-mono">F<sub>k</sub></span> where <span class="font-mono">R<sub>base</sub> &lt; k &lt; R<sub>base</sub> + W<sub>R</sub></span>. Stores payload in reassembly slot <span class="font-mono">k</span>, emits selective <span class="font-mono">ACK<sub>k</sub></span>, and holds <span class="font-mono">R<sub>base</sub></span> stationary.
+                            </p>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded border border-slate-200">
+                            <span class="font-bold text-amber-900">3. DUPLICATE_FRAME Handling</span>
+                            <p class="text-slate-600 text-[11px] mt-0.5">
+                                Arrival of <span class="font-mono">F<sub>k</sub></span> where <span class="font-mono">k &lt; R<sub>base</sub></span> (due to lost ACK). Discards duplicate payload, re-emits <span class="font-mono">ACK<sub>k</sub></span> to enable sender window advancement.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Mathematical Proof & Sequence Window Constraint -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h3 class="font-bold text-slate-900 text-sm border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <span>📐</span> Sequence Space Constraint Proof: W<sub>T</sub> + W<sub>R</sub> ≤ M
+                </h3>
+                <div class="text-xs text-slate-700 leading-relaxed space-y-3">
+                    <p>
+                        A fundamental design constraint of sliding window protocols is preventing sequence number ambiguity between frames of the current window cycle and retransmitted frames from the previous cycle.
+                    </p>
+                    <div class="p-4 bg-amber-50 rounded-lg border border-amber-200 space-y-2 text-amber-950">
+                        <div class="font-bold text-sm">Mathematical Formulation:</div>
+                        <p>
+                            Let sequence numbers be evaluated modulo <span class="font-mono font-bold">M = 2ᵐ</span>. For symmetric sender and receiver windows (<span class="font-mono font-bold">W<sub>T</sub> = W<sub>R</sub> = W</span>):
+                        </p>
+                        <div class="text-center font-mono font-bold text-sm text-indigo-900 py-1">
+                            W<sub>T</sub> + W<sub>R</sub> ≤ M &nbsp;⟹&nbsp; 2W ≤ M &nbsp;⟹&nbsp; W ≤ M / 2 = 2ᵐ⁻¹
+                        </div>
+                        <p class="text-[11px] text-amber-900">
+                            <strong>Failure Proof (Why W &gt; M/2 Fails):</strong> Suppose <span class="font-mono">m = 3 (M = 8)</span> and we illegally set <span class="font-mono">W = 5</span>. Sender transmits frames 0, 1, 2, 3, 4. Receiver accepts all 5 frames, generates ACKs, and advances its acceptance window to [5, 6, 7, 0, 1]. If all 5 ACKs are lost in transit, the sender times out and retransmits frame 0. When sequence number 0 arrives, the receiver cannot determine whether sequence 0 is an old duplicate or the new frame 0 in its advanced window!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparative ARQ Taxonomy Table -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="font-bold text-slate-900 text-sm border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <span>⚖️</span> Comparative ARQ Taxonomy Table
+                </h3>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700 border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-900 font-bold border-b border-slate-200">
+                                <th class="p-2.5">Protocol Vector</th>
+                                <th class="p-2.5">Stop-and-Wait ARQ</th>
+                                <th class="p-2.5">Go-Back-N (GBN) ARQ</th>
+                                <th class="p-2.5 bg-indigo-50 text-indigo-950">Selective Repeat (SR) ARQ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 font-mono text-[11px]">
+                            <tr>
+                                <td class="p-2.5 font-sans font-semibold">Sender Window (W<sub>T</sub>)</td>
+                                <td class="p-2.5">1</td>
+                                <td class="p-2.5">N &gt; 1</td>
+                                <td class="p-2.5 font-bold bg-indigo-50/50 text-indigo-900">N &gt; 1</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-sans font-semibold">Receiver Window (W<sub>R</sub>)</td>
+                                <td class="p-2.5">1</td>
+                                <td class="p-2.5">1</td>
+                                <td class="p-2.5 font-bold bg-indigo-50/50 text-indigo-900">N &gt; 1 (W<sub>R</sub> = W<sub>T</sub>)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-sans font-semibold">Acknowledgment Scheme</td>
+                                <td class="p-2.5">Individual / Stop-Wait</td>
+                                <td class="p-2.5">Cumulative</td>
+                                <td class="p-2.5 font-bold bg-indigo-50/50 text-indigo-900">Individual / Selective ACK</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-sans font-semibold">Out-of-Order Buffering</td>
+                                <td class="p-2.5">None</td>
+                                <td class="p-2.5">None (Discarded)</td>
+                                <td class="p-2.5 font-bold bg-indigo-50/50 text-indigo-900">Active Reassembly Buffer</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-sans font-semibold">Retransmission Scope</td>
+                                <td class="p-2.5">Single Frame</td>
+                                <td class="p-2.5">Missing Frame + All Successors</td>
+                                <td class="p-2.5 font-bold bg-indigo-50/50 text-indigo-900">Missing Frame Exclusively</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-sans font-semibold">Timer Infrastructure</td>
+                                <td class="p-2.5">Single Timer</td>
+                                <td class="p-2.5">Single Timer (Oldest Unacked)</td>
+                                <td class="p-2.5 font-bold bg-indigo-50/50 text-indigo-900">Per-Frame Independent Timers</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-sans font-semibold">Sequence Bound (M)</td>
+                                <td class="p-2.5">M ≥ 2</td>
+                                <td class="p-2.5">M ≥ N + 1</td>
+                                <td class="p-2.5 font-bold bg-indigo-50/50 text-indigo-900">M ≥ W<sub>T</sub> + W<sub>R</sub> = 2N</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-sans font-semibold">Lossy Link Efficiency (η)</td>
+                                <td class="p-2.5">(1-p)/(1+2a)</td>
+                                <td class="p-2.5">N(1-p)/[(1+2a)(1-p+Np)]</td>
+                                <td class="p-2.5 font-bold bg-indigo-50/50 text-indigo-900">(1-p) · min(1, N / (1+2a))</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-900 text-slate-400 border-t border-slate-800 py-4 mt-auto text-xs">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div>
+                <span class="font-bold text-slate-200">Selective Repeat ARQ Interactive Engineering Workbench</span> • Computer Networks Pedagogy
+            </div>
+            <div class="font-mono text-[11px] text-slate-500">
+                Single-Page Architecture • Chart.js & Canvas Powered • Tailwind CSS
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC CORE -->
+    <script>
+        /* ==========================================================================
+           GLOBAL STATE & PROTOCOL DATA STRUCTURES
+           ========================================================================== */
+        
+        let config = {
+            totalFrames: 8,
+            windowSender: 4,
+            windowReceiver: 4,
+            seqBits: 3,
+            seqModulus: 8,
+            maxSafeWindow: 4,
+            timeoutSec: 4.0,
+            animSpeed: 1.0
+        };
+
+        // Simulation State
+        let simState = {
+            isRunning: false,
+            sBase: 0,
+            sNext: 0,
+            rBase: 0,
+            frames: [],            // Frame models
+            rxBuffer: {},          // Out-of-order reassembly buffer { frameId: frameObj }
+            deliveredStream: [],   // Sequential delivered frames
+            inFlightPackets: [],   // Packets currently traveling across the channel
+            pendingFault: null,    // 'drop-frame', 'corrupt-frame', 'drop-ack', 'delay-ack', 'reorder'
+            stats: {
+                sent: 0,
+                delivered: 0,
+                retransmissions: 0,
+                acksSent: 0,
+                acksRcvd: 0,
+                timeouts: 0
+            },
+            simTime: 0,
+            lastTickTimestamp: null,
+            lastAutoSendTime: 0
+        };
+
+        let animFrameId = null;
+        let chartInstance = null;
+
+        /* ==========================================================================
+           INITIALIZATION & TAB NAVIGATION
+           ========================================================================== */
+
+        window.addEventListener('DOMContentLoaded', () => {
+            validateAndUpdateConfig();
+            initCanvas();
+            initChart();
+            resetSimulation();
+            
+            // Handle window resize for canvas responsiveness
+            window.addEventListener('resize', () => {
+                initCanvas();
+            });
+        });
+
+        function switchTab(tabId) {
+            ['visualizer', 'solver', 'theory'].forEach(t => {
+                document.getElementById(`module-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tab-btn-${t}`);
+                btn.className = "px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 text-slate-300 hover:text-white hover:bg-slate-700";
+            });
+
+            document.getElementById(`module-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            activeBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 bg-indigo-600 text-white shadow-sm";
+
+            if (tabId === 'solver') {
+                recalculateSolver();
+            }
+        }
+
+        /* ==========================================================================
+           CONFIGURATION VALIDATION & SETUP
+           ========================================================================== */
+
+        function validateAndUpdateConfig() {
+            const totalFrames = parseInt(document.getElementById('cfg-total-frames').value) || 8;
+            const windowSender = parseInt(document.getElementById('cfg-window-sender').value) || 4;
+            const windowReceiver = parseInt(document.getElementById('cfg-window-receiver').value) || 4;
+            const seqBits = parseInt(document.getElementById('cfg-seq-bits').value) || 3;
+            
+            const seqModulus = Math.pow(2, seqBits);
+            const maxSafeWindow = Math.floor(seqModulus / 2);
+
+            document.getElementById('cfg-seq-modulus').textContent = `M = 2^${seqBits} = ${seqModulus}`;
+            document.getElementById('matrix-m').textContent = `${seqBits} bits (M=${seqModulus})`;
+            document.getElementById('matrix-wmax').textContent = maxSafeWindow;
+
+            const isValid = (windowSender + windowReceiver <= seqModulus) && (windowSender <= maxSafeWindow);
+
+            const badge = document.getElementById('config-status-badge');
+            const errorBox = document.getElementById('validation-error-box');
+
+            if (isValid) {
+                badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200";
+                badge.textContent = "✓ Valid Configuration";
+                errorBox.classList.add('hidden');
+            } else {
+                badge.className = "text-xs px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 font-semibold border border-rose-200";
+                badge.textContent = "❌ Invalid Configuration";
+                errorBox.classList.remove('hidden');
+                document.getElementById('validation-error-msg').innerHTML = 
+                    `Selected Window (${windowSender}) exceeds safe bounds. Selective Repeat requires <strong>W<sub>T</sub> + W<sub>R</sub> ≤ M</strong> (where M = ${seqModulus}, max safe window = ${maxSafeWindow}).`;
+            }
+
+            config.totalFrames = totalFrames;
+            config.windowSender = windowSender;
+            config.windowReceiver = windowReceiver;
+            config.seqBits = seqBits;
+            config.seqModulus = seqModulus;
+            config.maxSafeWindow = maxSafeWindow;
+
+            document.getElementById('disp-wt-val').textContent = windowSender;
+            document.getElementById('disp-wr-val').textContent = windowReceiver;
+            document.getElementById('matrix-wt').textContent = windowSender;
+            document.getElementById('matrix-wr').textContent = windowReceiver;
+            document.getElementById('stat-total-frames').textContent = totalFrames;
+
+            return isValid;
+        }
+
+        function updateSimParams() {
+            config.timeoutSec = parseFloat(document.getElementById('cfg-timeout').value) || 4.0;
+            config.animSpeed = parseFloat(document.getElementById('cfg-anim-speed').value) || 1.0;
+        }
+
+        function applyConfiguration() {
+            if (validateAndUpdateConfig()) {
+                resetSimulation();
+                logEvent("SYSTEM", `Applied new configuration: N=${config.totalFrames}, W_T=${config.windowSender}, W_R=${config.windowReceiver}, m=${config.seqBits} bits`);
+            }
+        }
+
+        /* ==========================================================================
+           SIMULATION ENGINE & DATA MODELS
+           ========================================================================== */
+
+        function resetSimulation() {
+            if (simState.isRunning) {
+                toggleSimulation();
+            }
+
+            updateSimParams();
+
+            simState.sBase = 0;
+            simState.sNext = 0;
+            simState.rBase = 0;
+            simState.rxBuffer = {};
+            simState.deliveredStream = [];
+            simState.inFlightPackets = [];
+            simState.pendingFault = null;
+            simState.simTime = 0;
+            simState.lastTickTimestamp = null;
+            simState.lastAutoSendTime = 0;
+
+            simState.stats = {
+                sent: 0,
+                delivered: 0,
+                retransmissions: 0,
+                acksSent: 0,
+                acksRcvd: 0,
+                timeouts: 0
+            };
+
+            // Initialize frames array
+            simState.frames = [];
+            for (let i = 0; i < config.totalFrames; i++) {
+                simState.frames.push({
+                    id: i,
+                    seq: i % config.seqModulus,
+                    state: 'OUTSIDE', // READY, WAITING, ACKED, RETRANSMITTING
+                    timer: 0,
+                    timerActive: false,
+                    retransmissions: 0
+                });
+            }
+
+            // Update initial window states
+            updateWindowStates();
+            updateUI();
+            
+            const logContainer = document.getElementById('event-log-container');
+            logContainer.innerHTML = '<div class="text-slate-500 italic text-center py-4">[00:00.00] Simulation initialized. Awaiting user action.</div>';
+            document.getElementById('sim-fault-indicator').classList.add('hidden');
+        }
+
+        function updateWindowStates() {
+            for (let i = 0; i < config.totalFrames; i++) {
+                const f = simState.frames[i];
+                if (f.state === 'ACKED') continue;
+
+                if (i >= simState.sBase && i < simState.sBase + config.windowSender) {
+                    if (f.state === 'OUTSIDE') {
+                        f.state = 'READY';
+                    }
+                } else if (i >= simState.sBase + config.windowSender) {
+                    f.state = 'OUTSIDE';
+                }
+            }
+        }
+
+        function toggleSimulation() {
+            if (!validateAndUpdateConfig()) return;
+
+            simState.isRunning = !simState.isRunning;
+            const btn = document.getElementById('btn-play');
+            const btnIcon = document.getElementById('btn-play-icon');
+            const btnText = document.getElementById('btn-play-text');
+
+            if (simState.isRunning) {
+                btn.className = "bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-1.5 rounded flex items-center gap-1.5 shadow transition";
+                btnIcon.textContent = "⏸";
+                btnText.textContent = "Pause Simulation";
+                simState.lastTickTimestamp = performance.now();
+                logEvent("SYSTEM", "Simulation started");
+                requestAnimationFrame(simulationLoop);
+            } else {
+                btn.className = "bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-1.5 rounded flex items-center gap-1.5 shadow transition";
+                btnIcon.textContent = "▶";
+                btnText.textContent = "Resume Simulation";
+                logEvent("SYSTEM", "Simulation paused");
+            }
+        }
+
+        /* Main Simulation Time Loop */
+        function simulationLoop(timestamp) {
+            if (!simState.isRunning) return;
+
+            if (!simState.lastTickTimestamp) simState.lastTickTimestamp = timestamp;
+            const deltaSec = ((timestamp - simState.lastTickTimestamp) / 1000) * config.animSpeed;
+            simState.lastTickTimestamp = timestamp;
+
+            simState.simTime += deltaSec;
+
+            // 1. Advance Per-Frame Timers
+            updateTimers(deltaSec);
+
+            // 2. Advance In-Flight Packet Positions
+            updateInFlightPackets(deltaSec);
+
+            // 3. Automatic pipelined sending: fill the sender window gradually.
+            // Go-Back-N/Selective Repeat must not behave like Stop-and-Wait.
+            const sendInterval = 0.65 / config.animSpeed;
+            if (simState.sNext < config.totalFrames &&
+                simState.sNext < simState.sBase + config.windowSender &&
+                simState.simTime - simState.lastAutoSendTime >= sendInterval) {
+                stepSingleFrame();
+                simState.lastAutoSendTime = simState.simTime;
+            }
+
+            // 4. Stop automatically when every frame is delivered.
+            if (simState.sBase >= config.totalFrames &&
+                simState.rBase >= config.totalFrames &&
+                simState.inFlightPackets.length === 0) {
+                simState.isRunning = false;
+                logEvent("SYSTEM", "Simulation complete — all frames delivered successfully.");
+                document.getElementById('btn-play').className = "bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-1.5 rounded flex items-center gap-1.5 shadow transition";
+                document.getElementById('btn-play-icon').textContent = "▶";
+                document.getElementById('btn-play-text').textContent = "Start Simulation";
+            }
+
+            // 5. Render and Update UI
+            updateUI();
+            renderCanvas();
+
+            if (simState.isRunning) {
+                requestAnimationFrame(simulationLoop);
+            }
+        }
+
+        /* Advance per-frame countdown timers */
+        function updateTimers(deltaSec) {
+            for (let i = simState.sBase; i < simState.sNext; i++) {
+                const f = simState.frames[i];
+                if (f && f.state === 'WAITING' && f.timerActive) {
+                    f.timer += deltaSec;
+                    if (f.timer >= config.timeoutSec) {
+                        // TIMEOUT EVENT FOR INDIVIDUAL FRAME
+                        handleTimeout(f);
+                    }
+                }
+            }
+        }
+
+        /* Handle individual frame timeout */
+        function handleTimeout(frame) {
+            frame.timer = 0;
+            frame.retransmissions++;
+            frame.state = 'RETRANSMITTING';
+            frame.timerActive = false;
+            simState.stats.timeouts++;
+            simState.stats.retransmissions++;
+
+            logEvent("TIMEOUT", `Timer expired for Frame F${frame.id} (Seq ${frame.seq}). Executing Selective Retransmission of F${frame.id} ONLY.`);
+
+            // Transmit packet
+            sendPacketOverChannel(frame.id, frame.seq, 'DATA', true);
+            frame.state = 'WAITING';
+            frame.timerActive = true;
+        }
+
+        /* Step execution: Transmit next available frame in window */
+        function stepSingleFrame() {
+            if (!validateAndUpdateConfig()) return;
+
+            if (simState.sNext >= config.totalFrames && simState.sBase >= config.totalFrames) {
+                logEvent("SYSTEM", "All frames have been transmitted and acknowledged.");
+                return;
+            }
+
+            if (simState.sNext < simState.sBase + config.windowSender && simState.sNext < config.totalFrames) {
+                const frame = simState.frames[simState.sNext];
+                frame.state = 'WAITING';
+                frame.timer = 0;
+                frame.timerActive = true;
+                
+                simState.stats.sent++;
+                simState.sNext++;
+
+                logEvent("TX", `Transmitting Frame F${frame.id} (Seq ${frame.seq})`);
+                sendPacketOverChannel(frame.id, frame.seq, 'DATA', false);
+
+                updateWindowStates();
+                updateUI();
+                renderCanvas();
+            } else {
+                logEvent("WARNING", `Sender Window Full (W_T = ${config.windowSender}). Cannot send frame F${simState.sNext} until S_base advances.`);
+            }
+        }
+
+        /* Push Packet onto Channel */
+        function sendPacketOverChannel(frameId, seq, type, isRetx = false) {
+            let isCorrupted = false;
+            let isDropped = false;
+            let isDelayed = false;
+            let isReordered = false;
+
+            // Apply pending fault if matches
+            if (simState.pendingFault) {
+                if (simState.pendingFault === 'drop-frame' && type === 'DATA') {
+                    isDropped = true;
+                    logEvent("FAULT", `[FAULT INJECTED] Data Frame F${frameId} dropped in transit!`);
+                } else if (simState.pendingFault === 'corrupt-frame' && type === 'DATA') {
+                    isCorrupted = true;
+                    logEvent("FAULT", `[FAULT INJECTED] Data Frame F${frameId} payload corrupted (CRC error)!`);
+                } else if (simState.pendingFault === 'drop-ack' && type === 'ACK') {
+                    isDropped = true;
+                    logEvent("FAULT", `[FAULT INJECTED] Selective ACK${seq} for F${frameId} lost on return path!`);
+                } else if (simState.pendingFault === 'delay-ack' && type === 'ACK') {
+                    isDelayed = true;
+                    logEvent("FAULT", `[FAULT INJECTED] ACK${seq} delayed, triggering sender timeout.`);
+                } else if (simState.pendingFault === 'reorder' && type === 'DATA') {
+                    isReordered = true;
+                    logEvent("FAULT", `[FAULT INJECTED] Data Frame F${frameId} delayed to demonstrate out-of-order arrival.`);
+                }
+                clearFaultIndicator();
+            }
+
+            simState.inFlightPackets.push({
+                id: Math.random().toString(36).substr(2, 9),
+                frameId: frameId,
+                seq: seq,
+                type: type, // 'DATA' or 'ACK'
+                progress: 0, // 0 to 1
+                speed: isDelayed ? 0.12 : (isReordered ? 0.18 : 0.4), // speed fraction per sec
+                corrupted: isCorrupted,
+                dropped: isDropped,
+                isRetx: isRetx
+            });
+        }
+
+        /* Update in-flight packet movement */
+        function updateInFlightPackets(deltaSec) {
+            for (let i = simState.inFlightPackets.length - 1; i >= 0; i--) {
+                const pkt = simState.inFlightPackets[i];
+                pkt.progress += pkt.speed * deltaSec;
+
+                // Packet dropped mid-flight
+                if (pkt.dropped && pkt.progress >= 0.5) {
+                    simState.inFlightPackets.splice(i, 1);
+                    continue;
+                }
+
+                // Packet reaches destination
+                if (pkt.progress >= 1.0) {
+                    simState.inFlightPackets.splice(i, 1);
+                    if (pkt.type === 'DATA') {
+                        handleFrameArrivalAtReceiver(pkt);
+                    } else if (pkt.type === 'ACK') {
+                        handleAckArrivalAtSender(pkt);
+                    }
+                }
+            }
+        }
+
+        /* RECEIVER ENGINE: Handles frame arrival & reassembly */
+        function handleFrameArrivalAtReceiver(pkt) {
+            const fId = pkt.frameId;
+            const seq = pkt.seq;
+
+            if (pkt.corrupted) {
+                logEvent("ERROR", `Receiver CRC check failed for Frame F${fId} (Seq ${seq}). Packet discarded.`);
+                return;
+            }
+
+            logEvent("RX", `Receiver received Frame F${fId} (Seq ${seq})`);
+
+            // Check receiver window limits: [R_base ... R_base + W_R - 1]
+            const inWindow = (fId >= simState.rBase && fId < simState.rBase + config.windowReceiver);
+
+            if (inWindow) {
+                if (fId === simState.rBase) {
+                    // 1. In-order base arrival
+                    logEvent("RX", `Frame F${fId} matches R_base (${simState.rBase}). Delivering to Application.`);
+                    simState.deliveredStream.push(fId);
+                    simState.stats.delivered++;
+                    simState.rBase++;
+
+                    // 2. Contiguous Buffer Drain Routine
+                    let nextId = simState.rBase;
+                    while (simState.rxBuffer[nextId]) {
+                        logEvent("BUFFER", `Contiguous Buffer Drain: Delivering stored Frame F${nextId} to Application.`);
+                        simState.deliveredStream.push(nextId);
+                        simState.stats.delivered++;
+                        delete simState.rxBuffer[nextId];
+                        simState.rBase++;
+                        nextId++;
+                    }
+
+                    // Emit Selective ACK
+                    simState.stats.acksSent++;
+                    logEvent("ACK", `Emitting Selective ACK for F${fId} (ACK ${seq})`);
+                    sendPacketOverChannel(fId, seq, 'ACK');
+
+                } else {
+                    // 3. Out-of-order arrival inside window
+                    if (!simState.rxBuffer[fId]) {
+                        simState.rxBuffer[fId] = { id: fId, seq: seq };
+                        logEvent("BUFFER", `OUT-OF-ORDER: Frame F${fId} received early. Stored in Reassembly Buffer slot ${fId}.`);
+                    } else {
+                        logEvent("WARNING", `Duplicate Frame F${fId} received. Already buffered.`);
+                    }
+
+                    // Emit Selective ACK for out-of-order frame
+                    simState.stats.acksSent++;
+                    logEvent("ACK", `Emitting Selective ACK for out-of-order Frame F${fId} (ACK ${seq})`);
+                    sendPacketOverChannel(fId, seq, 'ACK');
+                }
+            } else if (fId < simState.rBase) {
+                // 4. Duplicate frame below R_base (ACK was likely lost)
+                logEvent("WARNING", `Duplicate Frame F${fId} received below R_base (${simState.rBase}). Resending ACK${seq}.`);
+                simState.stats.acksSent++;
+                sendPacketOverChannel(fId, seq, 'ACK');
+            } else {
+                // Outside receiver window
+                logEvent("ERROR", `Frame F${fId} exceeds Receiver Window bounds. Discarded.`);
+            }
+
+            updateUI();
+        }
+
+        /* SENDER ENGINE: Handles ACK arrival & window sliding */
+        function handleAckArrivalAtSender(pkt) {
+            const fId = pkt.frameId;
+            const seq = pkt.seq;
+
+            simState.stats.acksRcvd++;
+            logEvent("ACK", `Sender received Selective ACK for Frame F${fId} (ACK ${seq})`);
+
+            const frame = simState.frames[fId];
+            if (frame && frame.state !== 'ACKED') {
+                frame.state = 'ACKED';
+                frame.timerActive = false;
+                frame.timer = 0;
+
+                // Slide Sender Window if S_base was ACKed
+                if (fId === simState.sBase) {
+                    while (simState.sBase < config.totalFrames && simState.frames[simState.sBase].state === 'ACKED') {
+                        simState.sBase++;
+                    }
+                    logEvent("SYSTEM", `Sender Window Slid Forward! New S_base = ${simState.sBase}`);
+                }
+            }
+
+            updateWindowStates();
+            updateUI();
+        }
+
+        /* FAULT INJECTION CONTROLLER */
+        function injectFault(type) {
+            simState.pendingFault = type;
+            const indicator = document.getElementById('sim-fault-indicator');
+            const nameSpan = document.getElementById('pending-fault-name');
+            indicator.classList.remove('hidden');
+
+            const faultNames = {
+                'drop-frame': 'Lose Next Data Frame 💥',
+                'corrupt-frame': 'Corrupt Next Data Frame ☣️',
+                'drop-ack': 'Lose Next ACK Packet ⚡',
+                'delay-ack': 'Delay Next ACK Packet ⏱️',
+                'reorder': 'Out-of-Order Delivery 🔀'
+            };
+            nameSpan.textContent = faultNames[type] || type;
+            logEvent("FAULT", `Fault armed: ${faultNames[type]}`);
+        }
+
+        function clearFaultIndicator() {
+            simState.pendingFault = null;
+            document.getElementById('sim-fault-indicator').classList.add('hidden');
+        }
+
+        /* PRESET SCENARIO LOADER */
+        function loadPreset(scenario) {
+            resetSimulation();
+            logEvent("SYSTEM", `Loading Preset Scenario: ${scenario.toUpperCase()}`);
+
+            if (scenario === 'normal') {
+                // Standard continuous transmit
+                for (let i = 0; i < config.windowSender; i++) stepSingleFrame();
+            } else if (scenario === 'lost-frame') {
+                injectFault('drop-frame');
+                stepSingleFrame(); // F0 normal
+                stepSingleFrame(); // F1 (Dropped)
+                stepSingleFrame(); // F2 normal
+                stepSingleFrame(); // F3 normal
+            } else if (scenario === 'lost-ack') {
+                injectFault('drop-ack');
+                stepSingleFrame(); // F0 ACK lost
+                stepSingleFrame();
+            } else if (scenario === 'out-of-order') {
+                injectFault('drop-frame');
+                stepSingleFrame(); // F0 dropped
+                stepSingleFrame(); // F1 buffered
+                stepSingleFrame(); // F2 buffered
+            } else if (scenario === 'wraparound') {
+                document.getElementById('cfg-seq-bits').value = "2"; // M=4, max W=2
+                document.getElementById('cfg-window-sender').value = "2";
+                document.getElementById('cfg-window-receiver').value = "2";
+                document.getElementById('cfg-total-frames').value = "8";
+                applyConfiguration();
+                logEvent("SYSTEM", "Wraparound preset loaded: m=2 bits (M=4, Seq 0..3). Frames F4..F7 wrap back to Seq 0..3!");
+            }
+        }
+
+        /* ==========================================================================
+           DOM UI RENDERING & DYNAMICUPDATES
+           ========================================================================== */
+
+        function updateUI() {
+            // Update Base Labels
+            document.getElementById('disp-sbase').textContent = simState.sBase;
+            document.getElementById('disp-snext').textContent = simState.sNext;
+            document.getElementById('disp-rbase').textContent = simState.rBase;
+
+            // Render Sender Window Slots
+            const senderWinContainer = document.getElementById('sender-window-container');
+            senderWinContainer.innerHTML = '';
+            
+            for (let i = simState.sBase; i < simState.sBase + config.windowSender; i++) {
+                if (i >= config.totalFrames) break;
+                const f = simState.frames[i];
+                
+                let stateColor = "bg-amber-100 border-amber-300 text-amber-900";
+                let stateText = "READY";
+
+                if (f.state === 'WAITING') {
+                    stateColor = "bg-blue-100 border-blue-400 text-blue-900";
+                    stateText = "WAITING ACK";
+                } else if (f.state === 'ACKED') {
+                    stateColor = "bg-emerald-100 border-emerald-400 text-emerald-900";
+                    stateText = "ACKED ✓";
+                } else if (f.state === 'RETRANSMITTING') {
+                    stateColor = "bg-rose-100 border-rose-400 text-rose-900";
+                    stateText = "RETX ⚡";
+                }
+
+                const card = document.createElement('div');
+                card.className = `p-2 rounded-lg border flex flex-col items-center justify-between text-center ${stateColor} shadow-sm transition-all`;
+                card.innerHTML = `
+                    <div class="font-bold text-xs">F${f.id}</div>
+                    <div class="text-[10px] font-mono opacity-80">Seq ${f.seq}</div>
+                    <div class="text-[9px] font-bold uppercase mt-1 px-1 rounded bg-white/60">${stateText}</div>
+                `;
+                senderWinContainer.appendChild(card);
+            }
+
+            // Render Upstream Sender Buffer
+            const senderBufContainer = document.getElementById('sender-buffer-container');
+            senderBufContainer.innerHTML = '';
+            const outsideFrames = simState.frames.filter(f => f.id >= simState.sBase + config.windowSender);
+
+            if (outsideFrames.length === 0) {
+                senderBufContainer.innerHTML = '<span class="text-slate-400 italic text-[11px] font-normal">Buffer empty</span>';
+            } else {
+                outsideFrames.forEach(f => {
+                    const badge = document.createElement('span');
+                    badge.className = "px-2 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-700 font-mono text-xs font-bold";
+                    badge.textContent = `F${f.id} (Seq ${f.seq})`;
+                    senderBufContainer.appendChild(badge);
+                });
+            }
+
+            // Render Active Frame Timers
+            const timersContainer = document.getElementById('active-timers-container');
+            timersContainer.innerHTML = '';
+            let activeTimerCount = 0;
+
+            for (let i = simState.sBase; i < simState.sNext; i++) {
+                const f = simState.frames[i];
+                if (f && f.state === 'WAITING' && f.timerActive) {
+                    activeTimerCount++;
+                    const progress = Math.min(100, (f.timer / config.timeoutSec) * 100);
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between bg-slate-50 p-1.5 rounded border border-slate-200 text-[11px]";
+                    row.innerHTML = `
+                        <div class="font-bold text-indigo-900">Timer F${f.id}</div>
+                        <div class="w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden mx-2">
+                            <div class="bg-indigo-600 h-1.5 rounded-full" style="width: ${progress}%"></div>
+                        </div>
+                        <div class="text-slate-600 font-mono">${f.timer.toFixed(1)}s / ${config.timeoutSec.toFixed(1)}s</div>
+                    `;
+                    timersContainer.appendChild(row);
+                }
+            }
+            if (activeTimerCount === 0) {
+                timersContainer.innerHTML = '<div class="text-slate-400 italic text-[11px] text-center py-1">No active frame timers running</div>';
+            }
+
+            // Render Receiver Acceptance Window Slots
+            const receiverWinContainer = document.getElementById('receiver-window-container');
+            receiverWinContainer.innerHTML = '';
+
+            for (let i = simState.rBase; i < simState.rBase + config.windowReceiver; i++) {
+                if (i >= config.totalFrames) break;
+                const isBuffered = !!simState.rxBuffer[i];
+                const isBase = (i === simState.rBase);
+
+                let slotColor = isBase ? "bg-amber-100 border-amber-300 text-amber-900" : "bg-slate-100 border-slate-300 text-slate-700";
+                let slotStatus = isBase ? "EXPECTED BASE" : "OPEN SLOT";
+
+                if (isBuffered) {
+                    slotColor = "bg-blue-100 border-blue-400 text-blue-900";
+                    slotStatus = "BUFFERED ✓";
+                }
+
+                const card = document.createElement('div');
+                card.className = `p-2 rounded-lg border flex flex-col items-center justify-between text-center ${slotColor} shadow-sm`;
+                card.innerHTML = `
+                    <div class="font-bold text-xs">F${i}</div>
+                    <div class="text-[10px] font-mono opacity-80">Seq ${i % config.seqModulus}</div>
+                    <div class="text-[9px] font-bold uppercase mt-1 px-1 rounded bg-white/60">${slotStatus}</div>
+                `;
+                receiverWinContainer.appendChild(card);
+            }
+
+            // Render Receiver Out-of-Order Reassembly Buffer
+            const rxBufContainer = document.getElementById('receiver-buffer-container');
+            rxBufContainer.innerHTML = '';
+            const bufferedKeys = Object.keys(simState.rxBuffer);
+
+            if (bufferedKeys.length === 0) {
+                rxBufContainer.innerHTML = '<div class="text-slate-400 italic text-[11px] text-center py-2">No out-of-order frames stored in reassembly buffer</div>';
+            } else {
+                bufferedKeys.forEach(key => {
+                    const item = simState.rxBuffer[key];
+                    const div = document.createElement('div');
+                    div.className = "flex items-center justify-between bg-indigo-50 border border-indigo-200 p-1.5 rounded text-xs font-mono";
+                    div.innerHTML = `
+                        <span class="font-bold text-indigo-900">Slot ${item.id} [F${item.id} / Seq ${item.seq}]</span>
+                        <span class="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-sans font-bold">STORED</span>
+                    `;
+                    rxBufContainer.appendChild(div);
+                });
+            }
+
+            // Render Delivered Stream
+            const deliveredContainer = document.getElementById('delivered-stream-container');
+            deliveredContainer.innerHTML = '';
+            if (simState.deliveredStream.length === 0) {
+                deliveredContainer.innerHTML = '<span class="text-slate-400 italic text-[11px] font-normal">No frames delivered yet</span>';
+            } else {
+                simState.deliveredStream.forEach(id => {
+                    const badge = document.createElement('span');
+                    badge.className = "px-2 py-0.5 rounded bg-emerald-600 text-white font-mono text-xs font-bold shadow-sm";
+                    badge.textContent = `F${id}`;
+                    deliveredContainer.appendChild(badge);
+                });
+            }
+
+            // Render Statistics Counters
+            document.getElementById('stat-frames-sent').textContent = simState.stats.sent;
+            document.getElementById('stat-delivered').textContent = simState.stats.delivered;
+            document.getElementById('stat-outstanding').textContent = simState.sNext - simState.sBase;
+            document.getElementById('stat-rx-buffered').textContent = bufferedKeys.length;
+            document.getElementById('stat-retransmissions').textContent = simState.stats.retransmissions;
+            document.getElementById('stat-acks-sent').textContent = simState.stats.acksSent;
+            document.getElementById('stat-acks-rcvd').textContent = simState.stats.acksRcvd;
+            document.getElementById('stat-timeouts').textContent = simState.stats.timeouts;
+
+            const windowUtil = Math.round(((simState.sNext - simState.sBase) / config.windowSender) * 100);
+            document.getElementById('stat-window-util').textContent = `Util: ${windowUtil}%`;
+        }
+
+        /* LOGGING ENGINE */
+        function logEvent(type, message) {
+            const container = document.getElementById('event-log-container');
+            const entry = document.createElement('div');
+            
+            const now = new Date();
+            const timeStr = `[${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(Math.floor(now.getMilliseconds()/10)).padStart(2, '0')}]`;
+
+            let badgeColor = "bg-slate-100 text-slate-700 border border-slate-200";
+            if (type === 'TX') badgeColor = "bg-indigo-100 text-indigo-800 border border-indigo-200";
+            else if (type === 'RX') badgeColor = "bg-emerald-100 text-emerald-800 border border-emerald-200";
+            else if (type === 'ACK') badgeColor = "bg-purple-100 text-purple-800 border border-purple-200";
+            else if (type === 'BUFFER') badgeColor = "bg-blue-100 text-blue-800 border border-blue-200";
+            else if (type === 'TIMEOUT' || type === 'FAULT') badgeColor = "bg-rose-100 text-rose-800 border border-rose-200";
+            else if (type === 'WARNING') badgeColor = "bg-amber-100 text-amber-800 border border-amber-200";
+
+            entry.className = "flex items-start gap-2 text-[11px] leading-relaxed";
+            entry.innerHTML = `
+                <span class="text-slate-500 font-mono shrink-0">${timeStr}</span>
+                <span class="px-1.5 py-0.2 rounded font-bold uppercase text-[9px] shrink-0 ${badgeColor}">${type}</span>
+                <span class="text-slate-700 font-mono">${message}</span>
+            `;
+
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearEventLog() {
+            document.getElementById('event-log-container').innerHTML = '';
+        }
+
+        /* ==========================================================================
+           CANVAS ANIMATION ENGINE
+           ========================================================================== */
+
+        let canvas, ctx;
+
+        function initCanvas() {
+            canvas = document.getElementById('channelCanvas');
+            if (!canvas) return;
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth;
+            canvas.height = parent.clientHeight;
+            ctx = canvas.getContext('2d');
+            renderCanvas();
+        }
+
+        function renderCanvas() {
+            if (!ctx || !canvas) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Background Channel Guide Lines
+            ctx.strokeStyle = '#1e293b';
+            ctx.setLineDash([4, 4]);
+            ctx.lineWidth = 1;
+
+            // Sender to Receiver Lane (Data)
+            ctx.beginPath();
+            ctx.moveTo(30, canvas.height * 0.35);
+            ctx.lineTo(canvas.width - 30, canvas.height * 0.35);
+            ctx.stroke();
+
+            // Receiver to Sender Lane (ACK)
+            ctx.beginPath();
+            ctx.moveTo(canvas.width - 30, canvas.height * 0.65);
+            ctx.lineTo(30, canvas.height * 0.65);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Render In-Flight Packets
+            simState.inFlightPackets.forEach(pkt => {
+                let x, y;
+                if (pkt.type === 'DATA') {
+                    x = 30 + pkt.progress * (canvas.width - 60);
+                    y = canvas.height * 0.35;
+
+                    // Draw Data Frame Bubble
+                    ctx.fillStyle = pkt.corrupted ? '#ef4444' : (pkt.isRetx ? '#f59e0b' : '#3b82f6');
+                    ctx.beginPath();
+                    ctx.arc(x, y, 14, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 10px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`F${pkt.frameId}`, x, y);
+
+                } else if (pkt.type === 'ACK') {
+                    x = (canvas.width - 30) - pkt.progress * (canvas.width - 60);
+                    y = canvas.height * 0.65;
+
+                    // Draw ACK Bubble
+                    ctx.fillStyle = '#10b981';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 9px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`A${pkt.seq}`, x, y);
+                }
+            });
+        }
+
+        /* ==========================================================================
+           MODULE 2: NUMERICAL SOLVER & CHART.JS INTEGRATION
+           ========================================================================== */
+
+        function recalculateSolver() {
+            const frameSizeVal = parseFloat(document.getElementById('solv-frame-size').value) || 8000;
+            const frameUnit = parseFloat(document.getElementById('solv-frame-unit').value) || 1;
+            const L = frameSizeVal * frameUnit; // total bits
+
+            const bwVal = parseFloat(document.getElementById('solv-bandwidth').value) || 2.0;
+            const bwUnit = parseFloat(document.getElementById('solv-bw-unit').value) || 1000000;
+            const B = bwVal * bwUnit; // bps
+
+            const distVal = parseFloat(document.getElementById('solv-distance').value) || 3000;
+            const distUnit = parseFloat(document.getElementById('solv-dist-unit').value) || 1000;
+            const d = distVal * distUnit; // meters
+
+            const v = (parseFloat(document.getElementById('solv-velocity').value) || 200000) * 1000; // m/s
+            const W = parseInt(document.getElementById('solv-window').value) || 8;
+            const m = parseInt(document.getElementById('solv-bits').value) || 4;
+            const p = parseFloat(document.getElementById('solv-loss-rate').value) || 0.05;
+
+            // Mathematical Formulations
+            const Tt = L / B; // seconds
+            const Tp = d / v; // seconds
+            const RTT = 2 * Tp;
+            const a = Tp / Tt;
+
+            const M = Math.pow(2, m);
+            const Wmax = Math.floor(M / 2);
+
+            const eta0 = Math.min(1.0, W / (1 + 2 * a));
+            const etaSR = (1 - p) * eta0;
+            const netThroughput = etaSR * B;
+
+            // Update UI Displays
+            document.getElementById('solv-res-tt').textContent = `${(Tt * 1000).toFixed(2)} ms`;
+            document.getElementById('solv-formula-tt').textContent = `${L} bits / ${(B/1e6).toFixed(2)} Mbps = ${(Tt*1000).toFixed(2)} ms`;
+
+            document.getElementById('solv-res-tp').textContent = `Tp = ${(Tp * 1000).toFixed(2)} ms | RTT = ${(RTT * 1000).toFixed(2)} ms`;
+            document.getElementById('solv-formula-tp').textContent = `${d/1000} km / ${(v/1000).toLocaleString()} km/s = ${(Tp*1000).toFixed(2)} ms`;
+
+            document.getElementById('solv-res-a').textContent = `a = ${a.toFixed(2)} | M = ${M} (Wmax = ${Wmax})`;
+
+            document.getElementById('solv-res-eta').innerHTML = `η<sub>SR</sub> = ${(etaSR * 100).toFixed(2)}% | S = ${(netThroughput/1e6).toFixed(3)} Mbps`;
+
+            document.getElementById('graph-w-val').textContent = W;
+            document.getElementById('graph-a-val').textContent = a.toFixed(2);
+
+            // Store true answers on element dataset for quiz validation
+            window.trueSolverResults = {
+                ttMs: Tt * 1000,
+                etaPct: etaSR * 100,
+                tpMbps: netThroughput / 1e6
+            };
+
+            updateChart(W, a);
+        }
+
+        function verifyStudentAnswers() {
+            if (!window.trueSolverResults) return;
+
+            const userTt = parseFloat(document.getElementById('quiz-user-tt').value);
+            const userEta = parseFloat(document.getElementById('quiz-user-eta').value);
+            const userTp = parseFloat(document.getElementById('quiz-user-tp').value);
+
+            const feedback = document.getElementById('quiz-feedback-box');
+
+            if (isNaN(userTt) || isNaN(userEta) || isNaN(userTp)) {
+                feedback.className = "text-xs font-bold text-amber-600 font-mono";
+                feedback.textContent = "⚠️ Please enter numerical values for all three fields.";
+                return;
+            }
+
+            const ttCorrect = Math.abs(userTt - window.trueSolverResults.ttMs) < 0.1;
+            const etaCorrect = Math.abs(userEta - window.trueSolverResults.etaPct) < 1.0;
+            const tpCorrect = Math.abs(userTp - window.trueSolverResults.tpMbps) < 0.1;
+
+            if (ttCorrect && etaCorrect && tpCorrect) {
+                feedback.className = "text-xs font-bold text-emerald-600 font-mono";
+                feedback.textContent = "🎉 Excellent! All calculations are accurate.";
+            } else {
+                feedback.className = "text-xs font-bold text-rose-600 font-mono";
+                feedback.textContent = `❌ Discrepancy found. Expected: Tt ≈ ${window.trueSolverResults.ttMs.toFixed(2)}ms, η ≈ ${window.trueSolverResults.etaPct.toFixed(1)}%, S ≈ ${window.trueSolverResults.tpMbps.toFixed(2)}Mbps`;
+            }
+        }
+
+        /* Chart.js Initialization & Render */
+        function initChart() {
+            const ctxChart = document.getElementById('efficiencyChart');
+            if (!ctxChart) return;
+
+            chartInstance = new Chart(ctxChart, {
+                type: 'line',
+                data: {
+                    labels: [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50],
+                    datasets: [
+                        {
+                            label: 'Selective Repeat ARQ (SR)',
+                            data: [],
+                            borderColor: '#4f46e5',
+                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.2
+                        },
+                        {
+                            label: 'Go-Back-N ARQ (GBN)',
+                            data: [],
+                            borderColor: '#f59e0b',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.2
+                        },
+                        {
+                            label: 'Stop-and-Wait ARQ (S&W)',
+                            data: [],
+                            borderColor: '#64748b',
+                            borderWidth: 2,
+                            borderDash: [2, 2],
+                            fill: false,
+                            tension: 0.2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Frame Error Probability (p)',
+                                font: { weight: 'bold', size: 11 }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Link Efficiency (%)',
+                                font: { weight: 'bold', size: 11 }
+                            },
+                            min: 0,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { font: { size: 11, weight: 'bold' } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart(W, a) {
+            if (!chartInstance) return;
+
+            const lossRates = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50];
+            
+            // Calculate efficiencies
+            const srData = lossRates.map(p => {
+                const eta0 = Math.min(1.0, W / (1 + 2 * a));
+                return (1 - p) * eta0 * 100;
+            });
+
+            const gbnData = lossRates.map(p => {
+                const eta0 = Math.min(1.0, W / (1 + 2 * a));
+                const denom = 1 - p + W * p;
+                return (eta0 * (1 - p) / denom) * 100;
+            });
+
+            const swData = lossRates.map(p => {
+                return ((1 - p) / (1 + 2 * a)) * 100;
+            });
+
+            chartInstance.data.datasets[0].data = srData;
+            chartInstance.data.datasets[1].data = gbnData;
+            chartInstance.data.datasets[2].data = swData;
+            chartInstance.update();
+        }
+    </script>
+</body>
+</html>
